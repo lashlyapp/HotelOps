@@ -12,6 +12,12 @@ export function r2Client(): S3Client {
       accessKeyId: requireEnv('R2_ACCESS_KEY_ID'),
       secretAccessKey: requireEnv('R2_SECRET_ACCESS_KEY'),
     },
+    // R2 doesn't accept the x-amz-checksum-* header that AWS SDK v3 adds by
+    // default (>=3.729). Without these, presigned PUTs fail with a CORS-shaped
+    // error: R2 rejects before writing CORS headers, the browser reports it
+    // as "No Access-Control-Allow-Origin".
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
   })
   return cached
 }

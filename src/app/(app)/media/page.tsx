@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { requireSession } from '@/lib/auth/session'
+import { getCdnBandwidth } from '@/lib/cloudflare/analytics'
 import { listMediaWithTags } from '@/lib/r2/list'
 import {
   computeLibraryStats,
@@ -40,10 +41,10 @@ export default async function MediaPage({
     redirect(`/media?property=${activeProperty.slug}`)
   }
 
-  const files = await listMediaWithTags(
-    activeProperty.id,
-    activeProperty.r2_prefix,
-  )
+  const [files, bandwidth] = await Promise.all([
+    listMediaWithTags(activeProperty.id, activeProperty.r2_prefix),
+    getCdnBandwidth(),
+  ])
   const stats = computeLibraryStats(files)
 
   return (
@@ -88,15 +89,6 @@ export default async function MediaPage({
           hint="Cloudflare R2"
         />
         <StatCard
-          label="Documents"
-          value={stats.documentCount + stats.otherCount}
-          hint={
-            stats.documentCount + stats.otherCount === 0
-              ? 'PDFs and other files'
-              : `${stats.documentCount} PDFs`
-          }
-        />
-        <StatCard
           label="Last updated"
           value={formatRelative(stats.lastModified)}
           hint={
@@ -107,6 +99,15 @@ export default async function MediaPage({
                   year: 'numeric',
                 })
               : '—'
+          }
+        />
+        <StatCard
+          label="Bandwidth"
+          value={bandwidth.ok ? formatBytes(bandwidth.bytes) : '—'}
+          hint={
+            bandwidth.ok
+              ? `Last ${bandwidth.days} days · org-wide`
+              : 'Cloudflare analytics unavailable'
           }
         />
       </section>

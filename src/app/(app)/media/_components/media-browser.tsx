@@ -9,11 +9,14 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils/cn'
 import type { MediaFile } from '@/lib/r2/list'
 import { formatBytes } from '@/lib/r2/stats'
-import { deleteMediaAction } from '@/lib/media/actions'
+import {
+  deleteMediaAction,
+  updateMediaMetadataAction,
+} from '@/lib/media/actions'
 import { DropZone } from './drop-zone'
 import { TagEditor } from './tag-editor'
 
-type Type = 'all' | 'image' | 'video' | 'document'
+type Type = 'all' | 'image' | 'video'
 
 export function MediaBrowser({
   files: initialFiles,
@@ -53,13 +56,13 @@ export function MediaBrowser({
         const ct = file.contentType ?? ''
         if (type === 'image' && !ct.startsWith('image/')) return false
         if (type === 'video' && !ct.startsWith('video/')) return false
-        if (type === 'document' && ct !== 'application/pdf') return false
       }
       if (tagFilter && !file.tags.includes(tagFilter)) return false
       if (!q) return true
       return (
         file.filename.toLowerCase().includes(q) ||
-        file.description.toLowerCase().includes(q) ||
+        file.displayName.toLowerCase().includes(q) ||
+        (file.description?.toLowerCase().includes(q) ?? false) ||
         file.tags.some((t) => t.includes(q))
       )
     })
@@ -68,6 +71,24 @@ export function MediaBrowser({
   function handleTagChange(key: string, nextTags: string[]) {
     setFiles((prev) =>
       prev.map((f) => (f.key === key ? { ...f, tags: nextTags } : f)),
+    )
+  }
+
+  function handleMetadataChange(
+    key: string,
+    next: { displayName: string; description: string | null },
+  ) {
+    setFiles((prev) =>
+      prev.map((f) =>
+        f.key === key
+          ? { ...f, displayName: next.displayName, description: next.description }
+          : f,
+      ),
+    )
+    setActive((curr) =>
+      curr && curr.key === key
+        ? { ...curr, displayName: next.displayName, description: next.description }
+        : curr,
     )
   }
 
@@ -134,6 +155,7 @@ export function MediaBrowser({
             setFiles((prev) => prev.filter((f) => f.key !== key))
             setActive(null)
           }}
+          onMetadataChange={handleMetadataChange}
         />
       ) : null}
     </div>
@@ -151,7 +173,6 @@ function FilterTabs({
     { value: 'all', label: 'All' },
     { value: 'image', label: 'Images' },
     { value: 'video', label: 'Videos' },
-    { value: 'document', label: 'Documents' },
   ]
   return (
     <div className="inline-flex rounded-md border border-border-default bg-surface p-0.5">
@@ -229,6 +250,7 @@ function MediaCard({
   onTagsChange: (tags: string[]) => void
 }) {
   const isImage = file.contentType?.startsWith('image/') ?? false
+  const isVideo = file.contentType?.startsWith('video/') ?? false
 
   return (
     <Card className="flex flex-col overflow-hidden">
@@ -236,30 +258,54 @@ function MediaCard({
         type="button"
         onClick={onPreview}
         className="focus-ring relative aspect-[4/3] w-full bg-surface-muted"
-        aria-label={`Preview ${file.description}`}
+        aria-label={`Preview ${file.displayName}`}
       >
         {isImage ? (
           <Image
             src={file.url}
-            alt={file.description}
+            alt={file.displayName}
             fill
-            unoptimized
             sizes="(min-width:1280px) 25vw, (min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw"
             className="object-cover"
+          />
+        ) : isVideo && file.posterUrl ? (
+          <Image
+            src={file.posterUrl}
+            alt={file.displayName}
+            fill
+            sizes="(min-width:1280px) 25vw, (min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw"
+            className="object-cover"
+          />
+        ) : isVideo ? (
+          // No persisted poster yet (legacy upload). #t=0.1 nudges the browser
+          // to paint the first frame, but this still issues a metadata
+          // range-request on every mount.
+          <video
+            src={`${file.url}#t=0.1`}
+            muted
+            playsInline
+            preload="metadata"
+            className="absolute inset-0 h-full w-full object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs uppercase tracking-wider text-subtle">
             {file.contentType ?? 'file'}
           </div>
         )}
+        {isVideo ? <PlayBadge /> : null}
       </button>
 
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div>
-          <p className="text-sm font-medium text-fg">{file.description}</p>
+          <p className="text-sm font-medium text-fg">{file.displayName}</p>
           <p className="mt-0.5 text-xs text-subtle font-mono truncate">
             {file.filename} · {formatBytes(file.size)}
           </p>
+          {file.description ? (
+            <p className="mt-1 text-xs text-muted line-clamp-2">
+              {file.description}
+            </p>
+          ) : null}
         </div>
 
         <TagEditor
@@ -272,6 +318,25 @@ function MediaCard({
         <CopyableUrl url={file.url} />
       </div>
     </Card>
+  )
+}
+
+function PlayBadge() {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute inset-0 flex items-center justify-center"
+    >
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-lg backdrop-blur-sm transition-transform group-hover:scale-110">
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden
+          className="ml-0.5 h-5 w-5 fill-current"
+        >
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </span>
+    </span>
   )
 }
 
@@ -303,14 +368,27 @@ function PreviewDialog({
   propertyId,
   onClose,
   onDeleted,
+  onMetadataChange,
 }: {
   file: MediaFile
   propertyId: string
   onClose: () => void
   onDeleted: (key: string) => void
+  onMetadataChange: (
+    key: string,
+    next: { displayName: string; description: string | null },
+  ) => void
 }) {
   const [, startTransition] = useTransition()
   const [deleting, setDeleting] = useState(false)
+  const [displayName, setDisplayName] = useState(file.displayName)
+  const [description, setDescription] = useState(file.description ?? '')
+  const [savingMeta, setSavingMeta] = useState(false)
+  const [metaError, setMetaError] = useState<string | null>(null)
+
+  const dirty =
+    displayName.trim() !== file.displayName.trim() ||
+    description.trim() !== (file.description ?? '').trim()
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -336,11 +414,31 @@ function PreviewDialog({
     })
   }
 
+  async function handleSaveMeta() {
+    setSavingMeta(true)
+    setMetaError(null)
+    const result = await updateMediaMetadataAction({
+      propertyId,
+      key: file.key,
+      displayName,
+      description,
+    })
+    setSavingMeta(false)
+    if (!result.ok) {
+      setMetaError(result.error)
+      return
+    }
+    onMetadataChange(file.key, {
+      displayName: result.displayName?.trim() || file.displayName,
+      description: result.description,
+    })
+  }
+
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`Preview: ${file.description}`}
+      aria-label={`Preview: ${file.displayName}`}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
       onClick={onClose}
     >
@@ -352,7 +450,7 @@ function PreviewDialog({
           {isImage ? (
             <Image
               src={file.url}
-              alt={file.description}
+              alt={file.displayName}
               width={1600}
               height={1200}
               unoptimized
@@ -375,15 +473,26 @@ function PreviewDialog({
           )}
         </div>
 
-        <div className="border-t border-border-subtle p-4 space-y-3">
+        <div className="border-t border-border-subtle p-4 space-y-3 overflow-y-auto">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-base font-semibold text-fg">{file.description}</p>
-              <p className="mt-0.5 text-xs text-subtle font-mono truncate">
+            <div className="min-w-0 flex-1 space-y-2">
+              <label className="block">
+                <span className="text-xs uppercase tracking-wider text-subtle">
+                  Name
+                </span>
+                <Input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  maxLength={120}
+                  placeholder={file.displayName}
+                  className="mt-1 text-base font-semibold"
+                />
+              </label>
+              <p className="text-xs text-subtle font-mono truncate" title={file.filename}>
                 {file.filename} · {formatBytes(file.size)}
               </p>
               {file.tags.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1">
                   {file.tags.map((t) => (
                     <span
                       key={t}
@@ -399,9 +508,31 @@ function PreviewDialog({
               Close
             </Button>
           </div>
+
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-subtle">
+              Description
+              <span className="ml-1 normal-case tracking-normal text-muted">
+                (optional)
+              </span>
+            </span>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={500}
+              rows={3}
+              placeholder="Add notes about this file…"
+              className="focus-ring mt-1 w-full resize-y rounded-md border border-border-default bg-surface px-3 py-2 text-sm text-fg placeholder:text-subtle"
+            />
+          </label>
+
+          {metaError ? (
+            <p className="text-xs text-danger-fg">{metaError}</p>
+          ) : null}
+
           <CopyableUrl url={file.url} />
 
-          <div className="flex justify-end pt-2 border-t border-border-subtle">
+          <div className="flex items-center justify-between pt-2 border-t border-border-subtle">
             <button
               type="button"
               onClick={handleDelete}
@@ -410,6 +541,13 @@ function PreviewDialog({
             >
               {deleting ? 'Deleting...' : 'Delete file'}
             </button>
+            <Button
+              size="sm"
+              onClick={handleSaveMeta}
+              disabled={!dirty || savingMeta}
+            >
+              {savingMeta ? 'Saving…' : 'Save'}
+            </Button>
           </div>
         </div>
       </div>

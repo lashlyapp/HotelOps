@@ -7,7 +7,9 @@ import {
   abortMultipartUploadAction,
   completeMultipartUploadAction,
   initMultipartUploadAction,
+  presignPosterUploadAction,
   presignUploadAction,
+  recordPosterAction,
   revalidateAfterUploadAction,
 } from '@/lib/media/actions'
 
@@ -31,6 +33,7 @@ export function DropZone({
   propertyName: string
 }) {
   const [over, setOver] = useState(false)
+  const [open, setOpen] = useState(false)
   const [jobs, setJobs] = useState<Job[]>([])
   const [, startTransition] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -126,6 +129,9 @@ export function DropZone({
     try {
       await xhrPut(presign.url, file, contentType, onProgress)
       finishJob(jobId)
+      if (contentType.startsWith('video/')) {
+        await captureAndUploadPoster(file, presign.key)
+      }
       return true
     } catch (err) {
       failJob(jobId, err instanceof Error ? err.message : 'Upload failed')
@@ -205,6 +211,9 @@ export function DropZone({
 
       onProgress(100)
       finishJob(jobId)
+      if (contentType.startsWith('video/')) {
+        await captureAndUploadPoster(file, init.key)
+      }
       return true
     } catch (err) {
       failJob(jobId, err instanceof Error ? err.message : 'Upload failed')
@@ -217,68 +226,129 @@ export function DropZone({
     }
   }
 
-  function clearDone() {
-    setJobs((prev) => prev.filter((j) => j.status !== 'done'))
+  async function captureAndUploadPoster(file: File, videoKey: string) {
+    try {
+      const blob = await capturePosterBlob(file)
+      if (!blob) return
+
+      const presign = await presignPosterUploadAction({
+        propertyId,
+        videoKey,
+        size: blob.size,
+      })
+      if (!presign.ok) return
+
+      const res = await fetch(presign.url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'image/jpeg' },
+        body: blob,
+      })
+      if (!res.ok) return
+
+      await recordPosterAction({
+        propertyId,
+        videoKey,
+        posterKey: presign.posterKey,
+      })
+    } catch (err) {
+      // Best-effort: a missing poster falls back to <video preload="metadata">
+      // on the card, so we don't surface this error to the user.
+      console.warn('[poster]', err)
+    }
+  }
+
+  function clearFinished() {
+    setJobs((prev) =>
+      prev.filter((j) => j.status !== 'done' && j.status !== 'error'),
+    )
+  }
+
+  function dismissJob(id: string) {
+    setJobs((prev) => prev.filter((j) => j.id !== id))
   }
 
   return (
-    <div
-      onDragOver={(e) => {
-        e.preventDefault()
-        setOver(true)
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => {
-        e.preventDefault()
-        setOver(false)
-        if (e.dataTransfer.files) handleFiles(e.dataTransfer.files)
-      }}
-      className={cn(
-        'rounded-lg border-2 border-dashed transition-colors',
-        over
-          ? 'border-fg bg-surface-muted'
-          : 'border-border-default bg-surface',
-      )}
-    >
-      <div className="p-6 text-center space-y-3">
-        <p className="text-sm text-fg">Drag & drop files here, or</p>
-        <Button type="button" variant="secondary" size="sm" onClick={pickFiles}>
-          Choose files
-        </Button>
-        <p className="text-xs text-subtle">
-          Images, videos, and PDFs up to 2 GB each. Uploads to{' '}
-          <span className="text-fg">{propertyName}</span>.
-        </p>
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          accept="image/*,video/*,application/pdf"
-          className="sr-only"
-          onChange={(e) => {
-            if (e.target.files) handleFiles(e.target.files)
-            e.target.value = ''
+    <div className="space-y-2">
+      {open ? (
+        <div
+          onDragOver={(e) => {
+            e.preventDefault()
+            setOver(true)
           }}
-        />
-      </div>
+          onDragLeave={() => setOver(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setOver(false)
+            if (e.dataTransfer.files) handleFiles(e.dataTransfer.files)
+          }}
+          className={cn(
+            'rounded-lg border-2 border-dashed transition-colors',
+            over
+              ? 'border-fg bg-surface-muted'
+              : 'border-border-default bg-surface',
+          )}
+        >
+          <div className="p-4 text-center space-y-2">
+            <div className="flex items-center justify-between gap-2 text-left">
+              <p className="text-xs text-subtle">
+                Images and videos up to 2 GB each. Uploads to{' '}
+                <span className="text-fg">{propertyName}</span>.
+              </p>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="focus-ring rounded-sm text-xs text-muted hover:text-fg"
+              >
+                Hide
+              </button>
+            </div>
+            <p className="text-sm text-fg">Drag & drop files here, or</p>
+            <Button type="button" variant="secondary" size="sm" onClick={pickFiles}>
+              Choose files
+            </Button>
+            <input
+              ref={inputRef}
+              type="file"
+              multiple
+              accept="image/*,video/*"
+              className="sr-only"
+              onChange={(e) => {
+                if (e.target.files) handleFiles(e.target.files)
+                e.target.value = ''
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setOpen(true)}
+          >
+            Upload files
+          </Button>
+        </div>
+      )}
 
       {jobs.length > 0 ? (
-        <div className="border-t border-border-subtle p-4 space-y-2">
+        <div className="rounded-lg border border-border-subtle bg-surface p-4 space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
               Uploads
             </p>
             <button
               type="button"
-              onClick={clearDone}
+              onClick={clearFinished}
               className="focus-ring rounded-sm text-xs text-muted hover:text-fg"
             >
-              Clear completed
+              Clear
             </button>
           </div>
           <ul className="space-y-2">
             {jobs.map((job) => (
-              <JobRow key={job.id} job={job} />
+              <JobRow key={job.id} job={job} onDismiss={dismissJob} />
             ))}
           </ul>
         </div>
@@ -287,7 +357,13 @@ export function DropZone({
   )
 }
 
-function JobRow({ job }: { job: Job }) {
+function JobRow({
+  job,
+  onDismiss,
+}: {
+  job: Job
+  onDismiss: (id: string) => void
+}) {
   return (
     <li className="flex items-center gap-3 text-sm">
       <span className="flex-1 min-w-0 truncate text-fg" title={job.name}>
@@ -306,6 +382,18 @@ function JobRow({ job }: { job: Job }) {
           </span>
         )}
       </div>
+      {job.status === 'done' || job.status === 'error' ? (
+        <button
+          type="button"
+          onClick={() => onDismiss(job.id)}
+          aria-label={`Dismiss ${job.name}`}
+          className="focus-ring rounded-sm px-1 text-xs text-muted hover:text-fg"
+        >
+          ×
+        </button>
+      ) : (
+        <span className="w-4" aria-hidden />
+      )}
     </li>
   )
 }
@@ -370,6 +458,70 @@ function xhrPut(
     }
     xhr.onerror = () => reject(new Error('Network error'))
     xhr.send(body)
+  })
+}
+
+/**
+ * Render the first ~0.1s of a video to a canvas and return a JPEG blob. Used
+ * to persist a static poster image alongside each video upload so the catalog
+ * card can render <img> instead of <video preload="metadata">.
+ */
+function capturePosterBlob(file: File): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file)
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    video.muted = true
+    video.playsInline = true
+    video.src = objectUrl
+
+    const cleanup = () => {
+      video.removeAttribute('src')
+      video.load()
+      URL.revokeObjectURL(objectUrl)
+    }
+
+    let settled = false
+    const settle = (blob: Blob | null) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      resolve(blob)
+    }
+
+    // Hard timeout in case metadata never arrives (corrupt file, codec
+    // unsupported by the browser, etc.).
+    const timeout = setTimeout(() => settle(null), 10_000)
+
+    video.addEventListener('loadeddata', () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          clearTimeout(timeout)
+          settle(null)
+          return
+        }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+        canvas.toBlob(
+          (blob) => {
+            clearTimeout(timeout)
+            settle(blob)
+          },
+          'image/jpeg',
+          0.85,
+        )
+      } catch {
+        clearTimeout(timeout)
+        settle(null)
+      }
+    })
+    video.addEventListener('error', () => {
+      clearTimeout(timeout)
+      settle(null)
+    })
   })
 }
 

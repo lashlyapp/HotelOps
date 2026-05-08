@@ -11,8 +11,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export type MediaFile = {
   key: string
   filename: string
-  description: string
+  displayName: string
+  description: string | null
   url: string
+  posterUrl: string | null
   size: number
   lastModified: string | null
   contentType: string | null
@@ -42,10 +44,11 @@ export async function listMediaForPrefix(prefix: string): Promise<MediaFile[]> {
   const visibleObjects = items
     .filter((obj) => obj.Key && !obj.Key.endsWith('/'))
     .filter((obj) => {
-      // Hide platform-internal files (logos, future per-property metadata)
-      // from the customer-facing media catalog.
+      // Hide platform-internal files from the customer-facing catalog:
+      //   _meta/    — logos and per-property metadata
+      //   _posters/ — generated still-frame thumbnails for videos
       const rel = obj.Key!.slice(normalizedPrefix.length)
-      return !rel.startsWith('_meta/')
+      return !rel.startsWith('_meta/') && !rel.startsWith('_posters/')
     })
 
   return visibleObjects
@@ -55,8 +58,10 @@ export async function listMediaForPrefix(prefix: string): Promise<MediaFile[]> {
       return {
         key,
         filename,
-        description: humanizeFilename(filename),
+        displayName: humanizeFilename(filename),
+        description: null,
         url: r2PublicUrl(key),
+        posterUrl: null,
         size: obj.Size ?? 0,
         lastModified: obj.LastModified
           ? obj.LastModified.toISOString()
@@ -80,20 +85,51 @@ export async function listMediaWithTags(
   if (files.length === 0) return files
 
   const admin = createAdminClient()
-  const { data: tagRows } = await admin
-    .from('media_tags')
-    .select('file_key, tag')
-    .eq('property_id', propertyId)
-    .order('tag', { ascending: true })
+  const [{ data: tagRows }, { data: metadataRows }] = await Promise.all([
+    admin
+      .from('media_tags')
+      .select('file_key, tag')
+      .eq('property_id', propertyId)
+      .order('tag', { ascending: true }),
+    admin
+      .from('media_metadata')
+      .select('file_key, display_name, description, poster_key')
+      .eq('property_id', propertyId),
+  ])
 
-  const byKey = new Map<string, string[]>()
+  const tagsByKey = new Map<string, string[]>()
   for (const row of tagRows ?? []) {
-    const existing = byKey.get(row.file_key) ?? []
+    const existing = tagsByKey.get(row.file_key) ?? []
     existing.push(row.tag)
-    byKey.set(row.file_key, existing)
+    tagsByKey.set(row.file_key, existing)
   }
 
-  return files.map((f) => ({ ...f, tags: byKey.get(f.key) ?? [] }))
+  const metaByKey = new Map<
+    string,
+    {
+      display_name: string | null
+      description: string | null
+      poster_key: string | null
+    }
+  >()
+  for (const row of metadataRows ?? []) {
+    metaByKey.set(row.file_key, {
+      display_name: row.display_name,
+      description: row.description,
+      poster_key: row.poster_key,
+    })
+  }
+
+  return files.map((f) => {
+    const meta = metaByKey.get(f.key)
+    return {
+      ...f,
+      displayName: meta?.display_name?.trim() || f.displayName,
+      description: meta?.description ?? null,
+      posterUrl: meta?.poster_key ? r2PublicUrl(meta.poster_key) : null,
+      tags: tagsByKey.get(f.key) ?? [],
+    }
+  })
 }
 
 function guessContentType(filename: string): string | null {
