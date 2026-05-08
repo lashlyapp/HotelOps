@@ -13,11 +13,11 @@ on:
   workflow_dispatch:
     inputs:
       org_slug:
-        description: "Org slug (kebab-case, e.g. cg-hotel-group)"
+        description: "Org slug (kebab-case, e.g. acme-hotel-group)"
         required: true
         type: string
       org_name:
-        description: 'Org display name (e.g. "CG Hotel Group")'
+        description: 'Org display name (e.g. "Acme Hotel Group")'
         required: true
         type: string
       owner_email:
@@ -25,7 +25,7 @@ on:
         required: false
         type: string
       properties:
-        description: 'Properties as comma-separated slug:Name pairs (e.g. "cupertino-hotel:Cupertino Hotel,grand-hotel:Grand Hotel")'
+        description: 'Properties as comma-separated slug:Name pairs (e.g. "downtown-suites:Downtown Suites,harbor-view:Harbor View")'
         required: true
         type: string
 

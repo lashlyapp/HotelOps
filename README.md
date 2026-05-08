@@ -37,7 +37,7 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
    - **CI/CD (recommended):** push to GitHub. The `Database` workflow runs `supabase db push` against the linked remote project. Set the repo secrets listed under [CI / CD](#ci--cd).
    - **Manual one-time:** open Supabase Dashboard → SQL Editor and paste the contents of the latest file in `supabase/migrations/`.
 
-3. Bootstrap the first platform admin (one-time). They can then create tenants from the UI:
+3. Bootstrap the first platform admin (one-time). They can then manage every tenant from the UI:
 
    - **CI/CD (recommended):** add a temporary `BOOTSTRAP_ADMIN_PASSWORD` repo secret, then GitHub → Actions → **Bootstrap platform admin** → Run workflow → enter email (default `support@myhotelops.com`). Sign in at `/login`. After signing in, you may delete the secret.
    - **Local:**
@@ -48,11 +48,13 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
        --password=<strong-password>
      ```
 
-4. Create tenants and team members from the UI:
+   Platform admin emails must end in `@myhotelops.com`. Tenant/customer emails are unrestricted.
 
-   - **Platform admin** (`/admin`): create tenants — sets the org slug, name, properties, and the initial owner's email + temporary password.
-   - **Tenant owner** (`/team`, visible to `org_owner` role only): adds team members with email + temporary password.
-   - **Anyone**: change their own password from `/account` → "Set a new one".
+4. Create and manage tenants from the UI:
+
+   - **Platform admin** (`/admin`): lists every tenant on the platform; click a row to manage it (edit name, add/remove properties, add/remove members of any role, see per-property file/storage stats, delete tenant). Click **Create tenant** to onboard a new customer with org name, slug, properties, and initial owner credentials.
+   - **Tenant owner** (`/properties` and `/team`, visible to `org_owner` role only): manages their own properties and team members with email + temporary password.
+   - **Anyone**: change their own password from `/account`.
 
    The `Onboard tenant` GitHub Actions workflow remains as an ops fallback for non-UI provisioning.
 
@@ -73,23 +75,19 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
 
 ## R2 layout
 
+A single `app-hotelops` bucket holds every tenant's media. Each tenant gets a top-level prefix matching its org slug; each property gets a sub-prefix:
+
 ```
-app-hotelops/                       ← bucket
-  cg-hotel-group/                   ← {org-slug}
-    cupertino-hotel/                ← {property-slug}
+app-hotelops/                       ← bucket (one for the entire platform)
+  {org-slug}/
+    {property-slug}/
       lobby-view-01.jpg
-      ...
-    grand-hotel/
       ...
 ```
 
 Each file is served from `https://cdn.myhotelops.com/{key}`. Filenames are humanized into descriptions on the fly (e.g. `lobby-view-01.jpg` → "Lobby View 01").
 
-The bucket is configured with **public access enabled** and a custom domain bound to the platform CDN. To onboard a new customer:
-
-1. Choose a slug (e.g. `palace-resorts`) and create the prefix folders in R2 (or just upload — R2 creates prefixes lazily).
-2. Insert the org + properties via SQL or extend `scripts/setup.ts`.
-3. Invite the owner via `inviteUserByEmail`; they'll land on `/set-password` after clicking the email link.
+The bucket is configured with **public access enabled** and a custom domain bound to the platform CDN. New tenants don't require any R2 changes — the platform-admin "Create tenant" form (and the tenant-owner "Add property" form) compute the R2 prefix from the slugs you supply, and R2 creates folders lazily on first upload.
 
 ## Tenant model
 
@@ -169,7 +167,8 @@ See [`docs/design-system.md`](docs/design-system.md). TL;DR: every color in mark
 - `npm run build` — production build
 - `npm run start` — run the production build
 - `npm run lint` — lint
-- `npm run setup` — seed CG Hotel Group + invite owner (requires migration applied)
+- `npm run onboard:tenant -- --slug=... --name=... --owner=... --property=...` — onboard a tenant from the CLI (manual fallback when the UI isn't an option)
+- `npm run bootstrap:admin -- --email=... --password=...` — create the first platform admin (one-time)
 - `npx tsx scripts/smoke-r2.ts` — R2 connectivity smoke test
 
 ## Roadmap

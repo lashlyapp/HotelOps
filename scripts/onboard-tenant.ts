@@ -5,11 +5,11 @@
  *
  * Usage:
  *   npx tsx scripts/onboard-tenant.ts \
- *     --slug=cg-hotel-group \
- *     --name="CG Hotel Group" \
- *     --owner=nathan@cghotelgroup.com \
- *     --property=cupertino-hotel:"Cupertino Hotel" \
- *     --property=grand-hotel:"Grand Hotel"
+ *     --slug=acme-hotel-group \
+ *     --name="Acme Hotel Group" \
+ *     --owner=owner@acmehotelgroup.com \
+ *     --property=downtown-suites:"Downtown Suites" \
+ *     --property=harbor-view:"Harbor View"
  *
  * Properties:
  *   --property=<slug>:<name>     repeat for each property; the R2 prefix

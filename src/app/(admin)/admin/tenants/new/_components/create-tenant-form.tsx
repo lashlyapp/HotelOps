@@ -35,15 +35,15 @@ export function CreateTenantForm() {
             label="Display name"
             id="org_name"
             name="org_name"
-            placeholder="CG Hotel Group"
+            placeholder="Acme Hotel Group"
             required
           />
           <Field
             label="Slug"
             id="org_slug"
             name="org_slug"
-            placeholder="cg-hotel-group"
-            hint="Kebab-case. Used in R2 paths and stored as the org identifier."
+            placeholder="acme-hotel-group"
+            hint="Kebab-case. Used in R2 paths and stored as the org identifier. Cannot be changed once created."
             pattern="^[a-z0-9]+(-[a-z0-9]+)*$"
             required
           />
@@ -61,7 +61,7 @@ export function CreateTenantForm() {
                 label={idx === 0 ? 'Slug' : ''}
                 id={`property_slug_${p.id}`}
                 name="property_slug"
-                placeholder="cupertino-hotel"
+                placeholder="downtown-suites"
                 pattern="^[a-z0-9]+(-[a-z0-9]+)*$"
                 required
               />
@@ -69,7 +69,7 @@ export function CreateTenantForm() {
                 label={idx === 0 ? 'Display name' : ''}
                 id={`property_name_${p.id}`}
                 name="property_name"
-                placeholder="Cupertino Hotel"
+                placeholder="Downtown Suites"
                 required
               />
               <Button
@@ -104,7 +104,7 @@ export function CreateTenantForm() {
             id="owner_email"
             name="owner_email"
             type="email"
-            placeholder="nathan@cghotelgroup.com"
+            placeholder="owner@acmehotelgroup.com"
             autoComplete="off"
             required
           />
