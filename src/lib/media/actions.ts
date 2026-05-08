@@ -204,6 +204,50 @@ export async function deleteMediaAction(args: {
 }
 
 // ----------------------------------------------------------------------------
+// Per-file metadata (display name override + description)
+// ----------------------------------------------------------------------------
+
+const MAX_DISPLAY_NAME = 120
+const MAX_DESCRIPTION = 500
+
+export type MetadataResult =
+  | { ok: true; displayName: string | null; description: string | null }
+  | { ok: false; error: string }
+
+export async function updateMediaMetadataAction(args: {
+  propertyId: string
+  key: string
+  displayName: string
+  description: string
+}): Promise<MetadataResult> {
+  const session = await requireOrgUser()
+  const property = session.properties.find((p) => p.id === args.propertyId)
+  if (!property) return { ok: false, error: 'Property not found.' }
+  if (!args.key.startsWith(property.r2_prefix)) {
+    return { ok: false, error: 'File does not belong to this property.' }
+  }
+
+  const displayName = args.displayName.trim().slice(0, MAX_DISPLAY_NAME) || null
+  const description = args.description.trim().slice(0, MAX_DESCRIPTION) || null
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('media_metadata').upsert(
+    {
+      property_id: args.propertyId,
+      file_key: args.key,
+      display_name: displayName,
+      description,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'property_id,file_key' },
+  )
+  if (error) return { ok: false, error: error.message }
+
+  revalidatePath('/media')
+  return { ok: true, displayName, description }
+}
+
+// ----------------------------------------------------------------------------
 // Tags
 // ----------------------------------------------------------------------------
 

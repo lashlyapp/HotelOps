@@ -11,7 +11,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export type MediaFile = {
   key: string
   filename: string
-  description: string
+  displayName: string
+  description: string | null
   url: string
   size: number
   lastModified: string | null
@@ -55,7 +56,8 @@ export async function listMediaForPrefix(prefix: string): Promise<MediaFile[]> {
       return {
         key,
         filename,
-        description: humanizeFilename(filename),
+        displayName: humanizeFilename(filename),
+        description: null,
         url: r2PublicUrl(key),
         size: obj.Size ?? 0,
         lastModified: obj.LastModified
@@ -80,20 +82,45 @@ export async function listMediaWithTags(
   if (files.length === 0) return files
 
   const admin = createAdminClient()
-  const { data: tagRows } = await admin
-    .from('media_tags')
-    .select('file_key, tag')
-    .eq('property_id', propertyId)
-    .order('tag', { ascending: true })
+  const [{ data: tagRows }, { data: metadataRows }] = await Promise.all([
+    admin
+      .from('media_tags')
+      .select('file_key, tag')
+      .eq('property_id', propertyId)
+      .order('tag', { ascending: true }),
+    admin
+      .from('media_metadata')
+      .select('file_key, display_name, description')
+      .eq('property_id', propertyId),
+  ])
 
-  const byKey = new Map<string, string[]>()
+  const tagsByKey = new Map<string, string[]>()
   for (const row of tagRows ?? []) {
-    const existing = byKey.get(row.file_key) ?? []
+    const existing = tagsByKey.get(row.file_key) ?? []
     existing.push(row.tag)
-    byKey.set(row.file_key, existing)
+    tagsByKey.set(row.file_key, existing)
   }
 
-  return files.map((f) => ({ ...f, tags: byKey.get(f.key) ?? [] }))
+  const metaByKey = new Map<
+    string,
+    { display_name: string | null; description: string | null }
+  >()
+  for (const row of metadataRows ?? []) {
+    metaByKey.set(row.file_key, {
+      display_name: row.display_name,
+      description: row.description,
+    })
+  }
+
+  return files.map((f) => {
+    const meta = metaByKey.get(f.key)
+    return {
+      ...f,
+      displayName: meta?.display_name?.trim() || f.displayName,
+      description: meta?.description ?? null,
+      tags: tagsByKey.get(f.key) ?? [],
+    }
+  })
 }
 
 function guessContentType(filename: string): string | null {
