@@ -756,12 +756,12 @@ function MediaCard({
 }
 
 /**
- * Catalog thumbnail for video files. Stream-hosted videos hand back a
- * server-rendered, edge-cached JPEG via posterUrl (set in listMediaWithTags)
- * — no client-side capture, no DB column needed. Stream rows that haven't
- * finished encoding show an "Encoding…" placeholder; legacy R2 videos that
- * predate the Stream migration show a plain placeholder so the catalog
- * still renders without trying to fetch a frame from a 250 MB MP4.
+ * Catalog thumbnail for video files. The user picks a frame at upload time
+ * via the cover-picker; that JPEG lives next to the video in R2 and the
+ * key is recorded in media_metadata.poster_key. Files that predate the
+ * cover-picker (or where attaching the poster failed) render a static
+ * placeholder so the catalog never has to fetch metadata ranges from a
+ * multi-hundred-MB MP4.
  */
 function VideoThumbnail({ file }: { file: MediaFile }) {
   if (file.posterUrl) {
@@ -778,15 +778,9 @@ function VideoThumbnail({ file }: { file: MediaFile }) {
   }
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-surface-muted">
-      {file.streamStatus === 'pending' ? (
-        <span className="text-xs uppercase tracking-wider text-subtle">
-          Encoding…
-        </span>
-      ) : file.streamStatus === 'error' ? (
-        <span className="text-xs uppercase tracking-wider text-danger-fg">
-          Encoding failed
-        </span>
-      ) : null}
+      <span className="text-xs uppercase tracking-wider text-subtle">
+        Video
+      </span>
     </div>
   )
 }
@@ -926,18 +920,15 @@ function PreviewDialog({
               unoptimized
               className="max-h-[70vh] w-auto object-contain"
             />
-          ) : isVideo && file.streamUid ? (
-            // Stream's iframe ships an adaptive-bitrate player; for legacy
-            // R2 videos `streamUid` is null and we fall back to <video>.
-            <iframe
-              src={file.url}
-              title={file.displayName}
-              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-              allowFullScreen
-              className="aspect-video max-h-[70vh] w-full"
-            />
           ) : isVideo ? (
-            <video src={file.url} controls className="max-h-[70vh] w-full" />
+            <video
+              src={file.url}
+              poster={file.posterUrl ?? undefined}
+              controls
+              playsInline
+              preload="metadata"
+              className="max-h-[70vh] w-full"
+            />
           ) : (
             <div className="p-12 text-sm text-muted">
               No inline preview for {file.contentType ?? 'this file type'}.

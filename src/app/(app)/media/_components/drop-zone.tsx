@@ -2,17 +2,18 @@
 
 import { useRouter } from 'next/navigation'
 import { useRef, useState, useTransition } from 'react'
-import * as tus from 'tus-js-client'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
 import {
   abortMultipartUploadAction,
   completeMultipartUploadAction,
-  finalizeStreamVideoUploadAction,
   initMultipartUploadAction,
+  presignPosterUploadAction,
   presignUploadAction,
   revalidateAfterUploadAction,
+  setVideoPosterAction,
 } from '@/lib/media/actions'
+import { CoverPicker, type CoverPickerResult } from './cover-picker'
 
 const SINGLE_PUT_THRESHOLD = 10 * 1024 * 1024 // 10 MB
 // Concurrency tuned around browser per-host connection caps (~6). Worst
@@ -24,9 +25,16 @@ const PARTS_IN_FLIGHT_PER_FILE = 3
 
 type Job =
   | { id: string; name: string; size: number; status: 'pending' }
+  | { id: string; name: string; size: number; status: 'awaiting-cover' }
   | { id: string; name: string; size: number; status: 'uploading'; pct: number }
   | { id: string; name: string; size: number; status: 'done' }
   | { id: string; name: string; size: number; status: 'error'; error: string }
+
+type PendingCover = {
+  jobId: string
+  file: File
+  resolve: (cover: CoverPickerResult | null) => void
+}
 
 export function DropZone({
   propertyId,
@@ -40,8 +48,12 @@ export function DropZone({
   const [over, setOver] = useState(false)
   const [open, setOpen] = useState(false)
   const [jobs, setJobs] = useState<Job[]>([])
+  const [coverQueue, setCoverQueue] = useState<PendingCover[]>([])
   const [, startTransition] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
+  // jobId → R2 key mapping so the video flow can hand the key off to the
+  // poster-attach step after the underlying file finishes uploading.
+  const videoKeyByJob = useRef(new Map<string, string>())
   const router = useRouter()
 
   function pickFiles() {
@@ -76,18 +88,30 @@ export function DropZone({
     if (results.some(Boolean)) {
       startTransition(async () => {
         await revalidateAfterUploadAction(propertySlug)
+        router.refresh()
       })
     }
   }
 
   function updateJob(id: string, pct: number) {
     setJobs((prev) =>
+      prev.map((j) => {
+        if (j.id !== id) return j
+        if (j.status === 'uploading') return { ...j, pct }
+        if (j.status === 'pending' || j.status === 'awaiting-cover') {
+          return { ...j, status: 'uploading', pct }
+        }
+        return j
+      }),
+    )
+  }
+
+  function setJobStatus(id: string, status: 'pending' | 'awaiting-cover') {
+    setJobs((prev) =>
       prev.map((j) =>
-        j.id === id && j.status === 'uploading'
-          ? { ...j, pct }
-          : j.id === id && j.status === 'pending'
-            ? { ...j, status: 'uploading', pct }
-            : j,
+        j.id === id
+          ? ({ id: j.id, name: j.name, size: j.size, status } as Job)
+          : j,
       ),
     )
   }
@@ -104,6 +128,26 @@ export function DropZone({
     )
   }
 
+  /**
+   * Show the cover-picker for a single video. Resolves with the picker's
+   * output, or `null` if the user cancelled or the browser couldn't decode
+   * the file. Multiple concurrent video uploads queue up — only one picker
+   * is mounted at a time.
+   */
+  function requestCover(jobId: string, file: File): Promise<CoverPickerResult | null> {
+    return new Promise((resolve) => {
+      setCoverQueue((prev) => [...prev, { jobId, file, resolve }])
+    })
+  }
+
+  function resolveCover(result: { ok: true; value: CoverPickerResult } | { ok: false }) {
+    setCoverQueue((prev) => {
+      const [head, ...rest] = prev
+      if (head) head.resolve(result.ok ? result.value : null)
+      return rest
+    })
+  }
+
   async function uploadOne(
     file: File,
     jobId: string,
@@ -111,7 +155,7 @@ export function DropZone({
   ): Promise<boolean> {
     const contentType = file.type || 'application/octet-stream'
     if (contentType.startsWith('video/')) {
-      return uploadVideoToStream(file, contentType, jobId, onProgress)
+      return uploadVideo(file, contentType, jobId, onProgress)
     }
     if (file.size <= SINGLE_PUT_THRESHOLD) {
       return uploadSingle(file, contentType, jobId, onProgress)
@@ -120,41 +164,53 @@ export function DropZone({
   }
 
   /**
-   * Videos go to Cloudflare Stream via the tus-resumable Direct Creator
-   * Upload flow. tus-js-client uses our /api/media/stream-upload route as
-   * the CREATE endpoint (the route adds the Cloudflare API token, mints a
-   * Stream upload URL, and inserts the media_videos row); the chunk
-   * PATCHes go straight to Cloudflare. Stream handles transcoding,
-   * thumbnails, and adaptive playback so the catalog gets a real preview
-   * without any client-side frame capture.
+   * Videos: pause for the cover picker first, then upload the video to R2
+   * (multipart for anything over 10 MB — which is essentially every video)
+   * and the captured JPEG poster in parallel. Both PUTs go directly from
+   * the browser to R2 via presigned URLs; we only round-trip through Vercel
+   * to mint URLs and to record poster_key in media_metadata at the end.
    */
-  async function uploadVideoToStream(
+  async function uploadVideo(
     file: File,
-    _contentType: string,
+    contentType: string,
     jobId: string,
     onProgress: (pct: number) => void,
   ): Promise<boolean> {
-    let uid = ''
-    try {
-      uid = await tusUpload(
-        `/api/media/stream-upload?propertyId=${encodeURIComponent(propertyId)}`,
-        file,
-        onProgress,
+    setJobStatus(jobId, 'awaiting-cover')
+    const cover = await requestCover(jobId, file)
+    if (!cover) {
+      // User cancelled or HEVC-style decode failure. Surface a recoverable
+      // error rather than uploading a video with no poster.
+      failJob(
+        jobId,
+        'Cover image required. If your video is HEVC (.mov from iPhone), please export as MP4 first.',
       )
-    } catch (err) {
-      failJob(jobId, err instanceof Error ? err.message : 'Stream upload failed')
       return false
     }
 
-    onProgress(100)
-    finishJob(jobId)
-    if (uid) {
-      // Cloudflare hasn't finished transcoding by the time tus reports
-      // success — typical 250 MB clip takes a couple minutes. Poll the
-      // finalize action until the row flips to ready (or we hit a hard
-      // ceiling) so the catalog can swap "Encoding…" for the thumbnail
-      // without the user having to refresh.
-      void pollStreamUntilReady(propertyId, uid, () => router.refresh())
+    setJobStatus(jobId, 'pending')
+    const ok =
+      file.size <= SINGLE_PUT_THRESHOLD
+        ? await uploadSingle(file, contentType, jobId, onProgress)
+        : await uploadMultipart(file, contentType, jobId, onProgress)
+    if (!ok) return false
+
+    // Find the key the upload landed at. Both uploadSingle/uploadMultipart
+    // record it on the job before flipping to "done"; pull it back out so
+    // we can attach the poster.
+    const videoKey = videoKeyByJob.current.get(jobId)
+    if (!videoKey) return true
+
+    try {
+      await uploadPoster({
+        propertyId,
+        videoKey,
+        poster: cover.poster,
+      })
+    } catch (err) {
+      // Non-fatal: video is up, just no poster. The catalog will render the
+      // video with a generic placeholder until the user re-uploads.
+      console.error('[upload] poster attach failed', err)
     }
     return true
   }
@@ -177,6 +233,7 @@ export function DropZone({
     }
     try {
       await xhrPut(presign.url, file, contentType, onProgress)
+      videoKeyByJob.current.set(jobId, presign.key)
       finishJob(jobId)
       return true
     } catch (err) {
@@ -256,6 +313,7 @@ export function DropZone({
       }
 
       onProgress(100)
+      videoKeyByJob.current.set(jobId, init.key)
       finishJob(jobId)
       return true
     } catch (err) {
@@ -269,6 +327,26 @@ export function DropZone({
     }
   }
 
+  async function uploadPoster(args: {
+    propertyId: string
+    videoKey: string
+    poster: Blob
+  }): Promise<void> {
+    const presign = await presignPosterUploadAction({
+      propertyId: args.propertyId,
+      videoKey: args.videoKey,
+      size: args.poster.size,
+    })
+    if (!presign.ok) throw new Error(presign.error)
+    await xhrPut(presign.url, args.poster, 'image/jpeg', () => {})
+    const result = await setVideoPosterAction({
+      propertyId: args.propertyId,
+      videoKey: args.videoKey,
+      posterKey: presign.posterKey,
+    })
+    if (!result.ok) throw new Error(result.error)
+  }
+
   function clearFinished() {
     setJobs((prev) =>
       prev.filter((j) => j.status !== 'done' && j.status !== 'error'),
@@ -278,6 +356,8 @@ export function DropZone({
   function dismissJob(id: string) {
     setJobs((prev) => prev.filter((j) => j.id !== id))
   }
+
+  const activeCover = coverQueue[0] ?? null
 
   return (
     <div className="space-y-2">
@@ -303,8 +383,9 @@ export function DropZone({
           <div className="p-4 text-center space-y-2">
             <div className="flex items-center justify-between gap-2 text-left">
               <p className="text-xs text-subtle">
-                Images up to 2 GB, videos up to 30 GB (Cloudflare Stream).
-                Uploads to <span className="text-fg">{propertyName}</span>.
+                Images and videos up to 5 GB. Videos prompt for a cover image
+                after upload starts. Uploads to{' '}
+                <span className="text-fg">{propertyName}</span>.
               </p>
               <button
                 type="button"
@@ -365,6 +446,20 @@ export function DropZone({
           </ul>
         </div>
       ) : null}
+
+      {activeCover ? (
+        <CoverPicker
+          key={activeCover.jobId}
+          file={activeCover.file}
+          onResolve={(result) => {
+            if (result.ok) {
+              resolveCover({ ok: true, value: result.value })
+            } else {
+              resolveCover({ ok: false })
+            }
+          }}
+        />
+      ) : null}
     </div>
   )
 }
@@ -381,16 +476,18 @@ function JobRow({
       <span className="flex-1 min-w-0 truncate text-fg" title={job.name}>
         {job.name}
       </span>
-      <div className="w-32 text-right">
+      <div className="w-40 text-right">
         {job.status === 'pending' ? (
           <span className="text-xs text-subtle">Queued…</span>
+        ) : job.status === 'awaiting-cover' ? (
+          <span className="text-xs text-subtle">Pick cover…</span>
         ) : job.status === 'uploading' ? (
           <ProgressBar pct={job.pct} />
         ) : job.status === 'done' ? (
           <span className="text-xs text-success-fg">Done</span>
         ) : (
           <span className="text-xs text-danger-fg" title={job.error}>
-            Failed
+            {job.error.length > 30 ? 'Failed' : job.error}
           </span>
         )}
       </div>
@@ -446,81 +543,6 @@ async function runWithLimit<T, R>(
   )
   await Promise.all(workers)
   return results
-}
-
-/**
- * Poll finalizeStreamVideoUploadAction until Cloudflare finishes encoding,
- * then refresh the catalog so "Encoding…" placeholders swap to thumbnails.
- *
- * Tuned for typical hotel clips: 4 s between polls, ~5 min ceiling. The
- * loop is best-effort — if the user navigates away the unmounted Promise
- * is dropped, and any next visit picks up the (by then) ready row.
- */
-async function pollStreamUntilReady(
-  propertyId: string,
-  uid: string,
-  onReady: () => void,
-): Promise<void> {
-  const POLL_INTERVAL_MS = 4_000
-  const MAX_POLLS = 75
-  for (let i = 0; i < MAX_POLLS; i += 1) {
-    let result
-    try {
-      result = await finalizeStreamVideoUploadAction({ propertyId, uid })
-    } catch {
-      return
-    }
-    if (!result.ok) return
-    if (result.status !== 'pending') {
-      onReady()
-      return
-    }
-    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
-  }
-}
-
-/**
- * Drive a tus-resumable upload through our /api/media/stream-upload proxy
- * to Cloudflare Stream. tus-js-client makes the initial CREATE against
- * `endpoint`; our route returns the Cloudflare upload URL in `Location`
- * (and the future video UID in `stream-media-id`). tus then PATCHes
- * chunks straight to Cloudflare — that endpoint is browser-CORS-enabled
- * because we minted it with `direct_user=true`. Progress is normalized
- * to 0–99%; the caller stamps 100 after finalize.
- *
- * Resolves with the Stream UID extracted from the create response so the
- * caller can run finalizeStreamVideoUploadAction.
- */
-function tusUpload(
-  endpoint: string,
-  file: File,
-  onProgress: (pct: number) => void,
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    let uid = ''
-    const upload = new tus.Upload(file, {
-      endpoint,
-      retryDelays: [0, 1_000, 3_000, 5_000, 10_000],
-      // Stream requires resumable chunks be multiples of 256 KiB; 50 MiB
-      // is what Cloudflare's example uses.
-      chunkSize: 50 * 1024 * 1024,
-      uploadSize: file.size,
-      metadata: { name: file.name, filetype: file.type },
-      onError: (err) =>
-        reject(err instanceof Error ? err : new Error(String(err))),
-      onProgress: (bytesUploaded, bytesTotal) => {
-        const pct = Math.round((bytesUploaded / bytesTotal) * 100)
-        onProgress(Math.min(pct, 99))
-      },
-      onAfterResponse: (_req, res) => {
-        // Cloudflare echoes the UID on the CREATE response only.
-        const header = res.getHeader('stream-media-id')
-        if (header) uid = header
-      },
-      onSuccess: () => resolve(uid),
-    })
-    upload.start()
-  })
 }
 
 /** PUT a full file via XHR, reporting overall progress as a percentage. */

@@ -76,23 +76,17 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
 
    Open [http://localhost:3000](http://localhost:3000).
 
-## Cloudflare Stream — videos
+## Videos — R2 with browser-side cover picker
 
-Video files (`video/mp4`, `video/quicktime`, `video/webm`) bypass R2 and go to **Cloudflare Stream** via the tus-resumable Direct Creator Upload flow. Stream gives us edge-served thumbnails, adaptive-bitrate playback, and a 30 GB / 8-hour ceiling per video — without the page having to capture frames in the browser.
+Videos (`video/mp4`, `video/quicktime`, `video/webm`) and images both live in R2 under the property prefix. When a tenant uploads a video, a TikTok-style picker (`src/app/(app)/media/_components/cover-picker.tsx`) loads the file as an object URL into a hidden `<video>`, draws an evenly-spaced strip of thumbnails to a `<canvas>`, and lets them pick the cover frame. The chosen JPEG is PUT to R2 alongside the video at `{property-prefix}_posters/{filename}.jpg`, and the key is recorded in `media_metadata.poster_key`. Playback uses a plain `<video src=…>` element with that poster.
 
-The browser drives the upload directly to Cloudflare; the app just mints a one-time tus URL via `initStreamVideoUploadAction`. Each upload is tracked in `media_videos (property_id, stream_uid, …)`, and `listMediaWithTags` joins those rows in alongside the R2 object listing.
+Why we don't use a transcoding service: Cloudflare Stream's $5 per 1000 minutes stored + $1 per 1000 minutes delivered scales linearly with the catalog forever. R2 is ~$0.015/GB-month with zero egress on the Cloudflare CDN, so a 60-second 720p H.264 MP4 (~30 MB) costs fractions of a cent.
 
-**Required env vars** (see `.env.example`):
-
-- `CLOUDFLARE_API_TOKEN` — must include `Account Stream:Edit` and `Account Stream:Read` (in addition to the `Account Analytics:Read` scope already used for the bandwidth widget).
-- `CLOUDFLARE_ACCOUNT_ID` — same Cloudflare account that owns R2.
-- `CLOUDFLARE_STREAM_SUBDOMAIN` — your `customer-XXXX.cloudflarestream.com` host (no protocol). Find it in any Stream embed code under the dashboard.
-
-Images still flow through R2 — only videos move.
+**Codec note:** iPhone HEVC `.mov` files don't decode in non-Safari browsers. The cover picker detects the failure (metadata loads but `videoWidth === 0`) and surfaces an error asking the user to export as MP4 H.264 first. Adding a server-side transcode (Cloud Run / R2 event hook → ffmpeg) is the obvious next step if HEVC keeps showing up.
 
 ## R2 CORS — required for direct-to-R2 uploads
 
-The drag-and-drop uploader has the browser PUT image files directly to R2 (single PUT for files ≤10 MB, multipart upload for larger files). Without this, large originals would have to traverse the Vercel serverless function and hit the 4.5 MB body limit. (Videos no longer hit R2 — see Cloudflare Stream above.)
+The drag-and-drop uploader has the browser PUT files directly to R2 (single PUT for files ≤10 MB, multipart upload for larger files — videos almost always take the multipart path). Without this, large originals would have to traverse the Vercel serverless function and hit the 4.5 MB body limit.
 
 **The R2 bucket needs a CORS policy that allows the app origin to PUT and exposes the `ETag` header** (multipart uses the ETag of each uploaded part to finalize the upload).
 
