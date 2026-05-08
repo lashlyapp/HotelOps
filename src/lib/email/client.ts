@@ -18,3 +18,7 @@ export function getResend(): Resend | null {
 export function getEmailFrom(): string {
   return process.env.EMAIL_FROM ?? 'MyHotelOps <onboarding@resend.dev>'
 }
+
+export function isEmailConfigured(): boolean {
+  return Boolean(process.env.RESEND_API_KEY)
+}

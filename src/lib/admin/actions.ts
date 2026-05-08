@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireOrgOwner, requirePlatformAdmin, requireUser } from '@/lib/auth/session'
+import { isEmailConfigured } from '@/lib/email/client'
 import { sendWelcomeEmail } from '@/lib/email/send'
 import { r2DeleteObject, r2PutObject } from '@/lib/r2/upload'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -77,6 +78,12 @@ export async function createTenantAction(
       return {
         error: `Owner password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
       }
+    }
+  } else if (!isEmailConfigured()) {
+    return {
+      error:
+        'Email is not configured, so the setup link can\'t be delivered. ' +
+        'Choose "I\'ll set a temporary password" instead.',
     }
   }
   const properties = propertySlugs
@@ -201,6 +208,12 @@ export async function createTeamMemberAction(
       return {
         error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
       }
+    }
+  } else if (!isEmailConfigured()) {
+    return {
+      error:
+        'Email is not configured, so the setup link can\'t be delivered. ' +
+        'Choose "I\'ll set a temporary password" instead.',
     }
   }
 
@@ -384,6 +397,12 @@ export async function addOrgMemberAction(
     if (!password) return { error: 'Set a temporary password or switch to self-set mode.' }
     if (password.length < MIN_PASSWORD_LENGTH) {
       return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` }
+    }
+  } else if (!isEmailConfigured()) {
+    return {
+      error:
+        'Email is not configured, so the setup link can\'t be delivered. ' +
+        'Choose "I\'ll set a temporary password" instead.',
     }
   }
   if (role !== 'org_owner' && role !== 'org_staff') {
