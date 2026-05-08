@@ -14,6 +14,7 @@ import {
 } from '@/lib/r2/upload'
 import {
   streamDeleteVideo,
+  streamEnableMp4Download,
   streamGetVideo,
   streamMp4DownloadUrl,
 } from '@/lib/stream/client'
@@ -393,7 +394,26 @@ export async function finalizeStreamVideoUploadAction(args: {
     .eq('property_id', args.propertyId)
     .eq('stream_uid', args.uid)
 
-  if (nextStatus === 'ready') revalidatePath('/media')
+  if (nextStatus === 'ready') {
+    // Kick off MP4 build the first time the video transitions to ready,
+    // so the catalog "Download" button has something to point at. The
+    // build itself is async on Cloudflare's side; the static
+    // /downloads/default.mp4 URL 404s until it lands.
+    if (row.status !== 'ready') {
+      try {
+        await streamEnableMp4Download(args.uid)
+      } catch (err) {
+        // Non-fatal: the video still streams + has a thumbnail. We just
+        // log so a misconfigured token surfaces in Vercel function logs
+        // rather than silently breaking download.
+        console.error('[stream] enable MP4 download failed', {
+          uid: args.uid,
+          message: err instanceof Error ? err.message : String(err),
+        })
+      }
+    }
+    revalidatePath('/media')
+  }
   return { ok: true, status: nextStatus }
 }
 

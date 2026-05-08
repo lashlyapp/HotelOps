@@ -171,6 +171,33 @@ export async function streamDeleteVideo(uid: string): Promise<void> {
   }
 }
 
+/**
+ * Ask Stream to start generating a downloadable MP4 for this video.
+ * Idempotent on Cloudflare's side — calling it twice is safe. The MP4
+ * isn't available immediately; Cloudflare returns the current state in
+ * the response (usually "inprogress" right after we ask, then "ready"
+ * once the file is built). The catalog "Download" button hits the static
+ * `/downloads/default.mp4` URL, which 404s until the build finishes — a
+ * fine UX given downloads are an explicit user action.
+ *
+ * Stream requires the video to be `readyToStream` first; call this only
+ * after `streamGetVideo(uid).readyToStream === true`.
+ */
+export async function streamEnableMp4Download(uid: string): Promise<void> {
+  const accountId = requireEnv('CLOUDFLARE_ACCOUNT_ID')
+  const res = await fetch(
+    `${STREAM_API}/client/v4/accounts/${accountId}/stream/${uid}/downloads`,
+    { method: 'POST', headers: streamHeaders() },
+  )
+  // 200 on first request, 200 on subsequent (state echoed back). 409-style
+  // races on parallel calls are rare enough not to block; surface other
+  // errors so the catalog can log them.
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Stream enable-download failed (${res.status}): ${text}`)
+  }
+}
+
 function b64(s: string): string {
   return Buffer.from(s, 'utf8').toString('base64')
 }
