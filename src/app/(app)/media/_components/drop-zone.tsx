@@ -15,8 +15,12 @@ import {
 } from '@/lib/media/actions'
 
 const SINGLE_PUT_THRESHOLD = 10 * 1024 * 1024 // 10 MB
-const FILES_IN_FLIGHT = 2 // max files uploading concurrently
-const PARTS_IN_FLIGHT_PER_FILE = 4 // max parts of a single file in parallel
+// Concurrency tuned around browser per-host connection caps (~6). Worst
+// case is 4 large images uploading multipart simultaneously, which is
+// FILES_IN_FLIGHT × PARTS_IN_FLIGHT_PER_FILE = 12 in-flight PUTs to R2;
+// the browser queues the overflow rather than blowing up.
+const FILES_IN_FLIGHT = 4
+const PARTS_IN_FLIGHT_PER_FILE = 3
 
 type Job =
   | { id: string; name: string; size: number; status: 'pending' }
