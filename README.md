@@ -14,7 +14,8 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
 - **Public landing page** at `/`
 - **Three-tier roles**: platform admin (us) → tenant owner (customer) → tenant staff
 - **Admin portal** (`/admin`) — list tenants, create new tenants with initial owner credentials
-- **Tenant portal** (`/media`, `/billing`, `/team`, `/account`) — owner manages their team; staff can browse the catalog
+- **Tenant portal** (`/dashboard`, `/media`, `/billing`, `/team`, `/account`) — owner manages their team; staff can browse the catalog
+- **Dashboard** — per-org overview: total files, storage used, last upload, open invoices, per-property breakdown, recent invoices
 - **Media catalog** — per-property tabs, search, type filter, click-to-preview lightbox, copy permanent URL
 - **Library stats** — file count, storage used, breakdown by type, last updated
 - **Billing** — invoice list with check-payment instructions

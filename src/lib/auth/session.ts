@@ -77,13 +77,13 @@ export async function requireOrgUser(): Promise<OrgSession> {
 
 export async function requirePlatformAdmin(): Promise<UserSession> {
   const session = await requireUser()
-  if (session.profile.role !== 'platform_admin') redirect('/media')
+  if (session.profile.role !== 'platform_admin') redirect('/dashboard')
   return session
 }
 
 export async function requireOrgOwner(): Promise<OrgSession> {
   const session = await requireOrgUser()
-  if (session.profile.role !== 'org_owner') redirect('/media')
+  if (session.profile.role !== 'org_owner') redirect('/dashboard')
   return session
 }
 

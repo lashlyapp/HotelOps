@@ -31,7 +31,7 @@ export async function signIn(formData: FormData) {
   if (profile?.role === 'platform_admin') {
     redirect('/admin')
   }
-  redirect('/media')
+  redirect('/dashboard')
 }
 
 export async function signOut() {

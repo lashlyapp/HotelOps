@@ -17,7 +17,7 @@ export default async function HomePage() {
       .select('role')
       .eq('id', user.id)
       .maybeSingle()
-    redirect(profile?.role === 'platform_admin' ? '/admin' : '/media')
+    redirect(profile?.role === 'platform_admin' ? '/admin' : '/dashboard')
   }
 
   return (
