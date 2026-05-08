@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 // Note: useEffect is used inside PreviewDialog for keydown / scroll lock.
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -11,9 +11,12 @@ import type { MediaFile } from '@/lib/r2/list'
 import { formatBytes } from '@/lib/r2/stats'
 import {
   deleteMediaAction,
+  presignPosterUploadAction,
+  recordPosterAction,
   updateMediaMetadataAction,
 } from '@/lib/media/actions'
 import { DropZone } from './drop-zone'
+import { capturePosterBlob } from './poster-capture'
 import { TagEditor } from './tag-editor'
 
 type Type = 'all' | 'image' | 'video'
@@ -268,25 +271,8 @@ function MediaCard({
             sizes="(min-width:1280px) 25vw, (min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw"
             className="object-cover"
           />
-        ) : isVideo && file.posterUrl ? (
-          <Image
-            src={file.posterUrl}
-            alt={file.displayName}
-            fill
-            sizes="(min-width:1280px) 25vw, (min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw"
-            className="object-cover"
-          />
         ) : isVideo ? (
-          // No persisted poster yet (legacy upload). #t=0.1 nudges the browser
-          // to paint the first frame, but this still issues a metadata
-          // range-request on every mount.
-          <video
-            src={`${file.url}#t=0.1`}
-            muted
-            playsInline
-            preload="metadata"
-            className="absolute inset-0 h-full w-full object-cover"
-          />
+          <VideoPoster file={file} propertyId={propertyId} />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs uppercase tracking-wider text-subtle">
             {file.contentType ?? 'file'}
@@ -319,6 +305,104 @@ function MediaCard({
       </div>
     </Card>
   )
+}
+
+/**
+ * Catalog thumbnail for video files. Renders the persisted poster when one
+ * exists; otherwise captures the first frame client-side, displays it
+ * immediately, and uploads it to R2 so subsequent loads of this file (and
+ * other clients) get a static <img>.
+ */
+function VideoPoster({
+  file,
+  propertyId,
+}: {
+  file: MediaFile
+  propertyId: string
+}) {
+  // Captured-frame blob URL, used only when the server hasn't persisted one.
+  const [capturedUrl, setCapturedUrl] = useState<string | null>(null)
+  // Reset the captured URL when the card is reused for a different file
+  // (e.g. after a list re-sort) — render-phase state sync, per React docs.
+  const [seenKey, setSeenKey] = useState(file.key)
+  if (seenKey !== file.key) {
+    setSeenKey(file.key)
+    setCapturedUrl(null)
+  }
+  // Persist-once guard: a list re-render shouldn't re-trigger capture.
+  const startedKeyRef = useRef<string | null>(file.posterUrl ? file.key : null)
+
+  useEffect(() => {
+    if (file.posterUrl) return
+    if (startedKeyRef.current === file.key) return
+    startedKeyRef.current = file.key
+
+    let cancelled = false
+    let localUrl: string | null = null
+
+    void (async () => {
+      const blob = await capturePosterBlob(file.url)
+      if (cancelled || !blob) return
+
+      // Show the captured frame right away — don't wait for the upload.
+      localUrl = URL.createObjectURL(blob)
+      setCapturedUrl(localUrl)
+
+      try {
+        const presign = await presignPosterUploadAction({
+          propertyId,
+          videoKey: file.key,
+          size: blob.size,
+        })
+        if (!presign.ok) return
+        const res = await fetch(presign.url, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'image/jpeg' },
+          body: blob,
+        })
+        if (!res.ok) return
+        await recordPosterAction({
+          propertyId,
+          videoKey: file.key,
+          posterKey: presign.posterKey,
+        })
+      } catch {
+        // Best-effort persistence; the in-memory poster still renders.
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      if (localUrl) URL.revokeObjectURL(localUrl)
+    }
+  }, [file.key, file.url, file.posterUrl, propertyId])
+
+  const posterUrl = file.posterUrl ?? capturedUrl
+  if (posterUrl) {
+    // Captured blob URLs aren't whitelisted in next.config images — use a
+    // plain <img> for those, and the optimized <Image> only for R2 URLs.
+    const isBlob = posterUrl.startsWith('blob:')
+    return isBlob ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={posterUrl}
+        alt={file.displayName}
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+    ) : (
+      <Image
+        src={posterUrl}
+        alt={file.displayName}
+        fill
+        sizes="(min-width:1280px) 25vw, (min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw"
+        className="object-cover"
+      />
+    )
+  }
+
+  // Solid placeholder while the first frame is being captured. Avoids the
+  // black-rectangle effect of <video preload="metadata"> on Chrome/Safari.
+  return <div className="absolute inset-0 bg-surface-muted" aria-hidden />
 }
 
 function PlayBadge() {

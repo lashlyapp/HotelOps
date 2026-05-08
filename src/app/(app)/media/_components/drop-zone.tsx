@@ -12,6 +12,7 @@ import {
   recordPosterAction,
   revalidateAfterUploadAction,
 } from '@/lib/media/actions'
+import { capturePosterBlob } from './poster-capture'
 
 const SINGLE_PUT_THRESHOLD = 10 * 1024 * 1024 // 10 MB
 const FILES_IN_FLIGHT = 2 // max files uploading concurrently
@@ -458,70 +459,6 @@ function xhrPut(
     }
     xhr.onerror = () => reject(new Error('Network error'))
     xhr.send(body)
-  })
-}
-
-/**
- * Render the first ~0.1s of a video to a canvas and return a JPEG blob. Used
- * to persist a static poster image alongside each video upload so the catalog
- * card can render <img> instead of <video preload="metadata">.
- */
-function capturePosterBlob(file: File): Promise<Blob | null> {
-  return new Promise((resolve) => {
-    const objectUrl = URL.createObjectURL(file)
-    const video = document.createElement('video')
-    video.preload = 'metadata'
-    video.muted = true
-    video.playsInline = true
-    video.src = objectUrl
-
-    const cleanup = () => {
-      video.removeAttribute('src')
-      video.load()
-      URL.revokeObjectURL(objectUrl)
-    }
-
-    let settled = false
-    const settle = (blob: Blob | null) => {
-      if (settled) return
-      settled = true
-      cleanup()
-      resolve(blob)
-    }
-
-    // Hard timeout in case metadata never arrives (corrupt file, codec
-    // unsupported by the browser, etc.).
-    const timeout = setTimeout(() => settle(null), 10_000)
-
-    video.addEventListener('loadeddata', () => {
-      try {
-        const canvas = document.createElement('canvas')
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          clearTimeout(timeout)
-          settle(null)
-          return
-        }
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-        canvas.toBlob(
-          (blob) => {
-            clearTimeout(timeout)
-            settle(blob)
-          },
-          'image/jpeg',
-          0.85,
-        )
-      } catch {
-        clearTimeout(timeout)
-        settle(null)
-      }
-    })
-    video.addEventListener('error', () => {
-      clearTimeout(timeout)
-      settle(null)
-    })
   })
 }
 
