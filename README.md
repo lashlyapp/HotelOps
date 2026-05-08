@@ -34,15 +34,19 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
    - **CI/CD (recommended):** push to GitHub. The `Database` workflow runs `supabase db push` against the linked remote project. Set the repo secrets listed under [CI / CD](#ci--cd).
    - **Manual one-time:** open Supabase Dashboard → SQL Editor and paste the contents of the latest file in `supabase/migrations/`.
 
-3. Seed CG Hotel Group + properties (and optionally invite the owner):
+3. Onboard a tenant (organization + properties + optional owner invite). One-off, per customer. Two options:
 
-   The `Database` GitHub Actions workflow does this automatically after migration. To run locally instead:
+   - **CI/CD (recommended):** GitHub → Actions → **Onboard tenant** → Run workflow. Fill in the slug, name, owner email, and a comma-separated `slug:Name,slug:Name` list of properties.
+   - **Local:**
 
-   ```bash
-   # In .env.local, optionally set:
-   #   SEED_OWNER_EMAIL=owner@cghotelgroup.com
-   npm run setup
-   ```
+     ```bash
+     npm run onboard:tenant -- \
+       --slug=cg-hotel-group \
+       --name="CG Hotel Group" \
+       --owner=nathan@cghotelgroup.com \
+       --property=cupertino-hotel:"Cupertino Hotel" \
+       --property=grand-hotel:"Grand Hotel"
+     ```
 
 4. Smoke-test R2 access:
 
@@ -130,19 +134,20 @@ See [`docs/design-system.md`](docs/design-system.md). TL;DR: every color in mark
 
 - **App CI:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs lint + `next build` on every push and PR. Uses placeholder env vars; no secrets required.
 
-- **Database CI:** [`.github/workflows/database.yml`](.github/workflows/database.yml) runs Supabase migrations + the seed script on every push (feature branches and merges to `main`), plus on manual dispatch. Idempotent.
+- **Database migrations (auto):** [`.github/workflows/database.yml`](.github/workflows/database.yml) runs Supabase migrations on every push (feature branches and merges to `main`) plus manual dispatch. Idempotent — Supabase CLI tracks applied migrations in `supabase_migrations.schema_migrations`.
+
+- **Tenant onboarding (manual):** [`.github/workflows/onboard-tenant.yml`](.github/workflows/onboard-tenant.yml) runs only via **Run workflow** with form inputs (org slug, name, owner email, properties). Use this every time you onboard a new customer; not tied to any particular tenant.
 
   Required GitHub repo secrets (Settings → Secrets and variables → Actions):
 
-  | Secret                       | Where to get it                                                                |
-  | ---------------------------- | ------------------------------------------------------------------------------ |
-  | `SUPABASE_ACCESS_TOKEN`      | https://supabase.com/dashboard/account/tokens (create a personal access token) |
-  | `SUPABASE_PROJECT_REF`       | `ebhrldafznxsepqcpcjx` (your project ref)                                      |
-  | `SUPABASE_DB_PASSWORD`       | Supabase Dashboard → Settings → Database → Reset / reveal password             |
-  | `SUPABASE_URL`               | `https://ebhrldafznxsepqcpcjx.supabase.co`                                     |
-  | `SUPABASE_SERVICE_ROLE_KEY`  | Supabase Dashboard → Settings → API → `service_role` key                       |
-  | `SITE_URL`                   | Production / preview URL used for invite-email redirects                       |
-  | `SEED_OWNER_EMAIL`           | (Optional) email to invite as the CG Hotel Group owner. Skip to run only seed without invite. |
+  | Secret                       | Used by                | Where to get it                                                                |
+  | ---------------------------- | ---------------------- | ------------------------------------------------------------------------------ |
+  | `SUPABASE_ACCESS_TOKEN`      | migrations             | https://supabase.com/dashboard/account/tokens                                  |
+  | `SUPABASE_PROJECT_REF`       | migrations             | `ebhrldafznxsepqcpcjx`                                                         |
+  | `SUPABASE_DB_PASSWORD`       | migrations             | Supabase Dashboard → Settings → Database                                       |
+  | `SUPABASE_URL`               | onboarding             | `https://ebhrldafznxsepqcpcjx.supabase.co`                                     |
+  | `SUPABASE_SERVICE_ROLE_KEY`  | onboarding             | Supabase Dashboard → Settings → API → `service_role`                           |
+  | `SITE_URL`                   | onboarding             | Production / preview URL for invite-email redirects                            |
 
 - **CD (Vercel):**
   1. In Vercel, **Import Project** → select the GitHub repo `lashlyapp/HotelOps`.

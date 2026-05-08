@@ -1,33 +1,32 @@
 name: Database
 
-# Runs on every push (feature branches AND the push that lands on main when a PR
-# merges) and via manual dispatch. Idempotent: Supabase CLI tracks applied
-# migrations in supabase_migrations.schema_migrations, and the seed script
-# upserts org/properties + tolerates already-invited users.
+# Applies Supabase migrations to the linked remote project on every push
+# (feature branches AND the push that lands on main when a PR merges) and via
+# manual dispatch. Idempotent: Supabase CLI tracks applied migrations in
+# supabase_migrations.schema_migrations.
+#
+# Tenant onboarding (creating an org, its properties, and inviting the owner)
+# is intentionally NOT part of this workflow — that's a manual,
+# per-customer operation. See .github/workflows/onboard-tenant.yml.
 
 on:
   push:
   workflow_dispatch:
 
 concurrency:
-  # Serialize runs against the shared remote DB so two concurrent pushes can't
-  # race each other applying migrations or seeding.
-  group: database
+  # Serialize migration runs against the shared remote DB so concurrent pushes
+  # can't race each other.
+  group: db-migrate
   cancel-in-progress: false
 
 jobs:
-  apply:
-    name: Migrate + seed
+  migrate:
+    name: Apply migrations
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
 
       - uses: supabase/setup-cli@v1
         with:
@@ -44,14 +43,3 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: supabase db push --include-all
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Seed CG Hotel Group + invite owner
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          NEXT_PUBLIC_SITE_URL: ${{ secrets.SITE_URL }}
-          SEED_OWNER_EMAIL: ${{ secrets.SEED_OWNER_EMAIL }}
-        run: npm run setup
