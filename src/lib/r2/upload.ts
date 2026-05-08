@@ -4,6 +4,7 @@ import {
   CompleteMultipartUploadCommand,
   CreateMultipartUploadCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   UploadPartCommand,
@@ -58,6 +59,29 @@ export async function r2PresignPutUrl(
     ContentType: contentType,
   })
   return getSignedUrl(r2Client(), command, { expiresIn: 300 })
+}
+
+/**
+ * Presigned GET URL with a forced Content-Disposition. Used by the
+ * "Download" UI so the browser saves files instead of navigating to them
+ * (R2's default response is inline). URL valid for 5 minutes.
+ */
+export async function r2PresignDownloadUrl(
+  key: string,
+  filename: string,
+): Promise<string> {
+  const command = new GetObjectCommand({
+    Bucket: r2Bucket(),
+    Key: key,
+    ResponseContentDisposition: `attachment; filename="${sanitizeForHeader(filename)}"`,
+  })
+  return getSignedUrl(r2Client(), command, { expiresIn: 300 })
+}
+
+function sanitizeForHeader(name: string): string {
+  // RFC 6266 quoted-string: drop characters that would break the header
+  // or let a caller smuggle additional directives.
+  return name.replace(/[\\"\r\n]/g, '_')
 }
 
 export async function r2ObjectExists(key: string): Promise<boolean> {

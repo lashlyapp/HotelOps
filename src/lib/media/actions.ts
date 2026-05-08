@@ -8,6 +8,7 @@ import {
   r2CreateMultipartUpload,
   r2DeleteObject,
   r2ObjectExists,
+  r2PresignDownloadUrl,
   r2PresignParts,
   r2PresignPutUrl,
 } from '@/lib/r2/upload'
@@ -200,6 +201,62 @@ export async function deleteMediaAction(args: {
 
   revalidatePath('/media')
   revalidatePath('/dashboard')
+}
+
+const MAX_BULK_OPERATION = 500
+
+export async function bulkDeleteMediaAction(args: {
+  propertyId: string
+  keys: string[]
+}): Promise<{ ok: true; deleted: number } | { ok: false; error: string }> {
+  const session = await requireOrgUser()
+  const property = session.properties.find((p) => p.id === args.propertyId)
+  if (!property) return { ok: false, error: 'Property not found.' }
+
+  // Cap at a sane number so a single request can't take down the API.
+  if (args.keys.length === 0) return { ok: true, deleted: 0 }
+  if (args.keys.length > MAX_BULK_OPERATION) {
+    return { ok: false, error: `Select at most ${MAX_BULK_OPERATION} files at a time.` }
+  }
+
+  const tenantKeys = args.keys.filter((k) => k.startsWith(property.r2_prefix))
+  await Promise.all(tenantKeys.map((k) => r2DeleteObject(k)))
+
+  const admin = createAdminClient()
+  if (tenantKeys.length > 0) {
+    await admin
+      .from('media_tags')
+      .delete()
+      .eq('property_id', args.propertyId)
+      .in('file_key', tenantKeys)
+  }
+
+  revalidatePath('/media')
+  revalidatePath('/dashboard')
+  return { ok: true, deleted: tenantKeys.length }
+}
+
+// ----------------------------------------------------------------------------
+// Download — presigned GET with Content-Disposition: attachment
+// ----------------------------------------------------------------------------
+
+export type DownloadUrlResult =
+  | { ok: true; url: string }
+  | { ok: false; error: string }
+
+export async function presignDownloadAction(args: {
+  propertyId: string
+  key: string
+  filename: string
+}): Promise<DownloadUrlResult> {
+  const session = await requireOrgUser()
+  const property = session.properties.find((p) => p.id === args.propertyId)
+  if (!property) return { ok: false, error: 'Property not found.' }
+  if (!args.key.startsWith(property.r2_prefix)) {
+    return { ok: false, error: 'File does not belong to this property.' }
+  }
+  const url = await r2PresignDownloadUrl(args.key, args.filename)
+  return { ok: true, url }
 }
 
 // ----------------------------------------------------------------------------

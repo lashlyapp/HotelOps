@@ -10,16 +10,20 @@ import { cn } from '@/lib/utils/cn'
 import type { MediaFile } from '@/lib/r2/list'
 import { formatBytes } from '@/lib/r2/stats'
 import {
+  bulkDeleteMediaAction,
   deleteMediaAction,
+  presignDownloadAction,
   presignPosterUploadAction,
   recordPosterAction,
   updateMediaMetadataAction,
 } from '@/lib/media/actions'
+import { formatRelative } from '@/lib/r2/stats'
 import { DropZone } from './drop-zone'
 import { capturePosterBlob } from './poster-capture'
 import { TagEditor } from './tag-editor'
 
 type Type = 'all' | 'image' | 'video'
+type View = 'grid' | 'list'
 
 export function MediaBrowser({
   files: initialFiles,
@@ -45,6 +49,9 @@ export function MediaBrowser({
   const [type, setType] = useState<Type>('all')
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [active, setActive] = useState<MediaFile | null>(null)
+  const [view, setView] = useState<View>('grid')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkBusy, setBulkBusy] = useState<null | 'delete' | 'download'>(null)
 
   const allTags = useMemo(() => {
     const set = new Set<string>()
@@ -70,6 +77,88 @@ export function MediaBrowser({
       )
     })
   }, [files, query, type, tagFilter])
+
+  // Prune selection when files change (e.g. after a delete) so we don't keep
+  // dangling keys around. Render-phase sync — the file list is the source of
+  // truth, selection just mirrors a subset of it.
+  const [seenFilesForSelection, setSeenFilesForSelection] = useState(files)
+  if (files !== seenFilesForSelection) {
+    setSeenFilesForSelection(files)
+    if (selected.size > 0) {
+      const live = new Set(files.map((f) => f.key))
+      let changed = false
+      const next = new Set<string>()
+      for (const k of selected) {
+        if (live.has(k)) next.add(k)
+        else changed = true
+      }
+      if (changed) setSelected(next)
+    }
+  }
+
+  function toggleSelect(key: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+  function selectAllVisible() {
+    setSelected(new Set(filtered.map((f) => f.key)))
+  }
+  function clearSelection() {
+    setSelected(new Set())
+  }
+
+  async function handleBulkDelete() {
+    const keys = Array.from(selected)
+    if (keys.length === 0) return
+    if (
+      !confirm(
+        `Delete ${keys.length} file${keys.length === 1 ? '' : 's'}? This removes ${keys.length === 1 ? 'it' : 'them'} from R2 permanently.`,
+      )
+    )
+      return
+    setBulkBusy('delete')
+    const result = await bulkDeleteMediaAction({ propertyId, keys })
+    setBulkBusy(null)
+    if (!result.ok) {
+      alert(result.error)
+      return
+    }
+    const removed = new Set(keys)
+    setFiles((prev) => prev.filter((f) => !removed.has(f.key)))
+    setSelected(new Set())
+  }
+
+  async function handleBulkDownload() {
+    const keys = Array.from(selected)
+    if (keys.length === 0) return
+    setBulkBusy('download')
+    const byKey = new Map(files.map((f) => [f.key, f]))
+    for (const key of keys) {
+      const file = byKey.get(key)
+      if (!file) continue
+      const result = await presignDownloadAction({
+        propertyId,
+        key: file.key,
+        filename: file.filename,
+      })
+      if (!result.ok) continue
+      const a = document.createElement('a')
+      a.href = result.url
+      a.download = file.filename
+      a.rel = 'noopener'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      // Stagger so Chrome doesn't lump everything into one "Allow multiple
+      // downloads?" prompt; also keeps the network panel readable.
+      await new Promise((r) => setTimeout(r, 250))
+    }
+    setBulkBusy(null)
+  }
 
   function handleTagChange(key: string, nextTags: string[]) {
     setFiles((prev) =>
@@ -118,7 +207,10 @@ export function MediaBrowser({
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
-            <FilterTabs value={type} onChange={setType} />
+            <div className="flex items-center gap-2">
+              <FilterTabs value={type} onChange={setType} />
+              <ViewToggle value={view} onChange={setView} />
+            </div>
           </div>
 
           {allTags.length > 0 ? (
@@ -129,22 +221,44 @@ export function MediaBrowser({
             />
           ) : null}
 
+          {selected.size > 0 ? (
+            <BulkActionBar
+              selectedCount={selected.size}
+              busy={bulkBusy}
+              onClear={clearSelection}
+              onDelete={handleBulkDelete}
+              onDownload={handleBulkDownload}
+            />
+          ) : null}
+
           {filtered.length === 0 ? (
             <p className="text-sm text-muted py-12 text-center">
               No files match your filters.
             </p>
-          ) : (
+          ) : view === 'grid' ? (
             <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filtered.map((file) => (
                 <MediaCard
                   key={file.key}
                   file={file}
                   propertyId={propertyId}
+                  selected={selected.has(file.key)}
+                  onToggleSelect={() => toggleSelect(file.key)}
                   onPreview={() => setActive(file)}
                   onTagsChange={(t) => handleTagChange(file.key, t)}
                 />
               ))}
             </ul>
+          ) : (
+            <MediaList
+              files={filtered}
+              propertyId={propertyId}
+              selected={selected}
+              onToggleSelect={toggleSelect}
+              onSelectAll={selectAllVisible}
+              onClearSelection={clearSelection}
+              onPreview={(file) => setActive(file)}
+            />
           )}
         </>
       )}
@@ -241,14 +355,339 @@ function TagFilterBar({
   )
 }
 
+function ViewToggle({
+  value,
+  onChange,
+}: {
+  value: View
+  onChange: (next: View) => void
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="View mode"
+      className="inline-flex rounded-md border border-border-default bg-surface p-0.5"
+    >
+      {(['grid', 'list'] as const).map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          onClick={() => onChange(opt)}
+          aria-pressed={value === opt}
+          aria-label={opt === 'grid' ? 'Grid view' : 'List view'}
+          className={cn(
+            'focus-ring rounded-sm px-2 py-1 text-xs font-medium transition-colors',
+            value === opt
+              ? 'bg-surface-muted text-fg'
+              : 'text-muted hover:text-fg',
+          )}
+        >
+          {opt === 'grid' ? <GridIcon /> : <ListIcon />}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function GridIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden className="h-4 w-4 fill-current">
+      <rect x="1" y="1" width="6" height="6" rx="1" />
+      <rect x="9" y="1" width="6" height="6" rx="1" />
+      <rect x="1" y="9" width="6" height="6" rx="1" />
+      <rect x="9" y="9" width="6" height="6" rx="1" />
+    </svg>
+  )
+}
+
+function ListIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden className="h-4 w-4 fill-current">
+      <rect x="1" y="2" width="14" height="2" rx="1" />
+      <rect x="1" y="7" width="14" height="2" rx="1" />
+      <rect x="1" y="12" width="14" height="2" rx="1" />
+    </svg>
+  )
+}
+
+function SelectCheckbox({
+  checked,
+  indeterminate,
+  onChange,
+  label,
+  className,
+}: {
+  checked: boolean
+  indeterminate?: boolean
+  onChange: () => void
+  label: string
+  className?: string
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = !!indeterminate && !checked
+  }, [indeterminate, checked])
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={checked}
+      aria-label={label}
+      onChange={onChange}
+      onClick={(e) => e.stopPropagation()}
+      className={cn(
+        'focus-ring size-4 cursor-pointer rounded-xs border border-border-default bg-surface accent-fg',
+        className,
+      )}
+    />
+  )
+}
+
+function BulkActionBar({
+  selectedCount,
+  busy,
+  onClear,
+  onDelete,
+  onDownload,
+}: {
+  selectedCount: number
+  busy: null | 'delete' | 'download'
+  onClear: () => void
+  onDelete: () => void
+  onDownload: () => void
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border border-border-default bg-surface-muted px-3 py-2">
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-fg">
+          {selectedCount} selected
+        </span>
+        <button
+          type="button"
+          onClick={onClear}
+          className="focus-ring rounded-sm text-xs text-muted hover:text-fg"
+        >
+          Clear
+        </button>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={onDownload}
+          disabled={busy !== null}
+        >
+          {busy === 'download' ? 'Downloading…' : 'Download'}
+        </Button>
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={busy !== null}
+          className="focus-ring rounded-md bg-danger-bg/20 px-3 py-1.5 text-xs font-medium text-danger-fg hover:bg-danger-bg/40 disabled:opacity-50 transition-colors"
+        >
+          {busy === 'delete'
+            ? 'Deleting…'
+            : `Delete ${selectedCount} file${selectedCount === 1 ? '' : 's'}`}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function MediaList({
+  files,
+  propertyId,
+  selected,
+  onToggleSelect,
+  onSelectAll,
+  onClearSelection,
+  onPreview,
+}: {
+  files: MediaFile[]
+  propertyId: string
+  selected: Set<string>
+  onToggleSelect: (key: string) => void
+  onSelectAll: () => void
+  onClearSelection: () => void
+  onPreview: (file: MediaFile) => void
+}) {
+  const allSelected =
+    files.length > 0 && files.every((f) => selected.has(f.key))
+  const someSelected = files.some((f) => selected.has(f.key))
+
+  return (
+    <div className="overflow-hidden rounded-md border border-border-subtle bg-surface">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="border-b border-border-subtle bg-surface-muted/40 text-left text-xs uppercase tracking-wider text-subtle">
+            <tr>
+              <th scope="col" className="w-10 px-3 py-2">
+                <SelectCheckbox
+                  checked={allSelected}
+                  indeterminate={!allSelected && someSelected}
+                  onChange={() =>
+                    allSelected ? onClearSelection() : onSelectAll()
+                  }
+                  label="Select all visible files"
+                />
+              </th>
+              <th scope="col" className="px-3 py-2 font-medium">
+                Name
+              </th>
+              <th scope="col" className="px-3 py-2 font-medium">
+                Type
+              </th>
+              <th scope="col" className="px-3 py-2 font-medium text-right">
+                Size
+              </th>
+              <th scope="col" className="px-3 py-2 font-medium">
+                Modified
+              </th>
+              <th scope="col" className="w-10 px-3 py-2" aria-label="Actions" />
+            </tr>
+          </thead>
+          <tbody>
+            {files.map((file) => (
+              <MediaListRow
+                key={file.key}
+                file={file}
+                propertyId={propertyId}
+                selected={selected.has(file.key)}
+                onToggleSelect={() => onToggleSelect(file.key)}
+                onPreview={() => onPreview(file)}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function MediaListRow({
+  file,
+  propertyId,
+  selected,
+  onToggleSelect,
+  onPreview,
+}: {
+  file: MediaFile
+  propertyId: string
+  selected: boolean
+  onToggleSelect: () => void
+  onPreview: () => void
+}) {
+  const isImage = file.contentType?.startsWith('image/') ?? false
+  const isVideo = file.contentType?.startsWith('video/') ?? false
+  const [downloading, setDownloading] = useState(false)
+
+  async function handleDownload() {
+    setDownloading(true)
+    const result = await presignDownloadAction({
+      propertyId,
+      key: file.key,
+      filename: file.filename,
+    })
+    setDownloading(false)
+    if (!result.ok) {
+      alert(result.error)
+      return
+    }
+    const a = document.createElement('a')
+    a.href = result.url
+    a.download = file.filename
+    a.rel = 'noopener'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
+  return (
+    <tr
+      className={cn(
+        'border-b border-border-subtle last:border-b-0 hover:bg-surface-muted/30',
+        selected && 'bg-surface-muted/50',
+      )}
+    >
+      <td className="px-3 py-2 align-middle">
+        <SelectCheckbox
+          checked={selected}
+          onChange={onToggleSelect}
+          label={`Select ${file.displayName}`}
+        />
+      </td>
+      <td className="px-3 py-2 align-middle">
+        <button
+          type="button"
+          onClick={onPreview}
+          className="focus-ring flex items-center gap-3 text-left"
+        >
+          <span className="relative block h-10 w-14 shrink-0 overflow-hidden rounded-sm bg-surface-muted">
+            {isImage ? (
+              <Image
+                src={file.url}
+                alt=""
+                fill
+                sizes="56px"
+                className="object-cover"
+              />
+            ) : isVideo ? (
+              <VideoPoster file={file} propertyId={propertyId} />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-wider text-subtle">
+                file
+              </span>
+            )}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-medium text-fg">
+              {file.displayName}
+            </span>
+            <span
+              title={file.filename}
+              className="block truncate text-xs text-subtle font-mono"
+            >
+              {file.filename}
+            </span>
+          </span>
+        </button>
+      </td>
+      <td className="px-3 py-2 align-middle text-xs text-muted">
+        {file.contentType ?? '—'}
+      </td>
+      <td className="px-3 py-2 align-middle text-right text-xs text-muted tabular-nums">
+        {formatBytes(file.size)}
+      </td>
+      <td className="px-3 py-2 align-middle text-xs text-muted">
+        {formatRelative(file.lastModified)}
+      </td>
+      <td className="px-3 py-2 align-middle text-right">
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={downloading}
+          aria-label={`Download ${file.displayName}`}
+          className="focus-ring rounded-sm px-2 py-1 text-xs text-muted hover:text-fg disabled:opacity-50"
+        >
+          {downloading ? '…' : 'Download'}
+        </button>
+      </td>
+    </tr>
+  )
+}
+
 function MediaCard({
   file,
   propertyId,
+  selected,
+  onToggleSelect,
   onPreview,
   onTagsChange,
 }: {
   file: MediaFile
   propertyId: string
+  selected: boolean
+  onToggleSelect: () => void
   onPreview: () => void
   onTagsChange: (tags: string[]) => void
 }) {
@@ -256,7 +695,19 @@ function MediaCard({
   const isVideo = file.contentType?.startsWith('video/') ?? false
 
   return (
-    <Card className="flex flex-col overflow-hidden">
+    <Card
+      className={cn(
+        'flex flex-col overflow-hidden transition-shadow',
+        selected && 'ring-2 ring-fg',
+      )}
+    >
+      <div className="relative">
+        <SelectCheckbox
+          checked={selected}
+          onChange={onToggleSelect}
+          label={`Select ${file.displayName}`}
+          className="absolute left-2 top-2 z-10"
+        />
       <button
         type="button"
         onClick={onPreview}
@@ -280,6 +731,7 @@ function MediaCard({
         )}
         {isVideo ? <PlayBadge /> : null}
       </button>
+      </div>
 
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div>
