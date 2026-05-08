@@ -88,6 +88,8 @@ In Cloudflare Dashboard → R2 → `app-hotelops` → Settings → CORS Policy, 
 [
   {
     "AllowedOrigins": [
+      "https://www.myhotelops.com",
+      "https://myhotelops.com",
       "https://app.myhotelops.com",
       "https://hotel-ops-git-claude-setup-main-branch-ffliy-lashly.vercel.app",
       "http://localhost:3000"
@@ -100,7 +102,7 @@ In Cloudflare Dashboard → R2 → `app-hotelops` → Settings → CORS Policy, 
 ]
 ```
 
-Add any preview-deploy URLs to `AllowedOrigins` as needed. Without `ExposeHeaders: ["ETag"]`, multipart uploads fail with "Cannot read ETag".
+`AllowedOrigins` must contain every hostname the app is served from — list each one explicitly (R2 doesn't support wildcards on subdomains and the browser sends the exact origin in the preflight). Add preview-deploy URLs the same way. Without `ExposeHeaders: ["ETag"]`, multipart uploads fail with "Cannot read ETag".
 
 ## R2 layout
 
