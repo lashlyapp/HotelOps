@@ -252,6 +252,7 @@ function MediaCard({
   onTagsChange: (tags: string[]) => void
 }) {
   const isImage = file.contentType?.startsWith('image/') ?? false
+  const isVideo = file.contentType?.startsWith('video/') ?? false
 
   return (
     <Card className="flex flex-col overflow-hidden">
@@ -268,6 +269,16 @@ function MediaCard({
             fill
             sizes="(min-width:1280px) 25vw, (min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw"
             className="object-cover"
+          />
+        ) : isVideo ? (
+          // #t=0.1 forces browsers to paint the first frame as a poster
+          // without needing a separately generated thumbnail.
+          <video
+            src={`${file.url}#t=0.1`}
+            muted
+            playsInline
+            preload="metadata"
+            className="absolute inset-0 h-full w-full object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs uppercase tracking-wider text-subtle">
