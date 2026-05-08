@@ -3,8 +3,12 @@
 import { revalidatePath } from 'next/cache'
 import { requireOrgUser } from '@/lib/auth/session'
 import {
+  r2AbortMultipartUpload,
+  r2CompleteMultipartUpload,
+  r2CreateMultipartUpload,
   r2DeleteObject,
   r2ObjectExists,
+  r2PresignParts,
   r2PresignPutUrl,
 } from '@/lib/r2/upload'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -79,6 +83,94 @@ export async function revalidateAfterUploadAction(propertySlug: string) {
   revalidatePath(`/dashboard`)
   // No-op header to read the slug for path scoping later if needed.
   void propertySlug
+}
+
+// ----------------------------------------------------------------------------
+// Multipart upload — for large files (recommended threshold: > 10 MB).
+// All part URLs are presigned upfront so the browser only round-trips through
+// Vercel twice per file (init + complete) regardless of part count.
+// ----------------------------------------------------------------------------
+
+const PART_SIZE = 8 * 1024 * 1024 // 8 MB per part — sweet spot for R2/S3.
+const MAX_PARTS = 10_000 // S3 multipart hard limit.
+
+export type InitMultipartResult =
+  | {
+      ok: true
+      key: string
+      uploadId: string
+      partUrls: string[]
+      partSize: number
+    }
+  | { ok: false; error: string }
+
+export async function initMultipartUploadAction(args: {
+  propertyId: string
+  filename: string
+  contentType: string
+  size: number
+}): Promise<InitMultipartResult> {
+  const session = await requireOrgUser()
+
+  if (!ALLOWED_MIME.has(args.contentType)) {
+    return { ok: false, error: `${args.contentType} is not an allowed file type.` }
+  }
+  if (args.size > MAX_FILE_BYTES) {
+    return { ok: false, error: 'File exceeds 200 MB limit.' }
+  }
+  if (args.size <= 0) {
+    return { ok: false, error: 'Empty file.' }
+  }
+
+  const property = session.properties.find((p) => p.id === args.propertyId)
+  if (!property) return { ok: false, error: 'Property not found.' }
+
+  const safe = sanitizeFilename(args.filename)
+  if (!safe) return { ok: false, error: 'Invalid filename.' }
+
+  const partCount = Math.ceil(args.size / PART_SIZE)
+  if (partCount > MAX_PARTS) {
+    return { ok: false, error: 'File has too many parts.' }
+  }
+
+  const key = await uniqueKey(property.r2_prefix, safe)
+  const uploadId = await r2CreateMultipartUpload(key, args.contentType)
+  const partUrls = await r2PresignParts(key, uploadId, partCount)
+
+  return { ok: true, key, uploadId, partUrls, partSize: PART_SIZE }
+}
+
+export async function completeMultipartUploadAction(args: {
+  propertyId: string
+  key: string
+  uploadId: string
+  parts: Array<{ partNumber: number; etag: string }>
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await requireOrgUser()
+  const property = session.properties.find((p) => p.id === args.propertyId)
+  if (!property) return { ok: false, error: 'Property not found.' }
+  if (!args.key.startsWith(property.r2_prefix)) {
+    return { ok: false, error: 'Key not under this property.' }
+  }
+  try {
+    await r2CompleteMultipartUpload(args.key, args.uploadId, args.parts)
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Complete failed'
+    return { ok: false, error: message }
+  }
+}
+
+export async function abortMultipartUploadAction(args: {
+  propertyId: string
+  key: string
+  uploadId: string
+}) {
+  const session = await requireOrgUser()
+  const property = session.properties.find((p) => p.id === args.propertyId)
+  if (!property) return
+  if (!args.key.startsWith(property.r2_prefix)) return
+  await r2AbortMultipartUpload(args.key, args.uploadId)
 }
 
 // ----------------------------------------------------------------------------

@@ -1,8 +1,12 @@
 import 'server-only'
 import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
+  UploadPartCommand,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { r2Bucket, r2Client } from './client'
@@ -64,5 +68,90 @@ export async function r2ObjectExists(key: string): Promise<boolean> {
     return true
   } catch {
     return false
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Multipart upload — for large files (videos, originals).
+// Browser uploads each part directly to R2 via a presigned URL.
+// ----------------------------------------------------------------------------
+
+const MULTIPART_URL_TTL_SECONDS = 60 * 60 // 1 hour
+
+export async function r2CreateMultipartUpload(
+  key: string,
+  contentType: string,
+): Promise<string> {
+  const res = await r2Client().send(
+    new CreateMultipartUploadCommand({
+      Bucket: r2Bucket(),
+      Key: key,
+      ContentType: contentType,
+    }),
+  )
+  if (!res.UploadId) throw new Error('R2 did not return an UploadId')
+  return res.UploadId
+}
+
+/**
+ * Presign every part URL upfront so the browser does N HTTP PUTs without
+ * round-tripping through Vercel for each one. URLs valid for 1 hour.
+ */
+export async function r2PresignParts(
+  key: string,
+  uploadId: string,
+  partCount: number,
+): Promise<string[]> {
+  const client = r2Client()
+  const bucket = r2Bucket()
+  return Promise.all(
+    Array.from({ length: partCount }, (_, i) => {
+      const command = new UploadPartCommand({
+        Bucket: bucket,
+        Key: key,
+        UploadId: uploadId,
+        PartNumber: i + 1,
+      })
+      return getSignedUrl(client, command, {
+        expiresIn: MULTIPART_URL_TTL_SECONDS,
+      })
+    }),
+  )
+}
+
+export async function r2CompleteMultipartUpload(
+  key: string,
+  uploadId: string,
+  parts: Array<{ partNumber: number; etag: string }>,
+): Promise<void> {
+  await r2Client().send(
+    new CompleteMultipartUploadCommand({
+      Bucket: r2Bucket(),
+      Key: key,
+      UploadId: uploadId,
+      MultipartUpload: {
+        Parts: parts
+          .slice()
+          .sort((a, b) => a.partNumber - b.partNumber)
+          .map((p) => ({ PartNumber: p.partNumber, ETag: p.etag })),
+      },
+    }),
+  )
+}
+
+export async function r2AbortMultipartUpload(
+  key: string,
+  uploadId: string,
+): Promise<void> {
+  try {
+    await r2Client().send(
+      new AbortMultipartUploadCommand({
+        Bucket: r2Bucket(),
+        Key: key,
+        UploadId: uploadId,
+      }),
+    )
+  } catch {
+    // Best-effort; if the upload was never created or already aborted, fine.
   }
 }

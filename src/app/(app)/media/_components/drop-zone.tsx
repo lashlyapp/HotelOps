@@ -4,9 +4,16 @@ import { useRef, useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
 import {
+  abortMultipartUploadAction,
+  completeMultipartUploadAction,
+  initMultipartUploadAction,
   presignUploadAction,
   revalidateAfterUploadAction,
 } from '@/lib/media/actions'
+
+const SINGLE_PUT_THRESHOLD = 10 * 1024 * 1024 // 10 MB
+const FILES_IN_FLIGHT = 2 // max files uploading concurrently
+const PARTS_IN_FLIGHT_PER_FILE = 4 // max parts of a single file in parallel
 
 type Job =
   | { id: string; name: string; size: number; status: 'pending' }
@@ -44,10 +51,7 @@ export function DropZone({
     }))
     setJobs((prev) => [...prev, ...newJobs])
 
-    // Concurrent uploads with a worker-pool pattern. Cap at 4 to avoid
-    // saturating the user's uplink and the browser's connection pool.
-    const CONCURRENCY = 4
-    const results = await runWithLimit(incoming, CONCURRENCY, (file, i) =>
+    const results = await runWithLimit(incoming, FILES_IN_FLIGHT, (file, i) =>
       uploadOne(file, newJobs[i].id, (pct) =>
         updateJob(newJobs[i].id, pct),
       ),
@@ -72,58 +76,136 @@ export function DropZone({
     )
   }
 
+  function failJob(id: string, error: string) {
+    setJobs((prev) =>
+      prev.map((j) => (j.id === id ? { ...j, status: 'error', error } : j)),
+    )
+  }
+
+  function finishJob(id: string) {
+    setJobs((prev) =>
+      prev.map((j) => (j.id === id ? { ...j, status: 'done' } : j)),
+    )
+  }
+
   async function uploadOne(
     file: File,
     jobId: string,
     onProgress: (pct: number) => void,
   ): Promise<boolean> {
+    const contentType = file.type || 'application/octet-stream'
+    if (file.size <= SINGLE_PUT_THRESHOLD) {
+      return uploadSingle(file, contentType, jobId, onProgress)
+    }
+    return uploadMultipart(file, contentType, jobId, onProgress)
+  }
+
+  async function uploadSingle(
+    file: File,
+    contentType: string,
+    jobId: string,
+    onProgress: (pct: number) => void,
+  ): Promise<boolean> {
+    const presign = await presignUploadAction({
+      propertyId,
+      filename: file.name,
+      contentType,
+      size: file.size,
+    })
+    if (!presign.ok) {
+      failJob(jobId, presign.error)
+      return false
+    }
     try {
-      const presign = await presignUploadAction({
+      await xhrPut(presign.url, file, contentType, onProgress)
+      finishJob(jobId)
+      return true
+    } catch (err) {
+      failJob(jobId, err instanceof Error ? err.message : 'Upload failed')
+      return false
+    }
+  }
+
+  async function uploadMultipart(
+    file: File,
+    contentType: string,
+    jobId: string,
+    onProgress: (pct: number) => void,
+  ): Promise<boolean> {
+    const init = await initMultipartUploadAction({
+      propertyId,
+      filename: file.name,
+      contentType,
+      size: file.size,
+    })
+    if (!init.ok) {
+      failJob(jobId, init.error)
+      return false
+    }
+
+    const partCount = init.partUrls.length
+    const partProgress = new Array<number>(partCount).fill(0) // bytes uploaded per part
+    const partSizes = Array.from({ length: partCount }, (_, i) => {
+      const start = i * init.partSize
+      const end = Math.min(start + init.partSize, file.size)
+      return end - start
+    })
+
+    function recomputeOverall() {
+      const totalUploaded = partProgress.reduce((a, b) => a + b, 0)
+      const pct = Math.round((totalUploaded / file.size) * 100)
+      onProgress(Math.min(pct, 99))
+    }
+
+    try {
+      const parts = await runWithLimit(
+        Array.from({ length: partCount }, (_, i) => i),
+        PARTS_IN_FLIGHT_PER_FILE,
+        async (i) => {
+          const start = i * init.partSize
+          const end = start + partSizes[i]
+          const blob = file.slice(start, end)
+          const etag = await xhrPutBlob(
+            init.partUrls[i],
+            blob,
+            contentType,
+            (loaded) => {
+              partProgress[i] = loaded
+              recomputeOverall()
+            },
+          )
+          partProgress[i] = partSizes[i] // ensure full credit on completion
+          recomputeOverall()
+          return { partNumber: i + 1, etag }
+        },
+      )
+
+      const complete = await completeMultipartUploadAction({
         propertyId,
-        filename: file.name,
-        contentType: file.type || 'application/octet-stream',
-        size: file.size,
+        key: init.key,
+        uploadId: init.uploadId,
+        parts,
       })
-      if (!presign.ok) {
-        setJobs((prev) =>
-          prev.map((j) =>
-            j.id === jobId
-              ? { ...j, status: 'error', error: presign.error }
-              : j,
-          ),
-        )
+      if (!complete.ok) {
+        failJob(jobId, complete.error)
+        await abortMultipartUploadAction({
+          propertyId,
+          key: init.key,
+          uploadId: init.uploadId,
+        })
         return false
       }
 
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        xhr.open('PUT', presign.url)
-        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
-        xhr.upload.onprogress = (evt) => {
-          if (evt.lengthComputable) {
-            const pct = Math.round((evt.loaded / evt.total) * 100)
-            onProgress(pct)
-          }
-        }
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) resolve()
-          else reject(new Error(`Upload failed (${xhr.status})`))
-        }
-        xhr.onerror = () => reject(new Error('Network error'))
-        xhr.send(file)
-      })
-
-      setJobs((prev) =>
-        prev.map((j) => (j.id === jobId ? { ...j, status: 'done' } : j)),
-      )
+      onProgress(100)
+      finishJob(jobId)
       return true
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Upload failed'
-      setJobs((prev) =>
-        prev.map((j) =>
-          j.id === jobId ? { ...j, status: 'error', error: message } : j,
-        ),
-      )
+      failJob(jobId, err instanceof Error ? err.message : 'Upload failed')
+      await abortMultipartUploadAction({
+        propertyId,
+        key: init.key,
+        uploadId: init.uploadId,
+      })
       return false
     }
   }
@@ -152,9 +234,7 @@ export function DropZone({
       )}
     >
       <div className="p-6 text-center space-y-3">
-        <p className="text-sm text-fg">
-          Drag & drop files here, or
-        </p>
+        <p className="text-sm text-fg">Drag & drop files here, or</p>
         <Button type="button" variant="secondary" size="sm" onClick={pickFiles}>
           Choose files
         </Button>
@@ -223,11 +303,23 @@ function JobRow({ job }: { job: Job }) {
   )
 }
 
-/**
- * Run async tasks against a list with bounded concurrency. Each worker pulls
- * the next index off a shared counter, so faster tasks don't sit idle waiting
- * for slower ones in the same batch.
- */
+function ProgressBar({ pct }: { pct: number }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 rounded-full bg-surface-muted overflow-hidden">
+        <div
+          className="h-full bg-fg transition-[width] duration-200"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-xs text-muted tabular-nums w-9 text-right">
+        {pct}%
+      </span>
+    </div>
+  )
+}
+
+/** Run async tasks with bounded concurrency. */
 async function runWithLimit<T, R>(
   items: T[],
   limit: number,
@@ -249,18 +341,68 @@ async function runWithLimit<T, R>(
   return results
 }
 
-function ProgressBar({ pct }: { pct: number }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 rounded-full bg-surface-muted overflow-hidden">
-        <div
-          className="h-full bg-fg transition-[width] duration-200"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <span className="text-xs text-muted tabular-nums w-9 text-right">
-        {pct}%
-      </span>
-    </div>
-  )
+/** PUT a full file via XHR, reporting overall progress as a percentage. */
+function xhrPut(
+  url: string,
+  body: Blob,
+  contentType: string,
+  onProgress: (pct: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('PUT', url)
+    xhr.setRequestHeader('Content-Type', contentType)
+    xhr.upload.onprogress = (evt) => {
+      if (evt.lengthComputable) {
+        onProgress(Math.round((evt.loaded / evt.total) * 100))
+      }
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve()
+      else reject(new Error(`Upload failed (${xhr.status})`))
+    }
+    xhr.onerror = () => reject(new Error('Network error'))
+    xhr.send(body)
+  })
+}
+
+/**
+ * PUT a single multipart part. Reports loaded bytes (not pct) so the parent
+ * can sum across parts to compute file-level progress, and resolves with the
+ * R2-returned ETag (needed to complete the multipart upload).
+ */
+function xhrPutBlob(
+  url: string,
+  body: Blob,
+  contentType: string,
+  onProgress: (loadedBytes: number) => void,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('PUT', url)
+    xhr.setRequestHeader('Content-Type', contentType)
+    xhr.upload.onprogress = (evt) => {
+      if (evt.lengthComputable) onProgress(evt.loaded)
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const etag = xhr.getResponseHeader('etag') || xhr.getResponseHeader('ETag')
+        if (!etag) {
+          // R2 returned the ETag, but the browser can't read it because the
+          // bucket's CORS rules don't include "ETag" in ExposeHeaders.
+          reject(
+            new Error(
+              'Cannot read ETag — set R2 bucket CORS to expose the ETag header.',
+            ),
+          )
+          return
+        }
+        resolve(etag.replace(/"/g, ''))
+      } else {
+        reject(new Error(`Part upload failed (${xhr.status})`))
+      }
+    }
+    xhr.onerror = () => reject(new Error('Network error'))
+    xhr.send(body)
+  })
 }

@@ -76,6 +76,32 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
 
    Open [http://localhost:3000](http://localhost:3000).
 
+## R2 CORS — required for direct-to-R2 uploads
+
+The drag-and-drop uploader has the browser PUT directly to R2 (single PUT for files ≤10 MB, multipart upload for larger files). Without this, large videos would have to traverse the Vercel serverless function and hit the 4.5 MB body limit.
+
+**The R2 bucket needs a CORS policy that allows the app origin to PUT and exposes the `ETag` header** (multipart uses the ETag of each uploaded part to finalize the upload).
+
+In Cloudflare Dashboard → R2 → `app-hotelops` → Settings → CORS Policy, paste:
+
+```json
+[
+  {
+    "AllowedOrigins": [
+      "https://app.myhotelops.com",
+      "https://hotel-ops-git-claude-setup-main-branch-ffliy-lashly.vercel.app",
+      "http://localhost:3000"
+    ],
+    "AllowedMethods": ["PUT", "GET", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+Add any preview-deploy URLs to `AllowedOrigins` as needed. Without `ExposeHeaders: ["ETag"]`, multipart uploads fail with "Cannot read ETag".
+
 ## R2 layout
 
 A single `app-hotelops` bucket holds every tenant's media. Each tenant gets a top-level prefix matching its org slug; each property gets a sub-prefix:
