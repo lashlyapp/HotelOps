@@ -84,7 +84,7 @@ The drag-and-drop uploader has the browser PUT directly to R2 (single PUT for fi
 
 The policy lives at [`infra/r2-cors.json`](infra/r2-cors.json) and is applied automatically by the [`R2 CORS`](.github/workflows/r2-cors.yml) GitHub Actions workflow on every push that touches the file. One-time setup: add repo secrets `CLOUDFLARE_API_TOKEN` (with "Workers R2 Storage:Edit" on the account) and `CLOUDFLARE_ACCOUNT_ID`. After that, edit `infra/r2-cors.json` and push — the workflow re-applies it. Manual dispatch is also available (Actions → **R2 CORS** → **Run workflow**) if you need to retarget a different bucket.
 
-R2 doesn't support wildcards on subdomains and the browser sends the exact origin in the preflight, so each hostname must be listed explicitly. Without `exposeHeaders: ["ETag"]`, multipart uploads fail with "Cannot read ETag".
+Each origin string supports a single `*` wildcard (S3-compatible), which is how the entry `https://hotel-ops-*-lashly.vercel.app` covers every branch's Vercel preview deployment. Add new production hostnames as literals. Without `exposeHeaders: ["ETag"]`, multipart uploads fail with "Cannot read ETag".
 
 ## R2 layout
 

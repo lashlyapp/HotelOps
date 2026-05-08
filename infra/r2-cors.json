@@ -6,6 +6,7 @@
           "https://www.myhotelops.com",
           "https://myhotelops.com",
           "https://app.myhotelops.com",
+          "https://hotel-ops-*-lashly.vercel.app",
           "http://localhost:3000"
         ],
         "methods": ["PUT", "GET", "HEAD"],
