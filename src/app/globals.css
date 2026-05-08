@@ -1,26 +1,211 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ============================================================================
+ * Design tokens
+ *
+ * One-stop foundation for HotelOps UI. Tokens are intentionally semantic:
+ * components reference roles (bg-surface, text-muted, border-default), not raw
+ * colors (zinc-100, slate-700). Rebranding = update CSS variables here only.
+ *
+ * Layer ordering:
+ *   1. Raw scales       — primitive palettes, never used directly in markup.
+ *   2. Semantic tokens  — what components actually use.
+ *   3. Tailwind @theme  — exposes semantics as utilities (bg-surface, etc).
+ * ========================================================================== */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  /* --- Raw scales ---------------------------------------------------------
+   * Warm-neutral gray + brand black. These are *primitives* — don't use
+   * `bg-neutral-100` directly in markup; use `bg-surface-muted` instead.
+   * ------------------------------------------------------------------------ */
+  --neutral-0:   #ffffff;
+  --neutral-25:  #fafaf9;
+  --neutral-50:  #f5f5f4;
+  --neutral-100: #e7e5e4;
+  --neutral-200: #d6d3d1;
+  --neutral-300: #a8a29e;
+  --neutral-400: #78716c;
+  --neutral-500: #57534e;
+  --neutral-600: #44403c;
+  --neutral-700: #292524;
+  --neutral-800: #1c1917;
+  --neutral-900: #0c0a09;
+
+  --brand-50:  #f4f4f5;
+  --brand-100: #e4e4e7;
+  --brand-500: #18181b;
+  --brand-600: #09090b;
+
+  --emerald-50:  #ecfdf5;
+  --emerald-500: #10b981;
+  --emerald-700: #047857;
+
+  --amber-50:  #fffbeb;
+  --amber-500: #f59e0b;
+  --amber-700: #b45309;
+
+  --rose-50:  #fff1f2;
+  --rose-500: #f43f5e;
+  --rose-700: #be123c;
+
+  --sky-50:  #f0f9ff;
+  --sky-500: #0ea5e9;
+  --sky-700: #0369a1;
+
+  /* --- Semantic tokens (light theme — default) --------------------------- */
+  --bg:                var(--neutral-25);
+  --surface:           var(--neutral-0);
+  --surface-muted:     var(--neutral-50);
+  --surface-elevated:  var(--neutral-0);
+
+  --border-subtle:     var(--neutral-100);
+  --border-default:    var(--neutral-200);
+  --border-strong:     var(--neutral-300);
+
+  --fg:                var(--neutral-900);
+  --fg-muted:          var(--neutral-500);
+  --fg-subtle:         var(--neutral-400);
+  --fg-on-primary:     var(--neutral-0);
+
+  --primary:           var(--brand-500);
+  --primary-hover:     var(--brand-600);
+  --primary-fg:        var(--neutral-0);
+
+  --ring:              var(--neutral-900);
+
+  --success-bg:        var(--emerald-50);
+  --success-fg:        var(--emerald-700);
+  --warning-bg:        var(--amber-50);
+  --warning-fg:        var(--amber-700);
+  --danger-bg:         var(--rose-50);
+  --danger-fg:         var(--rose-700);
+  --info-bg:           var(--sky-50);
+  --info-fg:           var(--sky-700);
+
+  /* --- Radius ------------------------------------------------------------ */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* --- Elevation --------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.06), 0 1px 3px 0 rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.06);
+
+  /* --- Motion ------------------------------------------------------------ */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg:                var(--neutral-900);
+    --surface:           var(--neutral-800);
+    --surface-muted:     var(--neutral-700);
+    --surface-elevated:  var(--neutral-700);
+
+    --border-subtle:     var(--neutral-800);
+    --border-default:    var(--neutral-700);
+    --border-strong:     var(--neutral-600);
+
+    --fg:                var(--neutral-50);
+    --fg-muted:          var(--neutral-300);
+    --fg-subtle:         var(--neutral-400);
+    --fg-on-primary:     var(--neutral-900);
+
+    --primary:           var(--neutral-50);
+    --primary-hover:     var(--neutral-0);
+    --primary-fg:        var(--neutral-900);
+
+    --ring:              var(--neutral-50);
+
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4), 0 1px 3px 0 rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ============================================================================
+ * Tailwind theme: expose semantic tokens as utilities.
+ * Usage examples: bg-surface, text-muted, border-default, rounded-md.
+ * ========================================================================== */
+
+@theme inline {
+  /* Colors */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-elevated: var(--surface-elevated);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+
+  --color-fg: var(--fg);
+  --color-muted: var(--fg-muted);
+  --color-subtle: var(--fg-subtle);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+
+  --color-success-bg: var(--success-bg);
+  --color-success-fg: var(--success-fg);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-fg: var(--warning-fg);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-fg: var(--danger-fg);
+  --color-info-bg: var(--info-bg);
+  --color-info-fg: var(--info-fg);
+
+  --color-ring: var(--ring);
+
+  /* Radius */
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  /* Shadows */
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  /* Fonts (assigned via next/font in layout.tsx) */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ============================================================================
+ * Base styles
+ * ========================================================================== */
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Numeric tabular for tables / amounts */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Focus ring utility used by interactive primitives */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
 }

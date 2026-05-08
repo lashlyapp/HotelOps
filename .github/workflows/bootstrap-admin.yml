@@ -1,0 +1,56 @@
+name: Bootstrap platform admin
+
+# One-time. Creates the FIRST platform admin so they can sign in and manage
+# everything else from the UI. After running once, you can delete the
+# BOOTSTRAP_ADMIN_PASSWORD secret — re-running is supported but not normally
+# needed.
+#
+# To run:
+#   1. Add a temporary repo secret BOOTSTRAP_ADMIN_PASSWORD = a strong password.
+#   2. GitHub → Actions → "Bootstrap platform admin" → Run workflow → enter the
+#      admin email (defaults to support@myhotelops.com).
+#   3. Sign in at /login with that email + password.
+#   4. (Optional) delete BOOTSTRAP_ADMIN_PASSWORD from secrets.
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: "Admin email"
+        required: true
+        type: string
+        default: support@myhotelops.com
+
+jobs:
+  bootstrap:
+    name: Bootstrap admin
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create platform admin
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ADMIN_EMAIL: ${{ github.event.inputs.email }}
+          ADMIN_PASSWORD: ${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}
+        run: |
+          if [ -z "$ADMIN_PASSWORD" ]; then
+            echo "::error::BOOTSTRAP_ADMIN_PASSWORD secret is not set."
+            exit 1
+          fi
+          # Mask the password so it never appears in any subsequent log lines.
+          echo "::add-mask::$ADMIN_PASSWORD"
+          npx tsx scripts/bootstrap-admin.ts \
+            --email="$ADMIN_EMAIL" \
+            --password="$ADMIN_PASSWORD"

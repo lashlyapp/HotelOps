@@ -1,0 +1,80 @@
+name: Onboard tenant
+
+# Manual-only. Runs scripts/onboard-tenant.ts to provision a new customer:
+# creates the organization, its properties, and (optionally) emails the
+# owner an invite link.
+#
+# Trigger: GitHub → Actions → "Onboard tenant" → Run workflow → fill in inputs.
+#
+# This is intentionally separate from the migration workflow — it's a
+# per-customer operation, not something that should run on every push.
+
+on:
+  workflow_dispatch:
+    inputs:
+      org_slug:
+        description: "Org slug (kebab-case, e.g. acme-hotel-group)"
+        required: true
+        type: string
+      org_name:
+        description: 'Org display name (e.g. "Acme Hotel Group")'
+        required: true
+        type: string
+      owner_email:
+        description: "Owner email to invite (leave blank to skip invite)"
+        required: false
+        type: string
+      properties:
+        description: 'Properties as comma-separated slug:Name pairs (e.g. "downtown-suites:Downtown Suites,harbor-view:Harbor View")'
+        required: true
+        type: string
+
+concurrency:
+  group: onboard-tenant-${{ github.event.inputs.org_slug }}
+  cancel-in-progress: false
+
+jobs:
+  onboard:
+    name: Onboard ${{ github.event.inputs.org_slug }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run onboarding script
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.SITE_URL }}
+          ORG_SLUG: ${{ github.event.inputs.org_slug }}
+          ORG_NAME: ${{ github.event.inputs.org_name }}
+          OWNER_EMAIL: ${{ github.event.inputs.owner_email }}
+          PROPERTIES_INPUT: ${{ github.event.inputs.properties }}
+        run: |
+          # Build the script's --property=slug:Name args from the comma-separated input.
+          property_args=()
+          IFS=',' read -ra pairs <<< "$PROPERTIES_INPUT"
+          for pair in "${pairs[@]}"; do
+            trimmed="$(echo "$pair" | sed 's/^ *//;s/ *$//')"
+            property_args+=("--property=$trimmed")
+          done
+
+          owner_arg=()
+          if [ -n "$OWNER_EMAIL" ]; then
+            owner_arg+=("--owner=$OWNER_EMAIL")
+          fi
+
+          npx tsx scripts/onboard-tenant.ts \
+            --slug="$ORG_SLUG" \
+            --name="$ORG_NAME" \
+            "${owner_arg[@]}" \
+            "${property_args[@]}"
