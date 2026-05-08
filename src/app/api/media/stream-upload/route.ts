@@ -50,8 +50,11 @@ export async function POST(request: NextRequest) {
     return new NextResponse('Video exceeds 30 GB limit', { status: 413 })
   }
 
-  // The filename comes from tus's Upload-Metadata (base64-url pairs).
-  const filename = decodeTusMetadata(uploadMetadata).get('filename') ?? 'video'
+  // The filename comes from tus's Upload-Metadata. tus-js-client and
+  // Cloudflare Stream both use the `name` key (not `filename`); fall back
+  // to `filename` only for callers that follow the older tus convention.
+  const meta = decodeTusMetadata(uploadMetadata)
+  const filename = meta.get('name') ?? meta.get('filename') ?? 'video'
 
   let init: { uploadUrl: string; uid: string }
   try {
