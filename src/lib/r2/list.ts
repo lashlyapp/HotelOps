@@ -6,7 +6,12 @@ import {
 } from '@aws-sdk/client-s3'
 import { r2Bucket, r2Client, r2PublicUrl } from './client'
 import { humanizeFilename } from '@/lib/media/humanize'
-import { streamIframeUrl, streamThumbnailUrl } from '@/lib/stream/client'
+import {
+  streamEnableMp4Download,
+  streamGetVideo,
+  streamIframeUrl,
+  streamThumbnailUrl,
+} from '@/lib/stream/client'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export type MediaFile = {
@@ -133,6 +138,14 @@ export async function listMediaWithTags(
     })
   }
 
+  // Catch up on any rows still marked pending. Client-side polling handles
+  // the immediate post-upload window, but if the user closed the tab or
+  // navigated away mid-encode, nothing else nudges the row to ready —
+  // re-checking on each catalog read closes that gap. Concurrency-capped
+  // so a property with a backlog of pending rows doesn't fan out a huge
+  // burst of API calls.
+  await refreshPendingStreamRows(propertyId, videoRows ?? [], admin)
+
   const streamFiles: MediaFile[] = (videoRows ?? []).map((row) => {
     const key = `stream:${row.stream_uid}`
     const meta = metaByKey.get(key)
@@ -171,6 +184,86 @@ export async function listMediaWithTags(
 
   return [...r2WithMeta, ...streamFiles].sort((a, b) =>
     a.filename.localeCompare(b.filename),
+  )
+}
+
+type StreamRow = {
+  stream_uid: string
+  filename: string
+  size: number | null
+  status: string | null
+  created_at: string | null
+  ready_at: string | null
+}
+
+/**
+ * Lazy refresh: for every pending media_videos row, ask Stream for the
+ * current state. If Cloudflare reports the video is now ready, flip the
+ * DB row in place (mutating the array we hand back to the caller so this
+ * page render reflects the new state) and kick off the MP4 download
+ * build. If Cloudflare reports `error`, mark the row accordingly.
+ *
+ * Concurrency-bounded so even a property with a long pending backlog
+ * doesn't fan out a thundering herd of API calls.
+ */
+async function refreshPendingStreamRows(
+  propertyId: string,
+  rows: StreamRow[],
+  admin: ReturnType<typeof createAdminClient>,
+): Promise<void> {
+  const pending = rows.filter((r) => (r.status ?? 'pending') === 'pending')
+  if (pending.length === 0) return
+
+  const CONCURRENCY = 5
+  let next = 0
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, pending.length) }, async () => {
+      while (true) {
+        const i = next++
+        if (i >= pending.length) return
+        const row = pending[i]
+        try {
+          const v = await streamGetVideo(row.stream_uid)
+          if (!v) continue
+          if (v.readyToStream) {
+            const readyAt = new Date().toISOString()
+            await admin
+              .from('media_videos')
+              .update({
+                status: 'ready',
+                duration_seconds: v.duration ? Math.round(v.duration) : null,
+                ready_at: readyAt,
+              })
+              .eq('property_id', propertyId)
+              .eq('stream_uid', row.stream_uid)
+            row.status = 'ready'
+            row.ready_at = readyAt
+            // Fire-and-forget MP4 build so the Download button works.
+            // Non-fatal — playback + thumbnail are unaffected.
+            streamEnableMp4Download(row.stream_uid).catch((err) => {
+              console.error('[stream] enable mp4 download failed', {
+                uid: row.stream_uid,
+                message: err instanceof Error ? err.message : String(err),
+              })
+            })
+          } else if (v.status === 'error') {
+            await admin
+              .from('media_videos')
+              .update({ status: 'error' })
+              .eq('property_id', propertyId)
+              .eq('stream_uid', row.stream_uid)
+            row.status = 'error'
+          }
+        } catch (err) {
+          // Best-effort; transient Stream API errors shouldn't break the
+          // catalog render. The next page load will try again.
+          console.error('[stream] refresh failed', {
+            uid: row.stream_uid,
+            message: err instanceof Error ? err.message : String(err),
+          })
+        }
+      }
+    }),
   )
 }
 
