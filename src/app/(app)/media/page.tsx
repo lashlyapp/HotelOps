@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { requireSession } from '@/lib/auth/session'
-import { listMediaForPrefix } from '@/lib/r2/list'
+import { listMediaWithTags } from '@/lib/r2/list'
 import {
   computeLibraryStats,
   formatBytes,
@@ -40,14 +40,17 @@ export default async function MediaPage({
     redirect(`/media?property=${activeProperty.slug}`)
   }
 
-  const files = await listMediaForPrefix(activeProperty.r2_prefix)
+  const files = await listMediaWithTags(
+    activeProperty.id,
+    activeProperty.r2_prefix,
+  )
   const stats = computeLibraryStats(files)
 
   return (
     <div className="p-8 space-y-6">
       <PageHeader
         title="Media catalog"
-        subtitle={`Centralized library for ${session.organization.name}. Each file has a permanent URL you can paste into your website.`}
+        subtitle={`Centralized library for ${session.organization.name}. Upload, tag, and share photos and videos across your properties.`}
       />
 
       <div className="flex flex-wrap gap-1 border-b border-border-subtle">
@@ -108,13 +111,12 @@ export default async function MediaPage({
         />
       </section>
 
-      {files.length === 0 ? (
-        <p className="text-sm text-muted">
-          No media yet for {activeProperty.name}.
-        </p>
-      ) : (
-        <MediaBrowser files={files} />
-      )}
+      <MediaBrowser
+        files={files}
+        propertyId={activeProperty.id}
+        propertyName={activeProperty.name}
+        propertySlug={activeProperty.slug}
+      />
     </div>
   )
 }

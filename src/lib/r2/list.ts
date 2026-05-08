@@ -6,6 +6,7 @@ import {
 } from '@aws-sdk/client-s3'
 import { r2Bucket, r2Client, r2PublicUrl } from './client'
 import { humanizeFilename } from '@/lib/media/humanize'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export type MediaFile = {
   key: string
@@ -15,6 +16,7 @@ export type MediaFile = {
   size: number
   lastModified: string | null
   contentType: string | null
+  tags: string[]
 }
 
 export async function listMediaForPrefix(prefix: string): Promise<MediaFile[]> {
@@ -37,7 +39,7 @@ export async function listMediaForPrefix(prefix: string): Promise<MediaFile[]> {
     continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined
   } while (continuationToken)
 
-  return items
+  const visibleObjects = items
     .filter((obj) => obj.Key && !obj.Key.endsWith('/'))
     .filter((obj) => {
       // Hide platform-internal files (logos, future per-property metadata)
@@ -45,6 +47,8 @@ export async function listMediaForPrefix(prefix: string): Promise<MediaFile[]> {
       const rel = obj.Key!.slice(normalizedPrefix.length)
       return !rel.startsWith('_meta/')
     })
+
+  return visibleObjects
     .map((obj) => {
       const key = obj.Key!
       const filename = key.slice(normalizedPrefix.length)
@@ -58,9 +62,38 @@ export async function listMediaForPrefix(prefix: string): Promise<MediaFile[]> {
           ? obj.LastModified.toISOString()
           : null,
         contentType: guessContentType(filename),
+        tags: [] as string[],
       }
     })
     .sort((a, b) => a.filename.localeCompare(b.filename))
+}
+
+/**
+ * List media for a property and join user-applied tags onto each file.
+ * One round-trip to Supabase per call regardless of file count.
+ */
+export async function listMediaWithTags(
+  propertyId: string,
+  prefix: string,
+): Promise<MediaFile[]> {
+  const files = await listMediaForPrefix(prefix)
+  if (files.length === 0) return files
+
+  const admin = createAdminClient()
+  const { data: tagRows } = await admin
+    .from('media_tags')
+    .select('file_key, tag')
+    .eq('property_id', propertyId)
+    .order('tag', { ascending: true })
+
+  const byKey = new Map<string, string[]>()
+  for (const row of tagRows ?? []) {
+    const existing = byKey.get(row.file_key) ?? []
+    existing.push(row.tag)
+    byKey.set(row.file_key, existing)
+  }
+
+  return files.map((f) => ({ ...f, tags: byKey.get(f.key) ?? [] }))
 }
 
 function guessContentType(filename: string): string | null {
