@@ -252,7 +252,7 @@ export function DropZone({
           <div className="p-4 text-center space-y-2">
             <div className="flex items-center justify-between gap-2 text-left">
               <p className="text-xs text-subtle">
-                Images, videos, and PDFs up to 2 GB each. Uploads to{' '}
+                Images and videos up to 2 GB each. Uploads to{' '}
                 <span className="text-fg">{propertyName}</span>.
               </p>
               <button
@@ -271,7 +271,7 @@ export function DropZone({
               ref={inputRef}
               type="file"
               multiple
-              accept="image/*,video/*,application/pdf"
+              accept="image/*,video/*"
               className="sr-only"
               onChange={(e) => {
                 if (e.target.files) handleFiles(e.target.files)

@@ -16,7 +16,7 @@ import {
 import { DropZone } from './drop-zone'
 import { TagEditor } from './tag-editor'
 
-type Type = 'all' | 'image' | 'video' | 'document'
+type Type = 'all' | 'image' | 'video'
 
 export function MediaBrowser({
   files: initialFiles,
@@ -56,7 +56,6 @@ export function MediaBrowser({
         const ct = file.contentType ?? ''
         if (type === 'image' && !ct.startsWith('image/')) return false
         if (type === 'video' && !ct.startsWith('video/')) return false
-        if (type === 'document' && ct !== 'application/pdf') return false
       }
       if (tagFilter && !file.tags.includes(tagFilter)) return false
       if (!q) return true
@@ -174,7 +173,6 @@ function FilterTabs({
     { value: 'all', label: 'All' },
     { value: 'image', label: 'Images' },
     { value: 'video', label: 'Videos' },
-    { value: 'document', label: 'Documents' },
   ]
   return (
     <div className="inline-flex rounded-md border border-border-default bg-surface p-0.5">

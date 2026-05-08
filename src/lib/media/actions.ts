@@ -23,7 +23,6 @@ const ALLOWED_MIME = new Set([
   'video/mp4',
   'video/quicktime',
   'video/webm',
-  'application/pdf',
 ])
 const MAX_FILE_BYTES = 2 * 1024 * 1024 * 1024 // 2 GB — covers 4K and drone footage
 

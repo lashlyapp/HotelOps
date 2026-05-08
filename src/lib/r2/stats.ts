@@ -5,8 +5,6 @@ export type LibraryStats = {
   totalBytes: number
   imageCount: number
   videoCount: number
-  documentCount: number
-  otherCount: number
   lastModified: string | null
 }
 
@@ -16,8 +14,6 @@ export function computeLibraryStats(files: MediaFile[]): LibraryStats {
     totalBytes: 0,
     imageCount: 0,
     videoCount: 0,
-    documentCount: 0,
-    otherCount: 0,
     lastModified: null,
   }
 
@@ -26,8 +22,6 @@ export function computeLibraryStats(files: MediaFile[]): LibraryStats {
     const ct = file.contentType ?? ''
     if (ct.startsWith('image/')) stats.imageCount += 1
     else if (ct.startsWith('video/')) stats.videoCount += 1
-    else if (ct === 'application/pdf') stats.documentCount += 1
-    else stats.otherCount += 1
 
     if (
       file.lastModified &&

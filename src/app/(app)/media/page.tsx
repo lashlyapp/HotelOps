@@ -76,7 +76,7 @@ export default async function MediaPage({
 
       <section
         aria-label={`${activeProperty.name} library stats`}
-        className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
+        className="grid grid-cols-2 gap-3 sm:grid-cols-4"
       >
         <StatCard
           label="Files"
@@ -87,15 +87,6 @@ export default async function MediaPage({
           label="Storage used"
           value={formatBytes(stats.totalBytes)}
           hint="Cloudflare R2"
-        />
-        <StatCard
-          label="Documents"
-          value={stats.documentCount + stats.otherCount}
-          hint={
-            stats.documentCount + stats.otherCount === 0
-              ? 'PDFs and other files'
-              : `${stats.documentCount} PDFs`
-          }
         />
         <StatCard
           label="Last updated"
