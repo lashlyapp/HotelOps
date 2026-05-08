@@ -82,27 +82,9 @@ The drag-and-drop uploader has the browser PUT directly to R2 (single PUT for fi
 
 **The R2 bucket needs a CORS policy that allows the app origin to PUT and exposes the `ETag` header** (multipart uses the ETag of each uploaded part to finalize the upload).
 
-In Cloudflare Dashboard → R2 → `app-hotelops` → Settings → CORS Policy, paste:
+The policy lives at [`infra/r2-cors.json`](infra/r2-cors.json) and is applied automatically by the [`R2 CORS`](.github/workflows/r2-cors.yml) GitHub Actions workflow on every push that touches the file. One-time setup: add repo secrets `CLOUDFLARE_API_TOKEN` (with "Workers R2 Storage:Edit" on the account) and `CLOUDFLARE_ACCOUNT_ID`. After that, edit `infra/r2-cors.json` and push — the workflow re-applies it. Manual dispatch is also available (Actions → **R2 CORS** → **Run workflow**) if you need to retarget a different bucket.
 
-```json
-[
-  {
-    "AllowedOrigins": [
-      "https://www.myhotelops.com",
-      "https://myhotelops.com",
-      "https://app.myhotelops.com",
-      "https://hotel-ops-git-claude-setup-main-branch-ffliy-lashly.vercel.app",
-      "http://localhost:3000"
-    ],
-    "AllowedMethods": ["PUT", "GET", "HEAD"],
-    "AllowedHeaders": ["*"],
-    "ExposeHeaders": ["ETag"],
-    "MaxAgeSeconds": 3600
-  }
-]
-```
-
-`AllowedOrigins` must contain every hostname the app is served from — list each one explicitly (R2 doesn't support wildcards on subdomains and the browser sends the exact origin in the preflight). Add preview-deploy URLs the same way. Without `ExposeHeaders: ["ETag"]`, multipart uploads fail with "Cannot read ETag".
+R2 doesn't support wildcards on subdomains and the browser sends the exact origin in the preflight, so each hostname must be listed explicitly. Without `exposeHeaders: ["ETag"]`, multipart uploads fail with "Cannot read ETag".
 
 ## R2 layout
 
