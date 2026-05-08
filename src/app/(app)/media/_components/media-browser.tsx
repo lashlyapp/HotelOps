@@ -268,9 +268,18 @@ function MediaCard({
             sizes="(min-width:1280px) 25vw, (min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw"
             className="object-cover"
           />
+        ) : isVideo && file.posterUrl ? (
+          <Image
+            src={file.posterUrl}
+            alt={file.displayName}
+            fill
+            sizes="(min-width:1280px) 25vw, (min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw"
+            className="object-cover"
+          />
         ) : isVideo ? (
-          // #t=0.1 forces browsers to paint the first frame as a poster
-          // without needing a separately generated thumbnail.
+          // No persisted poster yet (legacy upload). #t=0.1 nudges the browser
+          // to paint the first frame, but this still issues a metadata
+          // range-request on every mount.
           <video
             src={`${file.url}#t=0.1`}
             muted
@@ -283,6 +292,7 @@ function MediaCard({
             {file.contentType ?? 'file'}
           </div>
         )}
+        {isVideo ? <PlayBadge /> : null}
       </button>
 
       <div className="flex flex-1 flex-col gap-3 p-4">
@@ -308,6 +318,25 @@ function MediaCard({
         <CopyableUrl url={file.url} />
       </div>
     </Card>
+  )
+}
+
+function PlayBadge() {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute inset-0 flex items-center justify-center"
+    >
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-lg backdrop-blur-sm transition-transform group-hover:scale-110">
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden
+          className="ml-0.5 h-5 w-5 fill-current"
+        >
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </span>
+    </span>
   )
 }
 

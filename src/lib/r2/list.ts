@@ -14,6 +14,7 @@ export type MediaFile = {
   displayName: string
   description: string | null
   url: string
+  posterUrl: string | null
   size: number
   lastModified: string | null
   contentType: string | null
@@ -43,10 +44,11 @@ export async function listMediaForPrefix(prefix: string): Promise<MediaFile[]> {
   const visibleObjects = items
     .filter((obj) => obj.Key && !obj.Key.endsWith('/'))
     .filter((obj) => {
-      // Hide platform-internal files (logos, future per-property metadata)
-      // from the customer-facing media catalog.
+      // Hide platform-internal files from the customer-facing catalog:
+      //   _meta/    — logos and per-property metadata
+      //   _posters/ — generated still-frame thumbnails for videos
       const rel = obj.Key!.slice(normalizedPrefix.length)
-      return !rel.startsWith('_meta/')
+      return !rel.startsWith('_meta/') && !rel.startsWith('_posters/')
     })
 
   return visibleObjects
@@ -59,6 +61,7 @@ export async function listMediaForPrefix(prefix: string): Promise<MediaFile[]> {
         displayName: humanizeFilename(filename),
         description: null,
         url: r2PublicUrl(key),
+        posterUrl: null,
         size: obj.Size ?? 0,
         lastModified: obj.LastModified
           ? obj.LastModified.toISOString()
@@ -90,7 +93,7 @@ export async function listMediaWithTags(
       .order('tag', { ascending: true }),
     admin
       .from('media_metadata')
-      .select('file_key, display_name, description')
+      .select('file_key, display_name, description, poster_key')
       .eq('property_id', propertyId),
   ])
 
@@ -103,12 +106,17 @@ export async function listMediaWithTags(
 
   const metaByKey = new Map<
     string,
-    { display_name: string | null; description: string | null }
+    {
+      display_name: string | null
+      description: string | null
+      poster_key: string | null
+    }
   >()
   for (const row of metadataRows ?? []) {
     metaByKey.set(row.file_key, {
       display_name: row.display_name,
       description: row.description,
+      poster_key: row.poster_key,
     })
   }
 
@@ -118,6 +126,7 @@ export async function listMediaWithTags(
       ...f,
       displayName: meta?.display_name?.trim() || f.displayName,
       description: meta?.description ?? null,
+      posterUrl: meta?.poster_key ? r2PublicUrl(meta.poster_key) : null,
       tags: tagsByKey.get(f.key) ?? [],
     }
   })

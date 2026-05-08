@@ -203,6 +203,69 @@ export async function deleteMediaAction(args: {
 }
 
 // ----------------------------------------------------------------------------
+// Video poster — client-side captured first frame, uploaded as a sibling JPEG
+// ----------------------------------------------------------------------------
+
+const POSTER_PREFIX = '_posters/'
+const POSTER_MAX_BYTES = 1 * 1024 * 1024 // 1 MB cap on the captured JPEG
+
+export type PosterPresignResult =
+  | { ok: true; posterKey: string; url: string }
+  | { ok: false; error: string }
+
+export async function presignPosterUploadAction(args: {
+  propertyId: string
+  videoKey: string
+  size: number
+}): Promise<PosterPresignResult> {
+  const session = await requireOrgUser()
+  const property = session.properties.find((p) => p.id === args.propertyId)
+  if (!property) return { ok: false, error: 'Property not found.' }
+  if (!args.videoKey.startsWith(property.r2_prefix)) {
+    return { ok: false, error: 'File does not belong to this property.' }
+  }
+  if (args.size <= 0 || args.size > POSTER_MAX_BYTES) {
+    return { ok: false, error: 'Invalid poster size.' }
+  }
+
+  const relative = args.videoKey.slice(property.r2_prefix.length)
+  const posterKey = `${property.r2_prefix}${POSTER_PREFIX}${relative}.jpg`
+  const url = await r2PresignPutUrl(posterKey, 'image/jpeg')
+  return { ok: true, posterKey, url }
+}
+
+export async function recordPosterAction(args: {
+  propertyId: string
+  videoKey: string
+  posterKey: string
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await requireOrgUser()
+  const property = session.properties.find((p) => p.id === args.propertyId)
+  if (!property) return { ok: false, error: 'Property not found.' }
+  if (!args.videoKey.startsWith(property.r2_prefix)) {
+    return { ok: false, error: 'File does not belong to this property.' }
+  }
+  if (!args.posterKey.startsWith(`${property.r2_prefix}${POSTER_PREFIX}`)) {
+    return { ok: false, error: 'Poster key out of bounds.' }
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('media_metadata').upsert(
+    {
+      property_id: args.propertyId,
+      file_key: args.videoKey,
+      poster_key: args.posterKey,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'property_id,file_key' },
+  )
+  if (error) return { ok: false, error: error.message }
+
+  revalidatePath('/media')
+  return { ok: true }
+}
+
+// ----------------------------------------------------------------------------
 // Per-file metadata (display name override + description)
 // ----------------------------------------------------------------------------
 
