@@ -1,21 +1,26 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useRef, useState, useTransition } from 'react'
+import * as tus from 'tus-js-client'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
 import {
   abortMultipartUploadAction,
   completeMultipartUploadAction,
+  finalizeStreamVideoUploadAction,
   initMultipartUploadAction,
-  presignPosterUploadAction,
   presignUploadAction,
-  recordPosterAction,
   revalidateAfterUploadAction,
 } from '@/lib/media/actions'
 
 const SINGLE_PUT_THRESHOLD = 10 * 1024 * 1024 // 10 MB
-const FILES_IN_FLIGHT = 2 // max files uploading concurrently
-const PARTS_IN_FLIGHT_PER_FILE = 4 // max parts of a single file in parallel
+// Concurrency tuned around browser per-host connection caps (~6). Worst
+// case is 4 large images uploading multipart simultaneously, which is
+// FILES_IN_FLIGHT × PARTS_IN_FLIGHT_PER_FILE = 12 in-flight PUTs to R2;
+// the browser queues the overflow rather than blowing up.
+const FILES_IN_FLIGHT = 4
+const PARTS_IN_FLIGHT_PER_FILE = 3
 
 type Job =
   | { id: string; name: string; size: number; status: 'pending' }
@@ -37,6 +42,7 @@ export function DropZone({
   const [jobs, setJobs] = useState<Job[]>([])
   const [, startTransition] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
 
   function pickFiles() {
     inputRef.current?.click()
@@ -104,10 +110,53 @@ export function DropZone({
     onProgress: (pct: number) => void,
   ): Promise<boolean> {
     const contentType = file.type || 'application/octet-stream'
+    if (contentType.startsWith('video/')) {
+      return uploadVideoToStream(file, contentType, jobId, onProgress)
+    }
     if (file.size <= SINGLE_PUT_THRESHOLD) {
       return uploadSingle(file, contentType, jobId, onProgress)
     }
     return uploadMultipart(file, contentType, jobId, onProgress)
+  }
+
+  /**
+   * Videos go to Cloudflare Stream via the tus-resumable Direct Creator
+   * Upload flow. tus-js-client uses our /api/media/stream-upload route as
+   * the CREATE endpoint (the route adds the Cloudflare API token, mints a
+   * Stream upload URL, and inserts the media_videos row); the chunk
+   * PATCHes go straight to Cloudflare. Stream handles transcoding,
+   * thumbnails, and adaptive playback so the catalog gets a real preview
+   * without any client-side frame capture.
+   */
+  async function uploadVideoToStream(
+    file: File,
+    _contentType: string,
+    jobId: string,
+    onProgress: (pct: number) => void,
+  ): Promise<boolean> {
+    let uid = ''
+    try {
+      uid = await tusUpload(
+        `/api/media/stream-upload?propertyId=${encodeURIComponent(propertyId)}`,
+        file,
+        onProgress,
+      )
+    } catch (err) {
+      failJob(jobId, err instanceof Error ? err.message : 'Stream upload failed')
+      return false
+    }
+
+    onProgress(100)
+    finishJob(jobId)
+    if (uid) {
+      // Cloudflare hasn't finished transcoding by the time tus reports
+      // success — typical 250 MB clip takes a couple minutes. Poll the
+      // finalize action until the row flips to ready (or we hit a hard
+      // ceiling) so the catalog can swap "Encoding…" for the thumbnail
+      // without the user having to refresh.
+      void pollStreamUntilReady(propertyId, uid, () => router.refresh())
+    }
+    return true
   }
 
   async function uploadSingle(
@@ -129,9 +178,6 @@ export function DropZone({
     try {
       await xhrPut(presign.url, file, contentType, onProgress)
       finishJob(jobId)
-      if (contentType.startsWith('video/')) {
-        await captureAndUploadPoster(file, presign.key)
-      }
       return true
     } catch (err) {
       failJob(jobId, err instanceof Error ? err.message : 'Upload failed')
@@ -211,9 +257,6 @@ export function DropZone({
 
       onProgress(100)
       finishJob(jobId)
-      if (contentType.startsWith('video/')) {
-        await captureAndUploadPoster(file, init.key)
-      }
       return true
     } catch (err) {
       failJob(jobId, err instanceof Error ? err.message : 'Upload failed')
@@ -223,37 +266,6 @@ export function DropZone({
         uploadId: init.uploadId,
       })
       return false
-    }
-  }
-
-  async function captureAndUploadPoster(file: File, videoKey: string) {
-    try {
-      const blob = await capturePosterBlob(file)
-      if (!blob) return
-
-      const presign = await presignPosterUploadAction({
-        propertyId,
-        videoKey,
-        size: blob.size,
-      })
-      if (!presign.ok) return
-
-      const res = await fetch(presign.url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'image/jpeg' },
-        body: blob,
-      })
-      if (!res.ok) return
-
-      await recordPosterAction({
-        propertyId,
-        videoKey,
-        posterKey: presign.posterKey,
-      })
-    } catch (err) {
-      // Best-effort: a missing poster falls back to <video preload="metadata">
-      // on the card, so we don't surface this error to the user.
-      console.warn('[poster]', err)
     }
   }
 
@@ -291,8 +303,8 @@ export function DropZone({
           <div className="p-4 text-center space-y-2">
             <div className="flex items-center justify-between gap-2 text-left">
               <p className="text-xs text-subtle">
-                Images and videos up to 2 GB each. Uploads to{' '}
-                <span className="text-fg">{propertyName}</span>.
+                Images up to 2 GB, videos up to 30 GB (Cloudflare Stream).
+                Uploads to <span className="text-fg">{propertyName}</span>.
               </p>
               <button
                 type="button"
@@ -436,6 +448,81 @@ async function runWithLimit<T, R>(
   return results
 }
 
+/**
+ * Poll finalizeStreamVideoUploadAction until Cloudflare finishes encoding,
+ * then refresh the catalog so "Encoding…" placeholders swap to thumbnails.
+ *
+ * Tuned for typical hotel clips: 4 s between polls, ~5 min ceiling. The
+ * loop is best-effort — if the user navigates away the unmounted Promise
+ * is dropped, and any next visit picks up the (by then) ready row.
+ */
+async function pollStreamUntilReady(
+  propertyId: string,
+  uid: string,
+  onReady: () => void,
+): Promise<void> {
+  const POLL_INTERVAL_MS = 4_000
+  const MAX_POLLS = 75
+  for (let i = 0; i < MAX_POLLS; i += 1) {
+    let result
+    try {
+      result = await finalizeStreamVideoUploadAction({ propertyId, uid })
+    } catch {
+      return
+    }
+    if (!result.ok) return
+    if (result.status !== 'pending') {
+      onReady()
+      return
+    }
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
+  }
+}
+
+/**
+ * Drive a tus-resumable upload through our /api/media/stream-upload proxy
+ * to Cloudflare Stream. tus-js-client makes the initial CREATE against
+ * `endpoint`; our route returns the Cloudflare upload URL in `Location`
+ * (and the future video UID in `stream-media-id`). tus then PATCHes
+ * chunks straight to Cloudflare — that endpoint is browser-CORS-enabled
+ * because we minted it with `direct_user=true`. Progress is normalized
+ * to 0–99%; the caller stamps 100 after finalize.
+ *
+ * Resolves with the Stream UID extracted from the create response so the
+ * caller can run finalizeStreamVideoUploadAction.
+ */
+function tusUpload(
+  endpoint: string,
+  file: File,
+  onProgress: (pct: number) => void,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let uid = ''
+    const upload = new tus.Upload(file, {
+      endpoint,
+      retryDelays: [0, 1_000, 3_000, 5_000, 10_000],
+      // Stream requires resumable chunks be multiples of 256 KiB; 50 MiB
+      // is what Cloudflare's example uses.
+      chunkSize: 50 * 1024 * 1024,
+      uploadSize: file.size,
+      metadata: { name: file.name, filetype: file.type },
+      onError: (err) =>
+        reject(err instanceof Error ? err : new Error(String(err))),
+      onProgress: (bytesUploaded, bytesTotal) => {
+        const pct = Math.round((bytesUploaded / bytesTotal) * 100)
+        onProgress(Math.min(pct, 99))
+      },
+      onAfterResponse: (_req, res) => {
+        // Cloudflare echoes the UID on the CREATE response only.
+        const header = res.getHeader('stream-media-id')
+        if (header) uid = header
+      },
+      onSuccess: () => resolve(uid),
+    })
+    upload.start()
+  })
+}
+
 /** PUT a full file via XHR, reporting overall progress as a percentage. */
 function xhrPut(
   url: string,
@@ -458,70 +545,6 @@ function xhrPut(
     }
     xhr.onerror = () => reject(new Error('Network error'))
     xhr.send(body)
-  })
-}
-
-/**
- * Render the first ~0.1s of a video to a canvas and return a JPEG blob. Used
- * to persist a static poster image alongside each video upload so the catalog
- * card can render <img> instead of <video preload="metadata">.
- */
-function capturePosterBlob(file: File): Promise<Blob | null> {
-  return new Promise((resolve) => {
-    const objectUrl = URL.createObjectURL(file)
-    const video = document.createElement('video')
-    video.preload = 'metadata'
-    video.muted = true
-    video.playsInline = true
-    video.src = objectUrl
-
-    const cleanup = () => {
-      video.removeAttribute('src')
-      video.load()
-      URL.revokeObjectURL(objectUrl)
-    }
-
-    let settled = false
-    const settle = (blob: Blob | null) => {
-      if (settled) return
-      settled = true
-      cleanup()
-      resolve(blob)
-    }
-
-    // Hard timeout in case metadata never arrives (corrupt file, codec
-    // unsupported by the browser, etc.).
-    const timeout = setTimeout(() => settle(null), 10_000)
-
-    video.addEventListener('loadeddata', () => {
-      try {
-        const canvas = document.createElement('canvas')
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          clearTimeout(timeout)
-          settle(null)
-          return
-        }
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-        canvas.toBlob(
-          (blob) => {
-            clearTimeout(timeout)
-            settle(blob)
-          },
-          'image/jpeg',
-          0.85,
-        )
-      } catch {
-        clearTimeout(timeout)
-        settle(null)
-      }
-    })
-    video.addEventListener('error', () => {
-      clearTimeout(timeout)
-      settle(null)
-    })
   })
 }
 

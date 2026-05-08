@@ -8,11 +8,21 @@ import {
   r2CreateMultipartUpload,
   r2DeleteObject,
   r2ObjectExists,
+  r2PresignDownloadUrl,
   r2PresignParts,
   r2PresignPutUrl,
 } from '@/lib/r2/upload'
+import {
+  streamDeleteVideo,
+  streamEnableMp4Download,
+  streamGetVideo,
+  streamMp4DownloadUrl,
+} from '@/lib/stream/client'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+// Image uploads still go to R2; videos route to Cloudflare Stream via the
+// dedicated /api/media/stream-upload route handler and don't pass through
+// this allowlist.
 const ALLOWED_MIME = new Set([
   'image/jpeg',
   'image/png',
@@ -20,11 +30,17 @@ const ALLOWED_MIME = new Set([
   'image/gif',
   'image/avif',
   'image/svg+xml',
-  'video/mp4',
-  'video/quicktime',
-  'video/webm',
 ])
-const MAX_FILE_BYTES = 2 * 1024 * 1024 * 1024 // 2 GB — covers 4K and drone footage
+const MAX_FILE_BYTES = 2 * 1024 * 1024 * 1024 // 2 GB cap on R2 image uploads
+
+// All Stream-hosted videos use this synthetic file_key so existing
+// media_metadata + media_tags rows continue to apply uniformly.
+const STREAM_KEY_PREFIX = 'stream:'
+function streamUidFromKey(key: string): string | null {
+  return key.startsWith(STREAM_KEY_PREFIX)
+    ? key.slice(STREAM_KEY_PREFIX.length)
+    : null
+}
 
 const TAG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
 const TAG_MAX_LENGTH = 30
@@ -176,6 +192,37 @@ export async function abortMultipartUploadAction(args: {
 // Delete a media file
 // ----------------------------------------------------------------------------
 
+async function deleteOneByKey(args: {
+  propertyId: string
+  r2Prefix: string
+  key: string
+}): Promise<boolean> {
+  const uid = streamUidFromKey(args.key)
+  if (uid) {
+    // Stream-hosted video. Belongs to this property iff a row exists in
+    // media_videos under (property_id, stream_uid).
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('media_videos')
+      .select('stream_uid')
+      .eq('property_id', args.propertyId)
+      .eq('stream_uid', uid)
+      .maybeSingle()
+    if (error || !data) return false
+    await streamDeleteVideo(uid)
+    await admin
+      .from('media_videos')
+      .delete()
+      .eq('property_id', args.propertyId)
+      .eq('stream_uid', uid)
+    return true
+  }
+  // R2-hosted file. Tenant guard: key must live under the property prefix.
+  if (!args.key.startsWith(args.r2Prefix)) return false
+  await r2DeleteObject(args.key)
+  return true
+}
+
 export async function deleteMediaAction(args: {
   propertyId: string
   key: string
@@ -184,16 +231,22 @@ export async function deleteMediaAction(args: {
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return
 
-  // Make sure the key is under the caller's property prefix so they can't
-  // delete another tenant's files by passing an arbitrary key.
-  if (!args.key.startsWith(property.r2_prefix)) return
+  const ok = await deleteOneByKey({
+    propertyId: args.propertyId,
+    r2Prefix: property.r2_prefix,
+    key: args.key,
+  })
+  if (!ok) return
 
-  await r2DeleteObject(args.key)
-
-  // Drop any tag rows so they don't linger.
+  // Drop tag + metadata rows so they don't linger.
   const admin = createAdminClient()
   await admin
     .from('media_tags')
+    .delete()
+    .eq('property_id', args.propertyId)
+    .eq('file_key', args.key)
+  await admin
+    .from('media_metadata')
     .delete()
     .eq('property_id', args.propertyId)
     .eq('file_key', args.key)
@@ -202,67 +255,166 @@ export async function deleteMediaAction(args: {
   revalidatePath('/dashboard')
 }
 
-// ----------------------------------------------------------------------------
-// Video poster — client-side captured first frame, uploaded as a sibling JPEG
-// ----------------------------------------------------------------------------
+const MAX_BULK_OPERATION = 500
 
-const POSTER_PREFIX = '_posters/'
-const POSTER_MAX_BYTES = 1 * 1024 * 1024 // 1 MB cap on the captured JPEG
-
-export type PosterPresignResult =
-  | { ok: true; posterKey: string; url: string }
-  | { ok: false; error: string }
-
-export async function presignPosterUploadAction(args: {
+export async function bulkDeleteMediaAction(args: {
   propertyId: string
-  videoKey: string
-  size: number
-}): Promise<PosterPresignResult> {
+  keys: string[]
+}): Promise<{ ok: true; deleted: number } | { ok: false; error: string }> {
   const session = await requireOrgUser()
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return { ok: false, error: 'Property not found.' }
-  if (!args.videoKey.startsWith(property.r2_prefix)) {
-    return { ok: false, error: 'File does not belong to this property.' }
-  }
-  if (args.size <= 0 || args.size > POSTER_MAX_BYTES) {
-    return { ok: false, error: 'Invalid poster size.' }
+
+  // Cap so a single request can't take down the API.
+  if (args.keys.length === 0) return { ok: true, deleted: 0 }
+  if (args.keys.length > MAX_BULK_OPERATION) {
+    return { ok: false, error: `Select at most ${MAX_BULK_OPERATION} files at a time.` }
   }
 
-  const relative = args.videoKey.slice(property.r2_prefix.length)
-  const posterKey = `${property.r2_prefix}${POSTER_PREFIX}${relative}.jpg`
-  const url = await r2PresignPutUrl(posterKey, 'image/jpeg')
-  return { ok: true, posterKey, url }
-}
-
-export async function recordPosterAction(args: {
-  propertyId: string
-  videoKey: string
-  posterKey: string
-}): Promise<{ ok: true } | { ok: false; error: string }> {
-  const session = await requireOrgUser()
-  const property = session.properties.find((p) => p.id === args.propertyId)
-  if (!property) return { ok: false, error: 'Property not found.' }
-  if (!args.videoKey.startsWith(property.r2_prefix)) {
-    return { ok: false, error: 'File does not belong to this property.' }
-  }
-  if (!args.posterKey.startsWith(`${property.r2_prefix}${POSTER_PREFIX}`)) {
-    return { ok: false, error: 'Poster key out of bounds.' }
-  }
-
-  const admin = createAdminClient()
-  const { error } = await admin.from('media_metadata').upsert(
-    {
-      property_id: args.propertyId,
-      file_key: args.videoKey,
-      poster_key: args.posterKey,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'property_id,file_key' },
+  const results = await Promise.all(
+    args.keys.map((key) =>
+      deleteOneByKey({
+        propertyId: args.propertyId,
+        r2Prefix: property.r2_prefix,
+        key,
+      })
+        .then((ok) => (ok ? key : null))
+        .catch(() => null),
+    ),
   )
-  if (error) return { ok: false, error: error.message }
+  const deletedKeys = results.filter((k): k is string => k !== null)
+
+  if (deletedKeys.length > 0) {
+    const admin = createAdminClient()
+    await admin
+      .from('media_tags')
+      .delete()
+      .eq('property_id', args.propertyId)
+      .in('file_key', deletedKeys)
+    await admin
+      .from('media_metadata')
+      .delete()
+      .eq('property_id', args.propertyId)
+      .in('file_key', deletedKeys)
+  }
 
   revalidatePath('/media')
-  return { ok: true }
+  revalidatePath('/dashboard')
+  return { ok: true, deleted: deletedKeys.length }
+}
+
+// ----------------------------------------------------------------------------
+// Download — presigned GET (R2) or public MP4 (Stream)
+// ----------------------------------------------------------------------------
+
+export type DownloadUrlResult =
+  | { ok: true; url: string }
+  | { ok: false; error: string }
+
+export async function presignDownloadAction(args: {
+  propertyId: string
+  key: string
+  filename: string
+}): Promise<DownloadUrlResult> {
+  const session = await requireOrgUser()
+  const property = session.properties.find((p) => p.id === args.propertyId)
+  if (!property) return { ok: false, error: 'Property not found.' }
+
+  const uid = streamUidFromKey(args.key)
+  if (uid) {
+    // Verify ownership: the Stream UID must belong to this property.
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from('media_videos')
+      .select('stream_uid')
+      .eq('property_id', args.propertyId)
+      .eq('stream_uid', uid)
+      .maybeSingle()
+    if (!data) return { ok: false, error: 'Video not found.' }
+    return { ok: true, url: streamMp4DownloadUrl(uid) }
+  }
+
+  if (!args.key.startsWith(property.r2_prefix)) {
+    return { ok: false, error: 'File does not belong to this property.' }
+  }
+  const url = await r2PresignDownloadUrl(args.key, args.filename)
+  return { ok: true, url }
+}
+
+// ----------------------------------------------------------------------------
+// Stream — Direct Creator Upload finalize step.
+// (The tus CREATE goes through the /api/media/stream-upload route handler,
+// which proxies the Cloudflare API and inserts the media_videos row.)
+// ----------------------------------------------------------------------------
+
+/**
+ * Browser calls this after the tus upload finishes. We pull the latest
+ * status from Stream and flip the row to "ready" once Cloudflare reports
+ * readyToStream — the catalog can then render the thumbnail / iframe.
+ */
+export async function finalizeStreamVideoUploadAction(args: {
+  propertyId: string
+  uid: string
+}): Promise<{ ok: true; status: 'pending' | 'ready' | 'error' } | { ok: false; error: string }> {
+  const session = await requireOrgUser()
+  const property = session.properties.find((p) => p.id === args.propertyId)
+  if (!property) return { ok: false, error: 'Property not found.' }
+
+  const admin = createAdminClient()
+  const { data: row } = await admin
+    .from('media_videos')
+    .select('stream_uid, status')
+    .eq('property_id', args.propertyId)
+    .eq('stream_uid', args.uid)
+    .maybeSingle()
+  if (!row) return { ok: false, error: 'Video not found.' }
+
+  let video
+  try {
+    video = await streamGetVideo(args.uid)
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Stream lookup failed' }
+  }
+  if (!video) return { ok: false, error: 'Stream returned no video.' }
+
+  const nextStatus: 'pending' | 'ready' | 'error' =
+    video.status === 'error'
+      ? 'error'
+      : video.readyToStream
+        ? 'ready'
+        : 'pending'
+
+  await admin
+    .from('media_videos')
+    .update({
+      status: nextStatus,
+      duration_seconds: video.duration ? Math.round(video.duration) : null,
+      ready_at: nextStatus === 'ready' ? new Date().toISOString() : null,
+    })
+    .eq('property_id', args.propertyId)
+    .eq('stream_uid', args.uid)
+
+  if (nextStatus === 'ready') {
+    // Kick off MP4 build the first time the video transitions to ready,
+    // so the catalog "Download" button has something to point at. The
+    // build itself is async on Cloudflare's side; the static
+    // /downloads/default.mp4 URL 404s until it lands.
+    if (row.status !== 'ready') {
+      try {
+        await streamEnableMp4Download(args.uid)
+      } catch (err) {
+        // Non-fatal: the video still streams + has a thumbnail. We just
+        // log so a misconfigured token surfaces in Vercel function logs
+        // rather than silently breaking download.
+        console.error('[stream] enable MP4 download failed', {
+          uid: args.uid,
+          message: err instanceof Error ? err.message : String(err),
+        })
+      }
+    }
+    revalidatePath('/media')
+  }
+  return { ok: true, status: nextStatus }
 }
 
 // ----------------------------------------------------------------------------
