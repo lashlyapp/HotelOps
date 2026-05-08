@@ -1,4 +1,5 @@
 import 'server-only'
+import { unstable_cache } from 'next/cache'
 import {
   ListObjectsV2Command,
   type ListObjectsV2CommandOutput,
@@ -6,6 +7,7 @@ import {
 } from '@aws-sdk/client-s3'
 import { r2Bucket, r2Client, r2PublicUrl } from './client'
 import { humanizeFilename } from '@/lib/media/humanize'
+import { mediaCacheTag } from '@/lib/media/cache-tags'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export type MediaFile = {
@@ -78,8 +80,29 @@ export async function listMediaForPrefix(prefix: string): Promise<MediaFile[]> {
  * List media for a property: all files live in R2 under the property prefix,
  * joined with user-applied display name / description / tags / poster_key.
  * Three Supabase round-trips total regardless of file count.
+ *
+ * Wrapped in `unstable_cache` so concurrent /media renders for the same
+ * property hit Next's per-deployment cache instead of re-running the R2
+ * `ListObjectsV2` + 3 Supabase queries on every request. TTL is short (30s)
+ * because mutations call `revalidateTag(mediaCacheTag(propertyId))` to bust
+ * eagerly — the TTL is only there as a safety floor in case a mutation
+ * misses its bust call.
  */
 export async function listMediaWithTags(
+  propertyId: string,
+  prefix: string,
+): Promise<MediaFile[]> {
+  return unstable_cache(
+    () => listMediaWithTagsUncached(propertyId, prefix),
+    ['media-with-tags', propertyId, prefix],
+    {
+      revalidate: 30,
+      tags: [mediaCacheTag(propertyId)],
+    },
+  )()
+}
+
+async function listMediaWithTagsUncached(
   propertyId: string,
   prefix: string,
 ): Promise<MediaFile[]> {

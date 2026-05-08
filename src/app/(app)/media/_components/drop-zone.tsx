@@ -87,7 +87,7 @@ export function DropZone({
 
     if (results.some(Boolean)) {
       startTransition(async () => {
-        await revalidateAfterUploadAction(propertySlug)
+        await revalidateAfterUploadAction({ propertySlug, propertyId })
         router.refresh()
       })
     }

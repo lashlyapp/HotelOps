@@ -1,7 +1,9 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { randomBytes } from 'node:crypto'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { requireOrgUser } from '@/lib/auth/session'
+import { mediaCacheTag } from '@/lib/media/cache-tags'
 import { r2PublicUrl } from '@/lib/r2/client'
 import {
   r2AbortMultipartUpload,
@@ -13,6 +15,7 @@ import {
   r2PresignParts,
   r2PresignPutUrl,
 } from '@/lib/r2/upload'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 // Both images and videos go through R2 now; videos used to take the
@@ -41,6 +44,19 @@ const POSTER_PREFIX = '_posters/'
 const POSTER_CONTENT_TYPE = 'image/jpeg'
 const MAX_POSTER_BYTES = 5 * 1024 * 1024
 
+// Bust the catalog's unstable_cache entry for one property. Used by every
+// write path so a freshly-uploaded file shows up on the next /media render
+// instead of waiting out the 30-second TTL.
+function bustMediaCache(propertyId: string) {
+  revalidateTag(mediaCacheTag(propertyId), 'max')
+}
+
+// Per-user rate limit for presign + multipart-init endpoints. 60 requests
+// per minute = 1/sec sustained — generous for a tenant batch-uploading
+// images and videos, low enough to throttle a runaway client. The check is
+// best-effort across function instances (see lib/rate-limit.ts).
+const PRESIGN_LIMIT = { limit: 60, windowMs: 60_000 } as const
+
 // ----------------------------------------------------------------------------
 // Upload — presigned URL flow
 // ----------------------------------------------------------------------------
@@ -60,6 +76,11 @@ export async function presignUploadAction(args: {
   size: number
 }): Promise<PresignResult> {
   const session = await requireOrgUser()
+
+  const rl = checkRateLimit(`presign:${session.userId}`, PRESIGN_LIMIT)
+  if (!rl.ok) {
+    return { ok: false, error: 'Too many upload requests — slow down a moment.' }
+  }
 
   if (!ALLOWED_MIME.has(args.contentType)) {
     return { ok: false, error: `${args.contentType} is not an allowed file type.` }
@@ -87,12 +108,18 @@ export async function presignUploadAction(args: {
  * file write happens in the browser → R2; this is just a cache-bust + a
  * place to do post-upload bookkeeping later (e.g. virus scan kickoff).
  */
-export async function revalidateAfterUploadAction(propertySlug: string) {
-  await requireOrgUser()
+export async function revalidateAfterUploadAction(args: {
+  propertySlug: string
+  propertyId: string
+}) {
+  const session = await requireOrgUser()
+  if (session.properties.some((p) => p.id === args.propertyId)) {
+    bustMediaCache(args.propertyId)
+  }
   revalidatePath(`/media`)
   revalidatePath(`/dashboard`)
-  // No-op header to read the slug for path scoping later if needed.
-  void propertySlug
+  // Slug retained for future per-property path scoping.
+  void args.propertySlug
 }
 
 // ----------------------------------------------------------------------------
@@ -121,6 +148,11 @@ export async function initMultipartUploadAction(args: {
   size: number
 }): Promise<InitMultipartResult> {
   const session = await requireOrgUser()
+
+  const rl = checkRateLimit(`presign:${session.userId}`, PRESIGN_LIMIT)
+  if (!rl.ok) {
+    return { ok: false, error: 'Too many upload requests — slow down a moment.' }
+  }
 
   if (!ALLOWED_MIME.has(args.contentType)) {
     return { ok: false, error: `${args.contentType} is not an allowed file type.` }
@@ -200,6 +232,12 @@ export async function presignPosterUploadAction(args: {
   size: number
 }): Promise<PresignPosterResult> {
   const session = await requireOrgUser()
+
+  const rl = checkRateLimit(`presign:${session.userId}`, PRESIGN_LIMIT)
+  if (!rl.ok) {
+    return { ok: false, error: 'Too many upload requests — slow down a moment.' }
+  }
+
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return { ok: false, error: 'Property not found.' }
   if (!args.videoKey.startsWith(property.r2_prefix)) {
@@ -245,6 +283,7 @@ export async function setVideoPosterAction(args: {
   )
   if (error) return { ok: false, error: error.message }
 
+  bustMediaCache(args.propertyId)
   revalidatePath('/media')
   return { ok: true, posterUrl: r2PublicUrl(args.posterKey) }
 }
@@ -314,6 +353,7 @@ export async function deleteMediaAction(args: {
     .eq('property_id', args.propertyId)
     .eq('file_key', args.key)
 
+  bustMediaCache(args.propertyId)
   revalidatePath('/media')
   revalidatePath('/dashboard')
 }
@@ -361,6 +401,7 @@ export async function bulkDeleteMediaAction(args: {
       .in('file_key', deletedKeys)
   }
 
+  bustMediaCache(args.propertyId)
   revalidatePath('/media')
   revalidatePath('/dashboard')
   return { ok: true, deleted: deletedKeys.length }
@@ -430,6 +471,7 @@ export async function updateMediaMetadataAction(args: {
   )
   if (error) return { ok: false, error: error.message }
 
+  bustMediaCache(args.propertyId)
   revalidatePath('/media')
   return { ok: true, displayName, description }
 }
@@ -479,6 +521,7 @@ export async function addTagAction(args: {
   }
 
   const updated = await listTagsForFile(args.propertyId, args.key)
+  bustMediaCache(args.propertyId)
   revalidatePath('/media')
   return { ok: true, tags: updated }
 }
@@ -508,6 +551,7 @@ export async function removeTagAction(args: {
   if (error) return { ok: false, error: error.message }
 
   const updated = await listTagsForFile(args.propertyId, args.key)
+  bustMediaCache(args.propertyId)
   revalidatePath('/media')
   return { ok: true, tags: updated }
 }
@@ -542,21 +586,18 @@ function sanitizeFilename(raw: string): string | null {
 }
 
 async function uniqueKey(prefix: string, filename: string): Promise<string> {
-  // If the exact key isn't taken, use it. Otherwise append "-2", "-3", ...
-  // before the extension.
+  // Preserve the user's filename when there's no collision (1 HEAD call).
+  // Under contention or for repeat names, append 8 hex chars (4 random
+  // bytes = 4 billion candidates) so even a busy property never sequential-
+  // probes 50× HEAD calls in a row to find a free slot.
   const proposed = `${prefix}${filename}`
   if (!(await r2ObjectExists(proposed))) return proposed
 
   const dot = filename.lastIndexOf('.')
   const stem = dot === -1 ? filename : filename.slice(0, dot)
   const ext = dot === -1 ? '' : filename.slice(dot)
-
-  for (let n = 2; n < 1000; n += 1) {
-    const candidate = `${prefix}${stem}-${n}${ext}`
-    if (!(await r2ObjectExists(candidate))) return candidate
-  }
-  // Fallback (basically never reached): timestamp-suffixed.
-  return `${prefix}${stem}-${Date.now()}${ext}`
+  const suffix = randomBytes(4).toString('hex')
+  return `${prefix}${stem}-${suffix}${ext}`
 }
 
 function normalizeTag(raw: string): string | null {
