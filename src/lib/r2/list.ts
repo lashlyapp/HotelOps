@@ -39,6 +39,12 @@ export async function listMediaForPrefix(prefix: string): Promise<MediaFile[]> {
 
   return items
     .filter((obj) => obj.Key && !obj.Key.endsWith('/'))
+    .filter((obj) => {
+      // Hide platform-internal files (logos, future per-property metadata)
+      // from the customer-facing media catalog.
+      const rel = obj.Key!.slice(normalizedPrefix.length)
+      return !rel.startsWith('_meta/')
+    })
     .map((obj) => {
       const key = obj.Key!
       const filename = key.slice(normalizedPrefix.length)

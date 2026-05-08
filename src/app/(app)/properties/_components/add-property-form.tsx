@@ -8,7 +8,7 @@ import { ownerAddPropertyAction, type ActionResult } from '@/lib/admin/actions'
 
 const initial: ActionResult = {}
 
-export function AddPropertyForm({ orgSlug }: { orgSlug: string }) {
+export function AddPropertyForm() {
   const [state, action, pending] = useActionState(
     ownerAddPropertyAction,
     initial,
@@ -21,29 +21,17 @@ export function AddPropertyForm({ orgSlug }: { orgSlug: string }) {
 
   return (
     <form ref={formRef} action={action} className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="add-prop-slug">Slug</Label>
-          <Input
-            id="add-prop-slug"
-            name="slug"
-            placeholder="riverside-inn"
-            pattern="^[a-z0-9]+(-[a-z0-9]+)*$"
-            required
-          />
-          <p className="text-xs text-subtle font-mono">
-            R2 path: {orgSlug}/[slug]/
-          </p>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="add-prop-name">Display name</Label>
-          <Input
-            id="add-prop-name"
-            name="name"
-            placeholder="Riverside Inn"
-            required
-          />
-        </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="add-prop-name">Property name</Label>
+        <Input
+          id="add-prop-name"
+          name="name"
+          placeholder="Riverside Inn"
+          required
+        />
+        <p className="text-xs text-subtle">
+          You can add the address, logo, and other details after creating it.
+        </p>
       </div>
 
       {state.error ? (

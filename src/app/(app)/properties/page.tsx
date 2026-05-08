@@ -1,7 +1,9 @@
+import Link from 'next/link'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requireOrgOwner } from '@/lib/auth/session'
 import { listMediaForPrefix } from '@/lib/r2/list'
 import { computeLibraryStats, formatBytes } from '@/lib/r2/stats'
+import { r2PublicUrl } from '@/lib/r2/client'
 import { AddPropertyForm } from './_components/add-property-form'
 import { RemovePropertyButton } from './_components/remove-property-button'
 
@@ -22,55 +24,55 @@ export default async function PropertiesPage() {
           Properties
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Each property has its own media folder and permanent CDN URLs. Add as
-          many as you operate.
+          Each property has its own media catalog and details. Click a property
+          to edit its address, logo, and contact info.
         </p>
       </div>
 
       <Card className="overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
-            <tr>
-              <th className="px-4 py-3 font-medium">Property</th>
-              <th className="px-4 py-3 font-medium">R2 prefix</th>
-              <th className="px-4 py-3 font-medium">Files</th>
-              <th className="px-4 py-3 font-medium">Storage</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border-subtle">
-            {rows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="px-4 py-10 text-center text-sm text-muted"
+        <ul className="divide-y divide-border-subtle">
+          {rows.length === 0 ? (
+            <li className="p-8 text-center text-sm text-muted">
+              No properties yet. Add the first one below.
+            </li>
+          ) : (
+            rows.map(({ property, stats }) => (
+              <li
+                key={property.id}
+                className="flex items-center gap-4 p-4 hover:bg-surface-muted transition-colors"
+              >
+                <PropertyAvatar
+                  name={property.name}
+                  logoKey={property.logo_key}
+                  logoUploadedAt={property.logo_uploaded_at}
+                />
+
+                <Link
+                  href={`/properties/${property.id}`}
+                  className="focus-ring rounded-sm flex-1 min-w-0"
                 >
-                  No properties yet. Add the first one below.
-                </td>
-              </tr>
-            ) : (
-              rows.map(({ property, stats }) => (
-                <tr key={property.id}>
-                  <td className="px-4 py-3 font-medium text-fg">
+                  <p className="text-sm font-medium text-fg truncate">
                     {property.name}
-                  </td>
-                  <td className="px-4 py-3 text-muted font-mono text-xs">
-                    {property.r2_prefix}
-                  </td>
-                  <td className="px-4 py-3 text-fg tabular-nums">
-                    {stats.fileCount}
-                  </td>
-                  <td className="px-4 py-3 text-muted tabular-nums">
-                    {formatBytes(stats.totalBytes)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <RemovePropertyButton propertyId={property.id} />
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted truncate">
+                    {formatLocation(property) ?? 'No address yet'}
+                  </p>
+                </Link>
+
+                <div className="hidden sm:block text-right">
+                  <p className="text-xs text-subtle uppercase tracking-wider">
+                    Library
+                  </p>
+                  <p className="text-sm text-fg tabular-nums">
+                    {stats.fileCount} · {formatBytes(stats.totalBytes)}
+                  </p>
+                </div>
+
+                <RemovePropertyButton propertyId={property.id} />
+              </li>
+            ))
+          )}
+        </ul>
       </Card>
 
       <Card>
@@ -78,9 +80,52 @@ export default async function PropertiesPage() {
           <CardTitle>Add property</CardTitle>
         </CardHeader>
         <CardBody>
-          <AddPropertyForm orgSlug={session.organization.slug} />
+          <AddPropertyForm />
         </CardBody>
       </Card>
     </div>
   )
+}
+
+function PropertyAvatar({
+  name,
+  logoKey,
+  logoUploadedAt,
+}: {
+  name: string
+  logoKey: string | null
+  logoUploadedAt: string | null
+}) {
+  if (logoKey) {
+    const cacheBust = logoUploadedAt
+      ? `?t=${new Date(logoUploadedAt).getTime()}`
+      : ''
+    return (
+      <div className="size-12 shrink-0 rounded-md overflow-hidden border border-border-subtle bg-surface">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`${r2PublicUrl(logoKey)}${cacheBust}`}
+          alt={`${name} logo`}
+          className="size-full object-cover"
+        />
+      </div>
+    )
+  }
+  const initial = name.charAt(0).toUpperCase()
+  return (
+    <div className="size-12 shrink-0 rounded-md border border-border-subtle bg-surface-muted flex items-center justify-center text-sm font-semibold text-muted">
+      {initial}
+    </div>
+  )
+}
+
+function formatLocation(p: {
+  city: string | null
+  state: string | null
+  country: string
+}): string | null {
+  const parts = [p.city, p.state].filter(Boolean) as string[]
+  if (parts.length === 0) return null
+  const main = parts.join(', ')
+  return p.country && p.country !== 'US' ? `${main} · ${p.country}` : main
 }

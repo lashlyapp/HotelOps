@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requirePlatformAdmin } from '@/lib/auth/session'
+import { r2PublicUrl } from '@/lib/r2/client'
 import { listMediaForPrefix } from '@/lib/r2/list'
 import { computeLibraryStats, formatBytes, formatRelative } from '@/lib/r2/stats'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -91,10 +92,22 @@ export default async function TenantDetailPage({
                 {propertyStats.map(({ property, stats }) => (
                   <tr key={property.id}>
                     <td className="px-5 py-3">
-                      <p className="text-fg font-medium">{property.name}</p>
-                      <p className="text-xs text-subtle font-mono truncate">
-                        {property.r2_prefix}
-                      </p>
+                      <div className="flex items-center gap-3">
+                        <PropertyLogo property={property} />
+                        <div className="min-w-0">
+                          <p className="text-fg font-medium truncate">
+                            {property.name}
+                          </p>
+                          <p className="text-xs text-subtle font-mono truncate">
+                            {property.slug} · {property.r2_prefix}
+                          </p>
+                          {formatLocation(property) ? (
+                            <p className="text-xs text-muted truncate">
+                              {formatLocation(property)}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
                     </td>
                     <td className="px-5 py-3 text-fg tabular-nums">
                       {stats.fileCount}
@@ -167,6 +180,35 @@ export default async function TenantDetailPage({
       />
     </div>
   )
+}
+
+function PropertyLogo({ property }: { property: Property }) {
+  if (property.logo_key) {
+    const cacheBust = property.logo_uploaded_at
+      ? `?t=${new Date(property.logo_uploaded_at).getTime()}`
+      : ''
+    return (
+      <div className="size-10 shrink-0 rounded-md overflow-hidden border border-border-subtle bg-surface">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`${r2PublicUrl(property.logo_key)}${cacheBust}`}
+          alt=""
+          className="size-full object-cover"
+        />
+      </div>
+    )
+  }
+  return (
+    <div className="size-10 shrink-0 rounded-md border border-border-subtle bg-surface-muted flex items-center justify-center text-sm font-semibold text-muted">
+      {property.name.charAt(0).toUpperCase()}
+    </div>
+  )
+}
+
+function formatLocation(p: Property): string | null {
+  const parts = [p.city, p.state].filter(Boolean) as string[]
+  if (parts.length === 0) return null
+  return parts.join(', ')
 }
 
 async function loadTenant(orgId: string) {

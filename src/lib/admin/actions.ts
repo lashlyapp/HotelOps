@@ -2,9 +2,11 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { requireOrgOwner, requirePlatformAdmin } from '@/lib/auth/session'
+import { requireOrgOwner, requirePlatformAdmin, requireUser } from '@/lib/auth/session'
+import { r2DeleteObject, r2PutObject } from '@/lib/r2/upload'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { AppRole } from '@/lib/supabase/types'
+import type { AppRole, Property } from '@/lib/supabase/types'
+import { slugify, uniqueSlug } from '@/lib/utils/slugify'
 
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
 const MIN_PASSWORD_LENGTH = 8
@@ -361,27 +363,27 @@ export async function ownerAddPropertyAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const session = await requireOrgOwner()
-  const slug = String(formData.get('slug') ?? '').trim().toLowerCase()
   const name = String(formData.get('name') ?? '').trim()
+  if (!name) return { error: 'Name is required.' }
 
-  if (!slug || !name) return { error: 'Slug and name are required.' }
-  if (!SLUG_RE.test(slug)) {
-    return { error: 'Slug must be kebab-case (a-z, 0-9, hyphens).' }
-  }
+  const base = slugify(name)
+  if (!base) return { error: 'Name must include letters or numbers.' }
 
   const admin = createAdminClient()
+  const { data: existing } = await admin
+    .from('properties')
+    .select('slug')
+    .eq('org_id', session.organization.id)
+  const taken = new Set((existing ?? []).map((p) => p.slug))
+  const slug = uniqueSlug(base, (s) => taken.has(s))
+
   const { error } = await admin.from('properties').insert({
     org_id: session.organization.id,
     slug,
     name,
     r2_prefix: `${session.organization.slug}/${slug}/`,
   })
-  if (error) {
-    if (error.code === '23505') {
-      return { error: `You already have a property with slug "${slug}".` }
-    }
-    return { error: error.message }
-  }
+  if (error) return { error: error.message }
 
   revalidatePath('/properties')
   revalidatePath('/dashboard')
@@ -403,6 +405,161 @@ export async function ownerRemovePropertyAction(formData: FormData) {
 
   revalidatePath('/properties')
   revalidatePath('/dashboard')
+}
+
+/**
+ * Authorize the caller to modify this property: platform admins always pass;
+ * org owners pass only for their own org's properties. Returns the property
+ * row or throws / redirects.
+ */
+async function authorizePropertyAccess(
+  propertyId: string,
+): Promise<Property> {
+  const user = await requireUser()
+  const admin = createAdminClient()
+  const { data: property, error } = await admin
+    .from('properties')
+    .select('*')
+    .eq('id', propertyId)
+    .maybeSingle()
+  if (error) throw error
+  if (!property) throw new Error('Property not found')
+
+  const isPlatformAdmin = user.profile.role === 'platform_admin'
+  const isOrgOwner =
+    user.profile.role === 'org_owner' &&
+    user.profile.org_id === property.org_id
+  if (!isPlatformAdmin && !isOrgOwner) {
+    throw new Error('Not authorized')
+  }
+  return property as Property
+}
+
+const TEXT_FIELDS = [
+  'name',
+  'description',
+  'address_line1',
+  'address_line2',
+  'city',
+  'state',
+  'postal_code',
+  'country',
+  'phone',
+  'email',
+  'website',
+] as const
+
+export async function updatePropertyAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const propertyId = String(formData.get('property_id') ?? '')
+  if (!propertyId) return { error: 'Missing property.' }
+  await authorizePropertyAccess(propertyId)
+
+  const update: Record<string, string | null> = {}
+  for (const field of TEXT_FIELDS) {
+    const raw = formData.get(field)
+    if (raw === null) continue
+    const value = String(raw).trim()
+    update[field] = value === '' ? null : value
+  }
+  if (!update.name) return { error: 'Name is required.' }
+  if (update.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(update.email)) {
+    return { error: 'Email must be a valid address.' }
+  }
+  if (update.website) {
+    try {
+      new URL(update.website)
+    } catch {
+      return {
+        error: 'Website must be a full URL (e.g. https://example.com).',
+      }
+    }
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('properties')
+    .update(update)
+    .eq('id', propertyId)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/properties/${propertyId}`)
+  revalidatePath('/properties')
+  revalidatePath('/dashboard')
+  return { success: 'Saved.' }
+}
+
+const LOGO_MAX_BYTES = 5 * 1024 * 1024 // 5 MB
+const LOGO_MIME_EXT: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+  'image/svg+xml': 'svg',
+}
+
+export async function uploadPropertyLogoAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const propertyId = String(formData.get('property_id') ?? '')
+  if (!propertyId) return { error: 'Missing property.' }
+  const property = await authorizePropertyAccess(propertyId)
+
+  const file = formData.get('logo')
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: 'Choose a logo file to upload.' }
+  }
+  if (file.size > LOGO_MAX_BYTES) {
+    return { error: 'Logo must be under 5 MB.' }
+  }
+  const ext = LOGO_MIME_EXT[file.type]
+  if (!ext) {
+    return { error: 'Logo must be PNG, JPEG, WebP, or SVG.' }
+  }
+
+  const newKey = `${property.r2_prefix}_meta/logo.${ext}`
+  const buffer = Buffer.from(await file.arrayBuffer())
+  await r2PutObject(newKey, buffer, file.type)
+
+  // If the previous logo had a different extension, delete the orphan so it
+  // doesn't linger in R2 and confuse the cache.
+  if (property.logo_key && property.logo_key !== newKey) {
+    await r2DeleteObject(property.logo_key)
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('properties')
+    .update({
+      logo_key: newKey,
+      logo_uploaded_at: new Date().toISOString(),
+    })
+    .eq('id', propertyId)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/properties/${propertyId}`)
+  revalidatePath('/properties')
+  return { success: 'Logo updated.' }
+}
+
+export async function removePropertyLogoAction(formData: FormData) {
+  const propertyId = String(formData.get('property_id') ?? '')
+  if (!propertyId) return
+  const property = await authorizePropertyAccess(propertyId)
+
+  if (property.logo_key) {
+    await r2DeleteObject(property.logo_key)
+  }
+  const admin = createAdminClient()
+  await admin
+    .from('properties')
+    .update({ logo_key: null, logo_uploaded_at: null })
+    .eq('id', propertyId)
+
+  revalidatePath(`/properties/${propertyId}`)
+  revalidatePath('/properties')
 }
 
 export async function deleteTenantAction(formData: FormData) {

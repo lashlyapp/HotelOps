@@ -23,6 +23,18 @@ export type Property = {
   name: string
   r2_prefix: string
   created_at: string
+  address_line1: string | null
+  address_line2: string | null
+  city: string | null
+  state: string | null
+  postal_code: string | null
+  country: string
+  phone: string | null
+  email: string | null
+  website: string | null
+  description: string | null
+  logo_key: string | null
+  logo_uploaded_at: string | null
 }
 
 export type Invoice = {
