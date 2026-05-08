@@ -7,6 +7,7 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
 - **Next.js 16** (App Router) + TypeScript + Tailwind CSS v4
 - **Supabase** — auth + Postgres (`@supabase/ssr`) with RLS-by-default
 - **Cloudflare R2** — media storage, served from `cdn.myhotelops.com`
+- **Resend** — transactional email (welcome emails to new members)
 - **Vercel** — hosting
 
 ## Features (v1)
@@ -53,8 +54,10 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
 4. Create and manage tenants from the UI:
 
    - **Platform admin** (`/admin`): lists every tenant on the platform; click a row to manage it (edit name, add/remove properties, add/remove members of any role, see per-property file/storage stats, delete tenant). Click **Create tenant** to onboard a new customer with org name, slug, properties, and initial owner credentials.
-   - **Tenant owner** (`/properties` and `/team`, visible to `org_owner` role only): manages their own properties and team members with email + temporary password.
+   - **Tenant owner** (`/properties` and `/team`, visible to `org_owner` role only): manages their own properties and team members. When adding a member, choose either "let them set their own password" (sends a one-time setup link by email) or "set a temporary password" (share it manually).
    - **Anyone**: change their own password from `/account`.
+
+   Welcome emails go through Resend. Set `RESEND_API_KEY` and `EMAIL_FROM` env vars (Vercel + `.env.local`). Without these, member creation still works but the email is skipped (logged as a warning). For production, verify your sending domain in Resend and use `noreply@myhotelops.com` as `EMAIL_FROM`.
 
    The `Onboard tenant` GitHub Actions workflow remains as an ops fallback for non-UI provisioning.
 

@@ -3,10 +3,39 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireOrgOwner, requirePlatformAdmin, requireUser } from '@/lib/auth/session'
+import { sendWelcomeEmail } from '@/lib/email/send'
 import { r2DeleteObject, r2PutObject } from '@/lib/r2/upload'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { AppRole, Property } from '@/lib/supabase/types'
 import { slugify, uniqueSlug } from '@/lib/utils/slugify'
+
+function roleLabel(role: AppRole): string {
+  if (role === 'org_owner') return 'an owner'
+  if (role === 'org_staff') return 'staff'
+  return 'a platform admin'
+}
+
+/**
+ * Generate a one-time setup link the recipient can click to set their own
+ * password. The link goes to /auth/callback?code=... which exchanges the code
+ * for a session and forwards them to /set-password. Default expiry is ~1h.
+ */
+async function generateSetupLink(email: string): Promise<string | null> {
+  const admin = createAdminClient()
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  ).replace(/\/+$/, '')
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: 'recovery',
+    email,
+    options: { redirectTo: `${siteUrl}/auth/callback` },
+  })
+  if (error || !data.properties?.action_link) {
+    console.error('[email] could not generate setup link', error)
+    return null
+  }
+  return data.properties.action_link
+}
 
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
 const MIN_PASSWORD_LENGTH = 8
@@ -21,26 +50,33 @@ export async function createTenantAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requirePlatformAdmin()
+  const inviter = await requirePlatformAdmin()
 
   const orgSlug = (formData.get('org_slug') as string)?.trim().toLowerCase()
   const orgName = (formData.get('org_name') as string)?.trim()
   const ownerEmail = (formData.get('owner_email') as string)?.trim().toLowerCase()
   const ownerPassword = formData.get('owner_password') as string
+  const passwordMode = (formData.get('password_mode') as string) || 'self'
+  const sendWelcome = passwordMode === 'self' || formData.get('send_welcome') === 'on'
 
   // Properties come as repeated property_slug[] / property_name[] fields.
   const propertySlugs = formData.getAll('property_slug').map((v) => String(v).trim().toLowerCase())
   const propertyNames = formData.getAll('property_name').map((v) => String(v).trim())
 
-  if (!orgSlug || !orgName || !ownerEmail || !ownerPassword) {
-    return { error: 'All fields are required.' }
+  if (!orgSlug || !orgName || !ownerEmail) {
+    return { error: 'Org name, slug, and owner email are required.' }
   }
   if (!SLUG_RE.test(orgSlug)) {
     return { error: 'Org slug must be kebab-case (a-z, 0-9, hyphens).' }
   }
-  if (ownerPassword.length < MIN_PASSWORD_LENGTH) {
-    return {
-      error: `Owner password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+  if (passwordMode === 'admin') {
+    if (!ownerPassword) {
+      return { error: 'Set a temporary password or switch to self-set mode.' }
+    }
+    if (ownerPassword.length < MIN_PASSWORD_LENGTH) {
+      return {
+        error: `Owner password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+      }
     }
   }
   const properties = propertySlugs
@@ -84,12 +120,16 @@ export async function createTenantAction(
   const { error: propErr } = await admin.from('properties').insert(propertyRows)
   if (propErr) return { error: propErr.message }
 
-  // 3. Owner — auth user with confirmed email + password.
+  // 3. Owner — auth user with confirmed email. Password is either set now
+  //    (admin mode) or left as a random placeholder (self-set mode; the
+  //    recovery link the email contains is what they actually use).
   const existingUserId = await findUserId(ownerEmail)
+  const effectivePassword =
+    passwordMode === 'admin' ? ownerPassword : randomPlaceholderPassword()
   let ownerId: string
   if (existingUserId) {
     const { error } = await admin.auth.admin.updateUserById(existingUserId, {
-      password: ownerPassword,
+      password: effectivePassword,
       email_confirm: true,
     })
     if (error) return { error: error.message }
@@ -97,7 +137,7 @@ export async function createTenantAction(
   } else {
     const { data, error } = await admin.auth.admin.createUser({
       email: ownerEmail,
-      password: ownerPassword,
+      password: effectivePassword,
       email_confirm: true,
     })
     if (error) return { error: error.message }
@@ -110,8 +150,33 @@ export async function createTenantAction(
     .upsert({ id: ownerId, org_id: orgId, role: 'org_owner' })
   if (profileErr) return { error: profileErr.message }
 
+  // 5. Welcome email (mandatory in self-set mode; optional in admin-set).
+  //    Best-effort: failure doesn't roll back the tenant.
+  if (sendWelcome) {
+    const setupLink =
+      passwordMode === 'self'
+        ? (await generateSetupLink(ownerEmail)) ?? undefined
+        : undefined
+    await sendWelcomeEmail({
+      to: ownerEmail,
+      recipientName: null,
+      orgName,
+      roleLabel: roleLabel('org_owner'),
+      inviterName: inviter.email,
+      setupLink,
+    })
+  }
+
   revalidatePath('/admin')
   redirect('/admin')
+}
+
+function randomPlaceholderPassword(): string {
+  // 32 random URL-safe chars; never disclosed to anyone — replaced when the
+  // recipient clicks the recovery link and sets their own password.
+  const bytes = new Uint8Array(24)
+  crypto.getRandomValues(bytes)
+  return Buffer.from(bytes).toString('base64url')
 }
 
 /**
@@ -126,13 +191,16 @@ export async function createTeamMemberAction(
   const email = (formData.get('email') as string)?.trim().toLowerCase()
   const password = formData.get('password') as string
   const fullName = (formData.get('full_name') as string)?.trim() || null
+  const passwordMode = (formData.get('password_mode') as string) || 'self'
+  const sendWelcome = passwordMode === 'self' || formData.get('send_welcome') === 'on'
 
-  if (!email || !password) {
-    return { error: 'Email and password are required.' }
-  }
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    return {
-      error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+  if (!email) return { error: 'Email is required.' }
+  if (passwordMode === 'admin') {
+    if (!password) return { error: 'Set a temporary password or switch to self-set mode.' }
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return {
+        error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+      }
     }
   }
 
@@ -151,10 +219,12 @@ export async function createTeamMemberAction(
     }
   }
 
+  const effectivePassword =
+    passwordMode === 'admin' ? password : randomPlaceholderPassword()
   let userId: string
   if (existingId) {
     const { error } = await admin.auth.admin.updateUserById(existingId, {
-      password,
+      password: effectivePassword,
       email_confirm: true,
     })
     if (error) return { error: error.message }
@@ -162,7 +232,7 @@ export async function createTeamMemberAction(
   } else {
     const { data, error } = await admin.auth.admin.createUser({
       email,
-      password,
+      password: effectivePassword,
       email_confirm: true,
     })
     if (error) return { error: error.message }
@@ -177,8 +247,31 @@ export async function createTeamMemberAction(
   })
   if (profileErr) return { error: profileErr.message }
 
+  let emailSent = false
+  if (sendWelcome) {
+    const setupLink =
+      passwordMode === 'self'
+        ? (await generateSetupLink(email)) ?? undefined
+        : undefined
+    emailSent = await sendWelcomeEmail({
+      to: email,
+      recipientName: fullName,
+      orgName: session.organization.name,
+      roleLabel: roleLabel('org_staff'),
+      inviterName: session.email,
+      setupLink,
+    })
+  }
+
   revalidatePath('/team')
-  return { success: `${email} added to ${session.organization.name}.` }
+  const suffix = sendWelcome
+    ? emailSent
+      ? ' Welcome email sent.'
+      : ' (Welcome email not sent — email not configured.)'
+    : ''
+  return {
+    success: `${email} added to ${session.organization.name}.${suffix}`,
+  }
 }
 
 async function findUserId(email: string): Promise<string | null> {
@@ -274,7 +367,7 @@ export async function addOrgMemberAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requirePlatformAdmin()
+  const inviter = await requirePlatformAdmin()
   const orgId = String(formData.get('org_id') ?? '')
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const password = String(formData.get('password') ?? '')
@@ -282,11 +375,16 @@ export async function addOrgMemberAction(
   const fullName = (String(formData.get('full_name') ?? '').trim() || null) as
     | string
     | null
+  const passwordMode = (formData.get('password_mode') as string) || 'self'
+  const sendWelcome = passwordMode === 'self' || formData.get('send_welcome') === 'on'
 
   if (!orgId) return { error: 'Missing org.' }
-  if (!email || !password) return { error: 'Email and password are required.' }
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` }
+  if (!email) return { error: 'Email is required.' }
+  if (passwordMode === 'admin') {
+    if (!password) return { error: 'Set a temporary password or switch to self-set mode.' }
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` }
+    }
   }
   if (role !== 'org_owner' && role !== 'org_staff') {
     return { error: 'Invalid role.' }
@@ -306,10 +404,12 @@ export async function addOrgMemberAction(
     }
   }
 
+  const effectivePassword =
+    passwordMode === 'admin' ? password : randomPlaceholderPassword()
   let userId: string
   if (existingId) {
     const { error } = await admin.auth.admin.updateUserById(existingId, {
-      password,
+      password: effectivePassword,
       email_confirm: true,
     })
     if (error) return { error: error.message }
@@ -317,7 +417,7 @@ export async function addOrgMemberAction(
   } else {
     const { data, error } = await admin.auth.admin.createUser({
       email,
-      password,
+      password: effectivePassword,
       email_confirm: true,
     })
     if (error) return { error: error.message }
@@ -332,9 +432,35 @@ export async function addOrgMemberAction(
   })
   if (profileErr) return { error: profileErr.message }
 
+  let emailSent = false
+  if (sendWelcome) {
+    const { data: org } = await admin
+      .from('organizations')
+      .select('name')
+      .eq('id', orgId)
+      .maybeSingle()
+    const setupLink =
+      passwordMode === 'self'
+        ? (await generateSetupLink(email)) ?? undefined
+        : undefined
+    emailSent = await sendWelcomeEmail({
+      to: email,
+      recipientName: fullName,
+      orgName: org?.name ?? 'your organization',
+      roleLabel: roleLabel(role),
+      inviterName: inviter.email,
+      setupLink,
+    })
+  }
+
   revalidatePath(`/admin/tenants/${orgId}`)
   revalidatePath('/admin')
-  return { success: `${email} added as ${role.replace('_', ' ')}.` }
+  const suffix = sendWelcome
+    ? emailSent
+      ? ' Welcome email sent.'
+      : ' (Welcome email not sent — email not configured.)'
+    : ''
+  return { success: `${email} added as ${role.replace('_', ' ')}.${suffix}` }
 }
 
 export async function removeOrgMemberAction(formData: FormData) {

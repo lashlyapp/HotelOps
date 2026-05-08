@@ -3,8 +3,10 @@
 import { useActionState, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { RadioOption } from '@/components/ui/radio-option'
 import { createTenantAction, type ActionResult } from '@/lib/admin/actions'
 
 const initial: ActionResult = {}
@@ -15,6 +17,7 @@ export function CreateTenantForm() {
     { id: 1 },
   ])
   const [nextId, setNextId] = useState(2)
+  const [mode, setMode] = useState<'self' | 'admin'>('self')
 
   function addProperty() {
     setProperties((p) => [...p, { id: nextId }])
@@ -108,16 +111,55 @@ export function CreateTenantForm() {
             autoComplete="off"
             required
           />
-          <Field
-            label="Temporary password"
-            id="owner_password"
-            name="owner_password"
-            type="password"
-            autoComplete="new-password"
-            minLength={8}
-            hint="At least 8 characters. Share this with the owner securely; they can change it from /account."
-            required
-          />
+
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-fg">Password</legend>
+            <RadioOption
+              id="tenant-mode-self"
+              name="password_mode"
+              value="self"
+              checked={mode === 'self'}
+              onChange={() => setMode('self')}
+              label="Let them set their own password"
+              hint="Sends a one-time setup link to the owner by email."
+            />
+            <RadioOption
+              id="tenant-mode-admin"
+              name="password_mode"
+              value="admin"
+              checked={mode === 'admin'}
+              onChange={() => setMode('admin')}
+              label="I'll set a temporary password"
+              hint="Share through a secure channel."
+            />
+          </fieldset>
+
+          {mode === 'admin' ? (
+            <Field
+              label="Temporary password"
+              id="owner_password"
+              name="owner_password"
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              required={mode === 'admin'}
+              hint="At least 8 characters."
+            />
+          ) : null}
+
+          {mode === 'admin' ? (
+            <Checkbox
+              id="owner-send-welcome"
+              name="send_welcome"
+              defaultChecked
+              label="Send welcome email to the owner"
+              hint="Includes a sign-in link only — the password is not included."
+            />
+          ) : (
+            <p className="text-xs text-subtle">
+              A welcome email with the setup link will be sent to the owner.
+            </p>
+          )}
         </CardBody>
       </Card>
 

@@ -1,8 +1,9 @@
 'use client'
 
-import { useActionState, useEffect, useRef } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createTeamMemberAction, type ActionResult } from '@/lib/admin/actions'
@@ -14,6 +15,7 @@ export function AddMemberForm() {
     createTeamMemberAction,
     initial,
   )
+  const [mode, setMode] = useState<'self' | 'admin'>('self')
   const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
@@ -51,21 +53,54 @@ export function AddMemberForm() {
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="password">Temporary password</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              required
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-fg">Password</legend>
+            <ModeRadio
+              id="mode-self"
+              value="self"
+              checked={mode === 'self'}
+              onChange={() => setMode('self')}
+              label="Let them set their own password"
+              hint="Sends a one-time setup link by email. Recommended."
             />
+            <ModeRadio
+              id="mode-admin"
+              value="admin"
+              checked={mode === 'admin'}
+              onChange={() => setMode('admin')}
+              label="I'll set a temporary password"
+              hint="Share it with them through a secure channel."
+            />
+          </fieldset>
+
+          {mode === 'admin' ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Temporary password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required={mode === 'admin'}
+              />
+              <p className="text-xs text-subtle">At least 8 characters.</p>
+            </div>
+          ) : null}
+
+          {mode === 'admin' ? (
+            <Checkbox
+              id="send_welcome"
+              name="send_welcome"
+              defaultChecked
+              label="Send welcome email"
+              hint="Includes a sign-in link only — the password is not included."
+            />
+          ) : (
             <p className="text-xs text-subtle">
-              At least 8 characters. Share with the new member; they can change
-              it from their account page.
+              A welcome email with the setup link will be sent automatically.
             </p>
-          </div>
+          )}
 
           {state.error ? (
             <p className="text-sm text-danger-fg">{state.error}</p>
@@ -80,5 +115,42 @@ export function AddMemberForm() {
         </form>
       </CardBody>
     </Card>
+  )
+}
+
+function ModeRadio({
+  id,
+  value,
+  checked,
+  onChange,
+  label,
+  hint,
+}: {
+  id: string
+  value: 'self' | 'admin'
+  checked: boolean
+  onChange: () => void
+  label: string
+  hint: string
+}) {
+  return (
+    <label
+      htmlFor={id}
+      className="flex items-start gap-2.5 cursor-pointer select-none"
+    >
+      <input
+        id={id}
+        type="radio"
+        name="password_mode"
+        value={value}
+        checked={checked}
+        onChange={onChange}
+        className="mt-0.5 size-4 shrink-0 accent-fg focus-ring"
+      />
+      <span>
+        <span className="block text-sm text-fg">{label}</span>
+        <span className="block text-xs text-subtle">{hint}</span>
+      </span>
+    </label>
   )
 }

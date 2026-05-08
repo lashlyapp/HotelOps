@@ -110,11 +110,7 @@ export default async function MediaPage({
 
       {files.length === 0 ? (
         <p className="text-sm text-muted">
-          No media yet for {activeProperty.name}. Upload files to{' '}
-          <code className="rounded-xs bg-surface-muted px-1.5 py-0.5 text-xs font-mono">
-            {activeProperty.r2_prefix}
-          </code>{' '}
-          in your R2 bucket.
+          No media yet for {activeProperty.name}.
         </p>
       ) : (
         <MediaBrowser files={files} />
