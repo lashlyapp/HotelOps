@@ -9,6 +9,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   missing: 'Email and password are required.',
   invalid: 'Invalid email or password.',
   no_org: "Your account isn't linked to an organization. Contact your admin.",
+  unauthorized: 'Your account is not authorized for the admin portal.',
 }
 
 type SearchParams = Promise<{ error?: string }>

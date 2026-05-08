@@ -92,6 +92,12 @@ function parseArgs(raw: string[]) {
   if (out.password!.length < 12) {
     usage('--password must be at least 12 characters')
   }
+  // Platform admin emails are locked to the internal domain. See
+  // src/lib/admin/policy.ts — kept consistent here so a misconfigured
+  // workflow input doesn't create a non-internal admin.
+  if (!/@myhotelops\.com$/i.test(out.email!)) {
+    usage('Platform admin email must end with @myhotelops.com')
+  }
   return out as { email: string; password: string }
 }
 

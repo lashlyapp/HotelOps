@@ -60,8 +60,18 @@ export default async function AdminDashboardPage() {
               </tr>
             ) : (
               tenants.map((t) => (
-                <tr key={t.id}>
-                  <td className="px-4 py-3 font-medium text-fg">{t.name}</td>
+                <tr
+                  key={t.id}
+                  className="hover:bg-surface-muted transition-colors"
+                >
+                  <td className="px-4 py-3 font-medium text-fg">
+                    <Link
+                      href={`/admin/tenants/${t.id}`}
+                      className="focus-ring rounded-sm hover:underline"
+                    >
+                      {t.name}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 text-muted font-mono text-xs">{t.slug}</td>
                   <td className="px-4 py-3 text-muted">{t.owner_email ?? '—'}</td>
                   <td className="px-4 py-3 text-fg tabular-nums">{t.property_count}</td>

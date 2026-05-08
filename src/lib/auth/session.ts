@@ -1,5 +1,6 @@
 import 'server-only'
 import { redirect } from 'next/navigation'
+import { isInternalEmail } from '@/lib/admin/policy'
 import { createClient } from '@/lib/supabase/server'
 import type { Organization, Profile, Property } from '@/lib/supabase/types'
 
@@ -78,6 +79,12 @@ export async function requireOrgUser(): Promise<OrgSession> {
 export async function requirePlatformAdmin(): Promise<UserSession> {
   const session = await requireUser()
   if (session.profile.role !== 'platform_admin') redirect('/dashboard')
+  if (!isInternalEmail(session.email)) {
+    // Sign them out so they can't keep retrying with cached cookies.
+    const supabase = await createClient()
+    await supabase.auth.signOut()
+    redirect('/login?error=unauthorized')
+  }
   return session
 }
 

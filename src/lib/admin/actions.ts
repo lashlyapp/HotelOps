@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireOrgOwner, requirePlatformAdmin } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { AppRole } from '@/lib/supabase/types'
 
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
 const MIN_PASSWORD_LENGTH = 8
@@ -192,4 +193,176 @@ async function findUserId(email: string): Promise<string | null> {
     if (data.users.length < 200) return null
     page += 1
   }
+}
+
+// ----------------------------------------------------------------------------
+// Tenant management actions (platform admin only)
+// ----------------------------------------------------------------------------
+
+export async function updateOrgNameAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requirePlatformAdmin()
+  const orgId = String(formData.get('org_id') ?? '')
+  const name = String(formData.get('name') ?? '').trim()
+  if (!orgId || !name) return { error: 'Name is required.' }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('organizations')
+    .update({ name })
+    .eq('id', orgId)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/admin/tenants/${orgId}`)
+  revalidatePath('/admin')
+  return { success: 'Saved.' }
+}
+
+export async function addPropertyAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requirePlatformAdmin()
+  const orgId = String(formData.get('org_id') ?? '')
+  const orgSlug = String(formData.get('org_slug') ?? '')
+  const slug = String(formData.get('slug') ?? '').trim().toLowerCase()
+  const name = String(formData.get('name') ?? '').trim()
+
+  if (!orgId || !orgSlug) return { error: 'Missing org.' }
+  if (!slug || !name) return { error: 'Slug and name are required.' }
+  if (!SLUG_RE.test(slug)) {
+    return { error: 'Slug must be kebab-case (a-z, 0-9, hyphens).' }
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('properties').insert({
+    org_id: orgId,
+    slug,
+    name,
+    r2_prefix: `${orgSlug}/${slug}/`,
+  })
+  if (error) {
+    if (error.code === '23505') {
+      return { error: `Property slug "${slug}" already exists in this org.` }
+    }
+    return { error: error.message }
+  }
+
+  revalidatePath(`/admin/tenants/${orgId}`)
+  revalidatePath('/admin')
+  return { success: `Added ${name}.` }
+}
+
+export async function removePropertyAction(formData: FormData) {
+  await requirePlatformAdmin()
+  const orgId = String(formData.get('org_id') ?? '')
+  const propertyId = String(formData.get('property_id') ?? '')
+  if (!orgId || !propertyId) return
+
+  const admin = createAdminClient()
+  await admin.from('properties').delete().eq('id', propertyId)
+
+  revalidatePath(`/admin/tenants/${orgId}`)
+  revalidatePath('/admin')
+}
+
+export async function addOrgMemberAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requirePlatformAdmin()
+  const orgId = String(formData.get('org_id') ?? '')
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
+  const password = String(formData.get('password') ?? '')
+  const role = String(formData.get('role') ?? 'org_staff') as AppRole
+  const fullName = (String(formData.get('full_name') ?? '').trim() || null) as
+    | string
+    | null
+
+  if (!orgId) return { error: 'Missing org.' }
+  if (!email || !password) return { error: 'Email and password are required.' }
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` }
+  }
+  if (role !== 'org_owner' && role !== 'org_staff') {
+    return { error: 'Invalid role.' }
+  }
+
+  const admin = createAdminClient()
+
+  const existingId = await findUserId(email)
+  if (existingId) {
+    const { data: existingProfile } = await admin
+      .from('profiles')
+      .select('org_id')
+      .eq('id', existingId)
+      .maybeSingle()
+    if (existingProfile?.org_id && existingProfile.org_id !== orgId) {
+      return { error: `${email} already belongs to another organization.` }
+    }
+  }
+
+  let userId: string
+  if (existingId) {
+    const { error } = await admin.auth.admin.updateUserById(existingId, {
+      password,
+      email_confirm: true,
+    })
+    if (error) return { error: error.message }
+    userId = existingId
+  } else {
+    const { data, error } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    })
+    if (error) return { error: error.message }
+    userId = data.user!.id
+  }
+
+  const { error: profileErr } = await admin.from('profiles').upsert({
+    id: userId,
+    org_id: orgId,
+    role,
+    full_name: fullName,
+  })
+  if (profileErr) return { error: profileErr.message }
+
+  revalidatePath(`/admin/tenants/${orgId}`)
+  revalidatePath('/admin')
+  return { success: `${email} added as ${role.replace('_', ' ')}.` }
+}
+
+export async function removeOrgMemberAction(formData: FormData) {
+  await requirePlatformAdmin()
+  const orgId = String(formData.get('org_id') ?? '')
+  const userId = String(formData.get('user_id') ?? '')
+  if (!orgId || !userId) return
+
+  const admin = createAdminClient()
+  // Detach the profile from the org. The auth.users record stays — they could
+  // be re-added to another tenant later.
+  await admin
+    .from('profiles')
+    .update({ org_id: null, role: 'org_staff' })
+    .eq('id', userId)
+
+  revalidatePath(`/admin/tenants/${orgId}`)
+}
+
+export async function deleteTenantAction(formData: FormData) {
+  await requirePlatformAdmin()
+  const orgId = String(formData.get('org_id') ?? '')
+  const confirmation = String(formData.get('confirmation') ?? '').trim()
+  const expected = String(formData.get('expected_confirmation') ?? '').trim()
+  if (!orgId || !confirmation || confirmation !== expected) return
+
+  const admin = createAdminClient()
+  // properties + invoices cascade; profiles get org_id set null via FK.
+  await admin.from('organizations').delete().eq('id', orgId)
+
+  revalidatePath('/admin')
+  redirect('/admin')
 }
