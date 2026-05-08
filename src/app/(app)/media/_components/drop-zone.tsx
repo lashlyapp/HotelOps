@@ -1,18 +1,18 @@
 'use client'
 
 import { useRef, useState, useTransition } from 'react'
+import * as tus from 'tus-js-client'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
 import {
   abortMultipartUploadAction,
   completeMultipartUploadAction,
+  finalizeStreamVideoUploadAction,
   initMultipartUploadAction,
-  presignPosterUploadAction,
+  initStreamVideoUploadAction,
   presignUploadAction,
-  recordPosterAction,
   revalidateAfterUploadAction,
 } from '@/lib/media/actions'
-import { capturePosterBlob } from './poster-capture'
 
 const SINGLE_PUT_THRESHOLD = 10 * 1024 * 1024 // 10 MB
 const FILES_IN_FLIGHT = 2 // max files uploading concurrently
@@ -105,10 +105,55 @@ export function DropZone({
     onProgress: (pct: number) => void,
   ): Promise<boolean> {
     const contentType = file.type || 'application/octet-stream'
+    if (contentType.startsWith('video/')) {
+      return uploadVideoToStream(file, contentType, jobId, onProgress)
+    }
     if (file.size <= SINGLE_PUT_THRESHOLD) {
       return uploadSingle(file, contentType, jobId, onProgress)
     }
     return uploadMultipart(file, contentType, jobId, onProgress)
+  }
+
+  /**
+   * Videos go to Cloudflare Stream via the tus-resumable Direct Creator
+   * Upload URL we minted server-side. Stream handles transcoding,
+   * thumbnails, and adaptive playback so the catalog gets a real preview
+   * without any client-side frame capture.
+   */
+  async function uploadVideoToStream(
+    file: File,
+    contentType: string,
+    jobId: string,
+    onProgress: (pct: number) => void,
+  ): Promise<boolean> {
+    const init = await initStreamVideoUploadAction({
+      propertyId,
+      filename: file.name,
+      contentType,
+      size: file.size,
+    })
+    if (!init.ok) {
+      failJob(jobId, init.error)
+      return false
+    }
+
+    try {
+      await tusUpload(init.uploadUrl, file, onProgress)
+    } catch (err) {
+      failJob(jobId, err instanceof Error ? err.message : 'Stream upload failed')
+      return false
+    }
+
+    onProgress(100)
+    finishJob(jobId)
+    // Cloudflare hasn't necessarily finished encoding yet — flip the row to
+    // "ready" if it has, otherwise leave it pending; the catalog still
+    // shows the file, just without the thumbnail until encoding completes.
+    void finalizeStreamVideoUploadAction({
+      propertyId,
+      uid: init.uid,
+    }).catch(() => undefined)
+    return true
   }
 
   async function uploadSingle(
@@ -130,9 +175,6 @@ export function DropZone({
     try {
       await xhrPut(presign.url, file, contentType, onProgress)
       finishJob(jobId)
-      if (contentType.startsWith('video/')) {
-        await captureAndUploadPoster(file, presign.key)
-      }
       return true
     } catch (err) {
       failJob(jobId, err instanceof Error ? err.message : 'Upload failed')
@@ -212,9 +254,6 @@ export function DropZone({
 
       onProgress(100)
       finishJob(jobId)
-      if (contentType.startsWith('video/')) {
-        await captureAndUploadPoster(file, init.key)
-      }
       return true
     } catch (err) {
       failJob(jobId, err instanceof Error ? err.message : 'Upload failed')
@@ -224,37 +263,6 @@ export function DropZone({
         uploadId: init.uploadId,
       })
       return false
-    }
-  }
-
-  async function captureAndUploadPoster(file: File, videoKey: string) {
-    try {
-      const blob = await capturePosterBlob(file)
-      if (!blob) return
-
-      const presign = await presignPosterUploadAction({
-        propertyId,
-        videoKey,
-        size: blob.size,
-      })
-      if (!presign.ok) return
-
-      const res = await fetch(presign.url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'image/jpeg' },
-        body: blob,
-      })
-      if (!res.ok) return
-
-      await recordPosterAction({
-        propertyId,
-        videoKey,
-        posterKey: presign.posterKey,
-      })
-    } catch (err) {
-      // Best-effort: a missing poster falls back to <video preload="metadata">
-      // on the card, so we don't surface this error to the user.
-      console.warn('[poster]', err)
     }
   }
 
@@ -292,8 +300,8 @@ export function DropZone({
           <div className="p-4 text-center space-y-2">
             <div className="flex items-center justify-between gap-2 text-left">
               <p className="text-xs text-subtle">
-                Images and videos up to 2 GB each. Uploads to{' '}
-                <span className="text-fg">{propertyName}</span>.
+                Images up to 2 GB, videos up to 30 GB (Cloudflare Stream).
+                Uploads to <span className="text-fg">{propertyName}</span>.
               </p>
               <button
                 type="button"
@@ -435,6 +443,35 @@ async function runWithLimit<T, R>(
   )
   await Promise.all(workers)
   return results
+}
+
+/**
+ * Drive a tus-resumable upload to a Stream Direct Creator URL. Stream
+ * insists on 5 MiB chunks for resumable uploads (chunkSize must be a
+ * multiple of 256 KiB). Progress is normalized to 0–99%; the caller stamps
+ * 100 only after the server-side finalize step succeeds.
+ */
+function tusUpload(
+  uploadUrl: string,
+  file: File,
+  onProgress: (pct: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const upload = new tus.Upload(file, {
+      uploadUrl,
+      retryDelays: [0, 1_000, 3_000, 5_000, 10_000],
+      chunkSize: 5 * 1024 * 1024,
+      metadata: { filename: file.name, filetype: file.type },
+      onError: (err) =>
+        reject(err instanceof Error ? err : new Error(String(err))),
+      onProgress: (bytesUploaded, bytesTotal) => {
+        const pct = Math.round((bytesUploaded / bytesTotal) * 100)
+        onProgress(Math.min(pct, 99))
+      },
+      onSuccess: () => resolve(),
+    })
+    upload.start()
+  })
 }
 
 /** PUT a full file via XHR, reporting overall progress as a percentage. */

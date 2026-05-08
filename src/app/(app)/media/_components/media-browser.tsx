@@ -8,18 +8,14 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils/cn'
 import type { MediaFile } from '@/lib/r2/list'
-import { formatBytes } from '@/lib/r2/stats'
+import { formatBytes, formatRelative } from '@/lib/r2/stats'
 import {
   bulkDeleteMediaAction,
   deleteMediaAction,
   presignDownloadAction,
-  presignPosterUploadAction,
-  recordPosterAction,
   updateMediaMetadataAction,
 } from '@/lib/media/actions'
-import { formatRelative } from '@/lib/r2/stats'
 import { DropZone } from './drop-zone'
-import { capturePosterBlob } from './poster-capture'
 import { TagEditor } from './tag-editor'
 
 type Type = 'all' | 'image' | 'video'
@@ -632,7 +628,7 @@ function MediaListRow({
                 className="object-cover"
               />
             ) : isVideo ? (
-              <VideoPoster file={file} propertyId={propertyId} />
+              <VideoThumbnail file={file} />
             ) : (
               <span className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-wider text-subtle">
                 file
@@ -723,7 +719,7 @@ function MediaCard({
             className="object-cover"
           />
         ) : isVideo ? (
-          <VideoPoster file={file} propertyId={propertyId} />
+          <VideoThumbnail file={file} />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs uppercase tracking-wider text-subtle">
             {file.contentType ?? 'file'}
@@ -760,101 +756,39 @@ function MediaCard({
 }
 
 /**
- * Catalog thumbnail for video files. Renders the persisted poster when one
- * exists; otherwise captures the first frame client-side, displays it
- * immediately, and uploads it to R2 so subsequent loads of this file (and
- * other clients) get a static <img>.
+ * Catalog thumbnail for video files. Stream-hosted videos hand back a
+ * server-rendered, edge-cached JPEG via posterUrl (set in listMediaWithTags)
+ * — no client-side capture, no DB column needed. Stream rows that haven't
+ * finished encoding show an "Encoding…" placeholder; legacy R2 videos that
+ * predate the Stream migration show a plain placeholder so the catalog
+ * still renders without trying to fetch a frame from a 250 MB MP4.
  */
-function VideoPoster({
-  file,
-  propertyId,
-}: {
-  file: MediaFile
-  propertyId: string
-}) {
-  // Captured-frame blob URL, used only when the server hasn't persisted one.
-  const [capturedUrl, setCapturedUrl] = useState<string | null>(null)
-  // Reset the captured URL when the card is reused for a different file
-  // (e.g. after a list re-sort) — render-phase state sync, per React docs.
-  const [seenKey, setSeenKey] = useState(file.key)
-  if (seenKey !== file.key) {
-    setSeenKey(file.key)
-    setCapturedUrl(null)
-  }
-  // Persist-once guard: a list re-render shouldn't re-trigger capture.
-  const startedKeyRef = useRef<string | null>(file.posterUrl ? file.key : null)
-
-  useEffect(() => {
-    if (file.posterUrl) return
-    if (startedKeyRef.current === file.key) return
-    startedKeyRef.current = file.key
-
-    let cancelled = false
-    let localUrl: string | null = null
-
-    void (async () => {
-      const blob = await capturePosterBlob(file.url)
-      if (cancelled || !blob) return
-
-      // Show the captured frame right away — don't wait for the upload.
-      localUrl = URL.createObjectURL(blob)
-      setCapturedUrl(localUrl)
-
-      try {
-        const presign = await presignPosterUploadAction({
-          propertyId,
-          videoKey: file.key,
-          size: blob.size,
-        })
-        if (!presign.ok) return
-        const res = await fetch(presign.url, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'image/jpeg' },
-          body: blob,
-        })
-        if (!res.ok) return
-        await recordPosterAction({
-          propertyId,
-          videoKey: file.key,
-          posterKey: presign.posterKey,
-        })
-      } catch {
-        // Best-effort persistence; the in-memory poster still renders.
-      }
-    })()
-
-    return () => {
-      cancelled = true
-      if (localUrl) URL.revokeObjectURL(localUrl)
-    }
-  }, [file.key, file.url, file.posterUrl, propertyId])
-
-  const posterUrl = file.posterUrl ?? capturedUrl
-  if (posterUrl) {
-    // Captured blob URLs aren't whitelisted in next.config images — use a
-    // plain <img> for those, and the optimized <Image> only for R2 URLs.
-    const isBlob = posterUrl.startsWith('blob:')
-    return isBlob ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={posterUrl}
-        alt={file.displayName}
-        className="absolute inset-0 h-full w-full object-cover"
-      />
-    ) : (
+function VideoThumbnail({ file }: { file: MediaFile }) {
+  if (file.posterUrl) {
+    return (
       <Image
-        src={posterUrl}
+        src={file.posterUrl}
         alt={file.displayName}
         fill
         sizes="(min-width:1280px) 25vw, (min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw"
         className="object-cover"
+        unoptimized
       />
     )
   }
-
-  // Solid placeholder while the first frame is being captured. Avoids the
-  // black-rectangle effect of <video preload="metadata"> on Chrome/Safari.
-  return <div className="absolute inset-0 bg-surface-muted" aria-hidden />
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-surface-muted">
+      {file.streamStatus === 'pending' ? (
+        <span className="text-xs uppercase tracking-wider text-subtle">
+          Encoding…
+        </span>
+      ) : file.streamStatus === 'error' ? (
+        <span className="text-xs uppercase tracking-wider text-danger-fg">
+          Encoding failed
+        </span>
+      ) : null}
+    </div>
+  )
 }
 
 function PlayBadge() {
@@ -991,6 +925,16 @@ function PreviewDialog({
               height={1200}
               unoptimized
               className="max-h-[70vh] w-auto object-contain"
+            />
+          ) : isVideo && file.streamUid ? (
+            // Stream's iframe ships an adaptive-bitrate player; for legacy
+            // R2 videos `streamUid` is null and we fall back to <video>.
+            <iframe
+              src={file.url}
+              title={file.displayName}
+              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+              allowFullScreen
+              className="aspect-video max-h-[70vh] w-full"
             />
           ) : isVideo ? (
             <video src={file.url} controls className="max-h-[70vh] w-full" />

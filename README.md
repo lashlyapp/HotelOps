@@ -76,9 +76,23 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
 
    Open [http://localhost:3000](http://localhost:3000).
 
+## Cloudflare Stream — videos
+
+Video files (`video/mp4`, `video/quicktime`, `video/webm`) bypass R2 and go to **Cloudflare Stream** via the tus-resumable Direct Creator Upload flow. Stream gives us edge-served thumbnails, adaptive-bitrate playback, and a 30 GB / 8-hour ceiling per video — without the page having to capture frames in the browser.
+
+The browser drives the upload directly to Cloudflare; the app just mints a one-time tus URL via `initStreamVideoUploadAction`. Each upload is tracked in `media_videos (property_id, stream_uid, …)`, and `listMediaWithTags` joins those rows in alongside the R2 object listing.
+
+**Required env vars** (see `.env.example`):
+
+- `CLOUDFLARE_API_TOKEN` — must include `Account Stream:Edit` and `Account Stream:Read` (in addition to the `Account Analytics:Read` scope already used for the bandwidth widget).
+- `CLOUDFLARE_ACCOUNT_ID` — same Cloudflare account that owns R2.
+- `CLOUDFLARE_STREAM_SUBDOMAIN` — your `customer-XXXX.cloudflarestream.com` host (no protocol). Find it in any Stream embed code under the dashboard.
+
+Images still flow through R2 — only videos move.
+
 ## R2 CORS — required for direct-to-R2 uploads
 
-The drag-and-drop uploader has the browser PUT directly to R2 (single PUT for files ≤10 MB, multipart upload for larger files). Without this, large videos would have to traverse the Vercel serverless function and hit the 4.5 MB body limit.
+The drag-and-drop uploader has the browser PUT image files directly to R2 (single PUT for files ≤10 MB, multipart upload for larger files). Without this, large originals would have to traverse the Vercel serverless function and hit the 4.5 MB body limit. (Videos no longer hit R2 — see Cloudflare Stream above.)
 
 **The R2 bucket needs a CORS policy that allows the app origin to PUT and exposes the `ETag` header** (multipart uses the ETag of each uploaded part to finalize the upload).
 
