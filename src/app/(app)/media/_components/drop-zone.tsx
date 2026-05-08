@@ -54,7 +54,14 @@ export function DropZone({
     const results = await runWithLimit(incoming, FILES_IN_FLIGHT, (file, i) =>
       uploadOne(file, newJobs[i].id, (pct) =>
         updateJob(newJobs[i].id, pct),
-      ),
+      ).catch((err) => {
+        // runWithLimit's workers swallow errors otherwise — make sure we
+        // always end the job in a visible state.
+        const message = err instanceof Error ? err.message : 'Upload failed'
+        console.error('[upload]', err)
+        failJob(newJobs[i].id, message)
+        return false
+      }),
     )
 
     if (results.some(Boolean)) {
@@ -239,7 +246,7 @@ export function DropZone({
           Choose files
         </Button>
         <p className="text-xs text-subtle">
-          Images, videos, and PDFs up to 200 MB each. Uploads to{' '}
+          Images, videos, and PDFs up to 2 GB each. Uploads to{' '}
           <span className="text-fg">{propertyName}</span>.
         </p>
         <input

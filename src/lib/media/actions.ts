@@ -25,7 +25,7 @@ const ALLOWED_MIME = new Set([
   'video/webm',
   'application/pdf',
 ])
-const MAX_FILE_BYTES = 200 * 1024 * 1024 // 200 MB
+const MAX_FILE_BYTES = 2 * 1024 * 1024 * 1024 // 2 GB — covers 4K and drone footage
 
 const TAG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
 const TAG_MAX_LENGTH = 30
@@ -55,7 +55,7 @@ export async function presignUploadAction(args: {
     return { ok: false, error: `${args.contentType} is not an allowed file type.` }
   }
   if (args.size > MAX_FILE_BYTES) {
-    return { ok: false, error: 'File exceeds 200 MB limit.' }
+    return { ok: false, error: 'File exceeds 2 GB limit.' }
   }
   if (args.size <= 0) {
     return { ok: false, error: 'Empty file.' }
@@ -116,7 +116,7 @@ export async function initMultipartUploadAction(args: {
     return { ok: false, error: `${args.contentType} is not an allowed file type.` }
   }
   if (args.size > MAX_FILE_BYTES) {
-    return { ok: false, error: 'File exceeds 200 MB limit.' }
+    return { ok: false, error: 'File exceeds 2 GB limit.' }
   }
   if (args.size <= 0) {
     return { ok: false, error: 'Empty file.' }
