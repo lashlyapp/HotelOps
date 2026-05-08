@@ -352,6 +352,59 @@ export async function removeOrgMemberAction(formData: FormData) {
   revalidatePath(`/admin/tenants/${orgId}`)
 }
 
+// ----------------------------------------------------------------------------
+// Tenant-side property management (org_owner manages their OWN org's properties)
+// ----------------------------------------------------------------------------
+
+export async function ownerAddPropertyAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await requireOrgOwner()
+  const slug = String(formData.get('slug') ?? '').trim().toLowerCase()
+  const name = String(formData.get('name') ?? '').trim()
+
+  if (!slug || !name) return { error: 'Slug and name are required.' }
+  if (!SLUG_RE.test(slug)) {
+    return { error: 'Slug must be kebab-case (a-z, 0-9, hyphens).' }
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('properties').insert({
+    org_id: session.organization.id,
+    slug,
+    name,
+    r2_prefix: `${session.organization.slug}/${slug}/`,
+  })
+  if (error) {
+    if (error.code === '23505') {
+      return { error: `You already have a property with slug "${slug}".` }
+    }
+    return { error: error.message }
+  }
+
+  revalidatePath('/properties')
+  revalidatePath('/dashboard')
+  return { success: `Added ${name}.` }
+}
+
+export async function ownerRemovePropertyAction(formData: FormData) {
+  const session = await requireOrgOwner()
+  const propertyId = String(formData.get('property_id') ?? '')
+  if (!propertyId) return
+
+  const admin = createAdminClient()
+  // Scope the delete to the caller's org so nobody can pass an arbitrary id.
+  await admin
+    .from('properties')
+    .delete()
+    .eq('id', propertyId)
+    .eq('org_id', session.organization.id)
+
+  revalidatePath('/properties')
+  revalidatePath('/dashboard')
+}
+
 export async function deleteTenantAction(formData: FormData) {
   await requirePlatformAdmin()
   const orgId = String(formData.get('org_id') ?? '')

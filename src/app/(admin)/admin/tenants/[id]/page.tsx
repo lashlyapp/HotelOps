@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requirePlatformAdmin } from '@/lib/auth/session'
+import { listMediaForPrefix } from '@/lib/r2/list'
+import { computeLibraryStats, formatBytes, formatRelative } from '@/lib/r2/stats'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { AppRole, Organization, Property } from '@/lib/supabase/types'
 import { AddMemberSection } from './_components/add-member-section'
@@ -32,6 +34,14 @@ export default async function TenantDetailPage({
   if (!data) notFound()
 
   const { organization, properties, members } = data
+
+  // Per-property R2 listing — small property counts in v1, fine to fan out.
+  const propertyStats = await Promise.all(
+    properties.map(async (property) => ({
+      property,
+      stats: computeLibraryStats(await listMediaForPrefix(property.r2_prefix)),
+    })),
+  )
 
   return (
     <div className="p-8 max-w-4xl space-y-6">
@@ -63,31 +73,55 @@ export default async function TenantDetailPage({
         <CardHeader>
           <CardTitle>Properties ({properties.length})</CardTitle>
         </CardHeader>
-        <CardBody className="space-y-4">
+        <CardBody className="p-0">
           {properties.length === 0 ? (
-            <p className="text-sm text-muted">No properties yet.</p>
+            <p className="px-5 py-8 text-sm text-muted">No properties yet.</p>
           ) : (
-            <ul className="divide-y divide-border-subtle">
-              {properties.map((p) => (
-                <li
-                  key={p.id}
-                  className="flex items-center justify-between gap-3 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-fg">{p.name}</p>
-                    <p className="text-xs text-subtle font-mono truncate">
-                      {p.r2_prefix}
-                    </p>
-                  </div>
-                  <RemovePropertyButton orgId={organization.id} propertyId={p.id} />
-                </li>
-              ))}
-            </ul>
+            <table className="w-full text-sm">
+              <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
+                <tr>
+                  <th className="px-5 py-3 font-medium">Property</th>
+                  <th className="px-5 py-3 font-medium">Files</th>
+                  <th className="px-5 py-3 font-medium">Storage</th>
+                  <th className="px-5 py-3 font-medium">Last upload</th>
+                  <th className="px-5 py-3" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-subtle">
+                {propertyStats.map(({ property, stats }) => (
+                  <tr key={property.id}>
+                    <td className="px-5 py-3">
+                      <p className="text-fg font-medium">{property.name}</p>
+                      <p className="text-xs text-subtle font-mono truncate">
+                        {property.r2_prefix}
+                      </p>
+                    </td>
+                    <td className="px-5 py-3 text-fg tabular-nums">
+                      {stats.fileCount}
+                    </td>
+                    <td className="px-5 py-3 text-muted tabular-nums">
+                      {formatBytes(stats.totalBytes)}
+                    </td>
+                    <td className="px-5 py-3 text-muted">
+                      {formatRelative(stats.lastModified)}
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <RemovePropertyButton
+                        orgId={organization.id}
+                        propertyId={property.id}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
-          <AddPropertySection
-            orgId={organization.id}
-            orgSlug={organization.slug}
-          />
+          <div className="border-t border-border-subtle p-5">
+            <AddPropertySection
+              orgId={organization.id}
+              orgSlug={organization.slug}
+            />
+          </div>
         </CardBody>
       </Card>
 
