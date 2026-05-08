@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useRef, useState, useTransition } from 'react'
 import * as tus from 'tus-js-client'
 import { Button } from '@/components/ui/button'
@@ -37,6 +38,7 @@ export function DropZone({
   const [jobs, setJobs] = useState<Job[]>([])
   const [, startTransition] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
 
   function pickFiles() {
     inputRef.current?.click()
@@ -143,13 +145,12 @@ export function DropZone({
     onProgress(100)
     finishJob(jobId)
     if (uid) {
-      // Cloudflare may still be encoding — flip the row to "ready" if
-      // readyToStream, otherwise leave it pending; the catalog still
-      // shows the file, just without the thumbnail until encoding lands.
-      void finalizeStreamVideoUploadAction({
-        propertyId,
-        uid,
-      }).catch(() => undefined)
+      // Cloudflare hasn't finished transcoding by the time tus reports
+      // success — typical 250 MB clip takes a couple minutes. Poll the
+      // finalize action until the row flips to ready (or we hit a hard
+      // ceiling) so the catalog can swap "Encoding…" for the thumbnail
+      // without the user having to refresh.
+      void pollStreamUntilReady(propertyId, uid, () => router.refresh())
     }
     return true
   }
@@ -441,6 +442,37 @@ async function runWithLimit<T, R>(
   )
   await Promise.all(workers)
   return results
+}
+
+/**
+ * Poll finalizeStreamVideoUploadAction until Cloudflare finishes encoding,
+ * then refresh the catalog so "Encoding…" placeholders swap to thumbnails.
+ *
+ * Tuned for typical hotel clips: 4 s between polls, ~5 min ceiling. The
+ * loop is best-effort — if the user navigates away the unmounted Promise
+ * is dropped, and any next visit picks up the (by then) ready row.
+ */
+async function pollStreamUntilReady(
+  propertyId: string,
+  uid: string,
+  onReady: () => void,
+): Promise<void> {
+  const POLL_INTERVAL_MS = 4_000
+  const MAX_POLLS = 75
+  for (let i = 0; i < MAX_POLLS; i += 1) {
+    let result
+    try {
+      result = await finalizeStreamVideoUploadAction({ propertyId, uid })
+    } catch {
+      return
+    }
+    if (!result.ok) return
+    if (result.status !== 'pending') {
+      onReady()
+      return
+    }
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
+  }
 }
 
 /**
