@@ -31,6 +31,7 @@ export function DropZone({
   propertyName: string
 }) {
   const [over, setOver] = useState(false)
+  const [open, setOpen] = useState(false)
   const [jobs, setJobs] = useState<Job[]>([])
   const [, startTransition] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -217,68 +218,98 @@ export function DropZone({
     }
   }
 
-  function clearDone() {
-    setJobs((prev) => prev.filter((j) => j.status !== 'done'))
+  function clearFinished() {
+    setJobs((prev) =>
+      prev.filter((j) => j.status !== 'done' && j.status !== 'error'),
+    )
+  }
+
+  function dismissJob(id: string) {
+    setJobs((prev) => prev.filter((j) => j.id !== id))
   }
 
   return (
-    <div
-      onDragOver={(e) => {
-        e.preventDefault()
-        setOver(true)
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => {
-        e.preventDefault()
-        setOver(false)
-        if (e.dataTransfer.files) handleFiles(e.dataTransfer.files)
-      }}
-      className={cn(
-        'rounded-lg border-2 border-dashed transition-colors',
-        over
-          ? 'border-fg bg-surface-muted'
-          : 'border-border-default bg-surface',
-      )}
-    >
-      <div className="p-6 text-center space-y-3">
-        <p className="text-sm text-fg">Drag & drop files here, or</p>
-        <Button type="button" variant="secondary" size="sm" onClick={pickFiles}>
-          Choose files
-        </Button>
-        <p className="text-xs text-subtle">
-          Images, videos, and PDFs up to 2 GB each. Uploads to{' '}
-          <span className="text-fg">{propertyName}</span>.
-        </p>
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          accept="image/*,video/*,application/pdf"
-          className="sr-only"
-          onChange={(e) => {
-            if (e.target.files) handleFiles(e.target.files)
-            e.target.value = ''
+    <div className="space-y-2">
+      {open ? (
+        <div
+          onDragOver={(e) => {
+            e.preventDefault()
+            setOver(true)
           }}
-        />
-      </div>
+          onDragLeave={() => setOver(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setOver(false)
+            if (e.dataTransfer.files) handleFiles(e.dataTransfer.files)
+          }}
+          className={cn(
+            'rounded-lg border-2 border-dashed transition-colors',
+            over
+              ? 'border-fg bg-surface-muted'
+              : 'border-border-default bg-surface',
+          )}
+        >
+          <div className="p-4 text-center space-y-2">
+            <div className="flex items-center justify-between gap-2 text-left">
+              <p className="text-xs text-subtle">
+                Images, videos, and PDFs up to 2 GB each. Uploads to{' '}
+                <span className="text-fg">{propertyName}</span>.
+              </p>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="focus-ring rounded-sm text-xs text-muted hover:text-fg"
+              >
+                Hide
+              </button>
+            </div>
+            <p className="text-sm text-fg">Drag & drop files here, or</p>
+            <Button type="button" variant="secondary" size="sm" onClick={pickFiles}>
+              Choose files
+            </Button>
+            <input
+              ref={inputRef}
+              type="file"
+              multiple
+              accept="image/*,video/*,application/pdf"
+              className="sr-only"
+              onChange={(e) => {
+                if (e.target.files) handleFiles(e.target.files)
+                e.target.value = ''
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setOpen(true)}
+          >
+            Upload files
+          </Button>
+        </div>
+      )}
 
       {jobs.length > 0 ? (
-        <div className="border-t border-border-subtle p-4 space-y-2">
+        <div className="rounded-lg border border-border-subtle bg-surface p-4 space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
               Uploads
             </p>
             <button
               type="button"
-              onClick={clearDone}
+              onClick={clearFinished}
               className="focus-ring rounded-sm text-xs text-muted hover:text-fg"
             >
-              Clear completed
+              Clear
             </button>
           </div>
           <ul className="space-y-2">
             {jobs.map((job) => (
-              <JobRow key={job.id} job={job} />
+              <JobRow key={job.id} job={job} onDismiss={dismissJob} />
             ))}
           </ul>
         </div>
@@ -287,7 +318,13 @@ export function DropZone({
   )
 }
 
-function JobRow({ job }: { job: Job }) {
+function JobRow({
+  job,
+  onDismiss,
+}: {
+  job: Job
+  onDismiss: (id: string) => void
+}) {
   return (
     <li className="flex items-center gap-3 text-sm">
       <span className="flex-1 min-w-0 truncate text-fg" title={job.name}>
@@ -306,6 +343,18 @@ function JobRow({ job }: { job: Job }) {
           </span>
         )}
       </div>
+      {job.status === 'done' || job.status === 'error' ? (
+        <button
+          type="button"
+          onClick={() => onDismiss(job.id)}
+          aria-label={`Dismiss ${job.name}`}
+          className="focus-ring rounded-sm px-1 text-xs text-muted hover:text-fg"
+        >
+          ×
+        </button>
+      ) : (
+        <span className="w-4" aria-hidden />
+      )}
     </li>
   )
 }
