@@ -29,13 +29,14 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
 
    Fill in Supabase URL + keys, R2 credentials, and `NEXT_PUBLIC_SITE_URL` (use `http://localhost:3000` locally).
 
-2. Apply the database schema (one-time):
+2. Apply the database schema. Two options:
 
-   1. Open Supabase Dashboard → SQL Editor.
-   2. Paste the contents of [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).
-   3. Run.
+   - **CI/CD (recommended):** push to GitHub. The `Database` workflow runs `supabase db push` against the linked remote project. Set the repo secrets listed under [CI / CD](#ci--cd).
+   - **Manual one-time:** open Supabase Dashboard → SQL Editor and paste the contents of the latest file in `supabase/migrations/`.
 
 3. Seed CG Hotel Group + properties (and optionally invite the owner):
+
+   The `Database` GitHub Actions workflow does this automatically after migration. To run locally instead:
 
    ```bash
    # In .env.local, optionally set:
@@ -127,7 +128,22 @@ See [`docs/design-system.md`](docs/design-system.md). TL;DR: every color in mark
 
 ## CI / CD
 
-- **CI:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs lint + `next build` on every push to `main` and on PRs. Build uses placeholder env vars so no secrets are required in CI.
+- **App CI:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs lint + `next build` on every push and PR. Uses placeholder env vars; no secrets required.
+
+- **Database CI:** [`.github/workflows/database.yml`](.github/workflows/database.yml) runs Supabase migrations + the seed script on every push (feature branches and merges to `main`), plus on manual dispatch. Idempotent.
+
+  Required GitHub repo secrets (Settings → Secrets and variables → Actions):
+
+  | Secret                       | Where to get it                                                                |
+  | ---------------------------- | ------------------------------------------------------------------------------ |
+  | `SUPABASE_ACCESS_TOKEN`      | https://supabase.com/dashboard/account/tokens (create a personal access token) |
+  | `SUPABASE_PROJECT_REF`       | `ebhrldafznxsepqcpcjx` (your project ref)                                      |
+  | `SUPABASE_DB_PASSWORD`       | Supabase Dashboard → Settings → Database → Reset / reveal password             |
+  | `SUPABASE_URL`               | `https://ebhrldafznxsepqcpcjx.supabase.co`                                     |
+  | `SUPABASE_SERVICE_ROLE_KEY`  | Supabase Dashboard → Settings → API → `service_role` key                       |
+  | `SITE_URL`                   | Production / preview URL used for invite-email redirects                       |
+  | `SEED_OWNER_EMAIL`           | (Optional) email to invite as the CG Hotel Group owner. Skip to run only seed without invite. |
+
 - **CD (Vercel):**
   1. In Vercel, **Import Project** → select the GitHub repo `lashlyapp/HotelOps`.
   2. Set Environment Variables (Production + Preview) to match `.env.example`. Set `NEXT_PUBLIC_SITE_URL` to the deployed URL (e.g. `https://app.myhotelops.com`).
