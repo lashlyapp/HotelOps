@@ -58,16 +58,20 @@ export function streamMp4DownloadUrl(uid: string): string {
 }
 
 /**
- * Mint a tus-resumable Direct Creator Upload URL. The browser then drives
- * the upload via tus-js-client; the file never round-trips through Vercel.
+ * Mint a tus-resumable Direct Creator Upload URL. The browser's tus client
+ * sends the initial CREATE through our route handler (which adds the API
+ * token); we forward to Cloudflare and return Location. The chunk PATCHes
+ * then go straight to Cloudflare — `direct_user=true` makes that endpoint
+ * browser-uploadable from any origin.
  *
- * Cloudflare returns the tus upload URL in the `Location` header and the
- * future video UID in `stream-media-id`. The response body is empty, so we
- * have to read those headers directly.
+ * `uploadMetadata` is the raw base64-url-encoded tus header from the client
+ * (so filenames with non-ASCII characters round-trip cleanly). If absent we
+ * synthesize one from the explicit filename.
  */
 export async function streamCreateTusUpload(args: {
   filename: string
   size: number
+  uploadMetadata?: string
   // Stream's cap is generous (30 GB / 8 hours); pass through whatever the
   // caller's policy allows so a misconfigured client surface a clear error.
   maxDurationSeconds?: number
@@ -75,22 +79,23 @@ export async function streamCreateTusUpload(args: {
   const accountId = requireEnv('CLOUDFLARE_ACCOUNT_ID')
   const url = `${STREAM_API}/client/v4/accounts/${accountId}/stream?direct_user=true`
 
-  // Stream reads filename + maxDurationSeconds from a base64-url-encoded
-  // tus "Upload-Metadata" header.
-  const metaPairs: Array<[string, string]> = [['name', args.filename]]
-  if (args.maxDurationSeconds) {
-    metaPairs.push(['maxDurationSeconds', String(args.maxDurationSeconds)])
-  }
-  const uploadMetadata = metaPairs
-    .map(([k, v]) => `${k} ${b64(v)}`)
-    .join(',')
+  const metadata =
+    args.uploadMetadata && args.uploadMetadata.length > 0
+      ? args.uploadMetadata
+      : (() => {
+          const pairs: Array<[string, string]> = [['name', args.filename]]
+          if (args.maxDurationSeconds) {
+            pairs.push(['maxDurationSeconds', String(args.maxDurationSeconds)])
+          }
+          return pairs.map(([k, v]) => `${k} ${b64(v)}`).join(',')
+        })()
 
   const res = await fetch(url, {
     method: 'POST',
     headers: streamHeaders({
       'Tus-Resumable': '1.0.0',
       'Upload-Length': String(args.size),
-      'Upload-Metadata': uploadMetadata,
+      'Upload-Metadata': metadata,
     }),
   })
 
@@ -98,11 +103,15 @@ export async function streamCreateTusUpload(args: {
     const text = await res.text().catch(() => '')
     throw new Error(`Stream tus init failed (${res.status}): ${text}`)
   }
-  const uploadUrl = res.headers.get('Location')
+  const rawLocation = res.headers.get('Location')
   const uid = res.headers.get('stream-media-id')
-  if (!uploadUrl || !uid) {
+  if (!rawLocation || !uid) {
     throw new Error('Stream tus init: missing Location / stream-media-id headers')
   }
+  // Cloudflare normally returns an absolute URL, but tus permits relative
+  // — resolve against the API host so the browser doesn't accidentally
+  // resolve against its own origin.
+  const uploadUrl = new URL(rawLocation, STREAM_API).toString()
   return { uploadUrl, uid }
 }
 

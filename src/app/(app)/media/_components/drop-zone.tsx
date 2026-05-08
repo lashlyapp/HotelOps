@@ -9,7 +9,6 @@ import {
   completeMultipartUploadAction,
   finalizeStreamVideoUploadAction,
   initMultipartUploadAction,
-  initStreamVideoUploadAction,
   presignUploadAction,
   revalidateAfterUploadAction,
 } from '@/lib/media/actions'
@@ -116,29 +115,26 @@ export function DropZone({
 
   /**
    * Videos go to Cloudflare Stream via the tus-resumable Direct Creator
-   * Upload URL we minted server-side. Stream handles transcoding,
+   * Upload flow. tus-js-client uses our /api/media/stream-upload route as
+   * the CREATE endpoint (the route adds the Cloudflare API token, mints a
+   * Stream upload URL, and inserts the media_videos row); the chunk
+   * PATCHes go straight to Cloudflare. Stream handles transcoding,
    * thumbnails, and adaptive playback so the catalog gets a real preview
    * without any client-side frame capture.
    */
   async function uploadVideoToStream(
     file: File,
-    contentType: string,
+    _contentType: string,
     jobId: string,
     onProgress: (pct: number) => void,
   ): Promise<boolean> {
-    const init = await initStreamVideoUploadAction({
-      propertyId,
-      filename: file.name,
-      contentType,
-      size: file.size,
-    })
-    if (!init.ok) {
-      failJob(jobId, init.error)
-      return false
-    }
-
+    let uid = ''
     try {
-      await tusUpload(init.uploadUrl, file, onProgress)
+      uid = await tusUpload(
+        `/api/media/stream-upload?propertyId=${encodeURIComponent(propertyId)}`,
+        file,
+        onProgress,
+      )
     } catch (err) {
       failJob(jobId, err instanceof Error ? err.message : 'Stream upload failed')
       return false
@@ -146,13 +142,15 @@ export function DropZone({
 
     onProgress(100)
     finishJob(jobId)
-    // Cloudflare hasn't necessarily finished encoding yet — flip the row to
-    // "ready" if it has, otherwise leave it pending; the catalog still
-    // shows the file, just without the thumbnail until encoding completes.
-    void finalizeStreamVideoUploadAction({
-      propertyId,
-      uid: init.uid,
-    }).catch(() => undefined)
+    if (uid) {
+      // Cloudflare may still be encoding — flip the row to "ready" if
+      // readyToStream, otherwise leave it pending; the catalog still
+      // shows the file, just without the thumbnail until encoding lands.
+      void finalizeStreamVideoUploadAction({
+        propertyId,
+        uid,
+      }).catch(() => undefined)
+    }
     return true
   }
 
@@ -446,29 +444,44 @@ async function runWithLimit<T, R>(
 }
 
 /**
- * Drive a tus-resumable upload to a Stream Direct Creator URL. Stream
- * insists on 5 MiB chunks for resumable uploads (chunkSize must be a
- * multiple of 256 KiB). Progress is normalized to 0–99%; the caller stamps
- * 100 only after the server-side finalize step succeeds.
+ * Drive a tus-resumable upload through our /api/media/stream-upload proxy
+ * to Cloudflare Stream. tus-js-client makes the initial CREATE against
+ * `endpoint`; our route returns the Cloudflare upload URL in `Location`
+ * (and the future video UID in `stream-media-id`). tus then PATCHes
+ * chunks straight to Cloudflare — that endpoint is browser-CORS-enabled
+ * because we minted it with `direct_user=true`. Progress is normalized
+ * to 0–99%; the caller stamps 100 after finalize.
+ *
+ * Resolves with the Stream UID extracted from the create response so the
+ * caller can run finalizeStreamVideoUploadAction.
  */
 function tusUpload(
-  uploadUrl: string,
+  endpoint: string,
   file: File,
   onProgress: (pct: number) => void,
-): Promise<void> {
+): Promise<string> {
   return new Promise((resolve, reject) => {
+    let uid = ''
     const upload = new tus.Upload(file, {
-      uploadUrl,
+      endpoint,
       retryDelays: [0, 1_000, 3_000, 5_000, 10_000],
-      chunkSize: 5 * 1024 * 1024,
-      metadata: { filename: file.name, filetype: file.type },
+      // Stream requires resumable chunks be multiples of 256 KiB; 50 MiB
+      // is what Cloudflare's example uses.
+      chunkSize: 50 * 1024 * 1024,
+      uploadSize: file.size,
+      metadata: { name: file.name, filetype: file.type },
       onError: (err) =>
         reject(err instanceof Error ? err : new Error(String(err))),
       onProgress: (bytesUploaded, bytesTotal) => {
         const pct = Math.round((bytesUploaded / bytesTotal) * 100)
         onProgress(Math.min(pct, 99))
       },
-      onSuccess: () => resolve(),
+      onAfterResponse: (_req, res) => {
+        // Cloudflare echoes the UID on the CREATE response only.
+        const header = res.getHeader('stream-media-id')
+        if (header) uid = header
+      },
+      onSuccess: () => resolve(uid),
     })
     upload.start()
   })

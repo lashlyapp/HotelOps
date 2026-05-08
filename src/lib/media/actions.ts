@@ -13,15 +13,15 @@ import {
   r2PresignPutUrl,
 } from '@/lib/r2/upload'
 import {
-  streamCreateTusUpload,
   streamDeleteVideo,
   streamGetVideo,
   streamMp4DownloadUrl,
 } from '@/lib/stream/client'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-// Image uploads still go to R2; videos route to Cloudflare Stream and don't
-// pass through this allowlist (Stream accepts any MP4/MOV/WebM up to 30 GB).
+// Image uploads still go to R2; videos route to Cloudflare Stream via the
+// dedicated /api/media/stream-upload route handler and don't pass through
+// this allowlist.
 const ALLOWED_MIME = new Set([
   'image/jpeg',
   'image/png',
@@ -30,21 +30,15 @@ const ALLOWED_MIME = new Set([
   'image/avif',
   'image/svg+xml',
 ])
-const ALLOWED_VIDEO_MIME = new Set(['video/mp4', 'video/quicktime', 'video/webm'])
 const MAX_FILE_BYTES = 2 * 1024 * 1024 * 1024 // 2 GB cap on R2 image uploads
-const MAX_VIDEO_BYTES = 30 * 1024 * 1024 * 1024 // 30 GB — Stream's per-video ceiling
 
 // All Stream-hosted videos use this synthetic file_key so existing
 // media_metadata + media_tags rows continue to apply uniformly.
 const STREAM_KEY_PREFIX = 'stream:'
-function streamKey(uid: string): string {
-  return `${STREAM_KEY_PREFIX}${uid}`
-}
-function isStreamKey(key: string): boolean {
-  return key.startsWith(STREAM_KEY_PREFIX)
-}
 function streamUidFromKey(key: string): string | null {
-  return isStreamKey(key) ? key.slice(STREAM_KEY_PREFIX.length) : null
+  return key.startsWith(STREAM_KEY_PREFIX)
+    ? key.slice(STREAM_KEY_PREFIX.length)
+    : null
 }
 
 const TAG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
@@ -347,71 +341,10 @@ export async function presignDownloadAction(args: {
 }
 
 // ----------------------------------------------------------------------------
-// Stream — Direct Creator Upload (tus) for video files
+// Stream — Direct Creator Upload finalize step.
+// (The tus CREATE goes through the /api/media/stream-upload route handler,
+// which proxies the Cloudflare API and inserts the media_videos row.)
 // ----------------------------------------------------------------------------
-
-export type StreamUploadInitResult =
-  | { ok: true; uid: string; uploadUrl: string; key: string }
-  | { ok: false; error: string }
-
-/**
- * Mint a tus upload URL the browser drives directly to Cloudflare. We also
- * insert a placeholder media_videos row so the catalog can show the file
- * (even pre-encoding) and so a tenant boundary is established before any
- * bytes hit Cloudflare.
- */
-export async function initStreamVideoUploadAction(args: {
-  propertyId: string
-  filename: string
-  contentType: string
-  size: number
-}): Promise<StreamUploadInitResult> {
-  const session = await requireOrgUser()
-  const property = session.properties.find((p) => p.id === args.propertyId)
-  if (!property) return { ok: false, error: 'Property not found.' }
-
-  if (!ALLOWED_VIDEO_MIME.has(args.contentType)) {
-    return { ok: false, error: `${args.contentType} is not an allowed video type.` }
-  }
-  if (args.size <= 0) return { ok: false, error: 'Empty file.' }
-  if (args.size > MAX_VIDEO_BYTES) {
-    return { ok: false, error: 'Video exceeds 30 GB limit.' }
-  }
-
-  const safe = sanitizeFilename(args.filename)
-  if (!safe) return { ok: false, error: 'Invalid filename.' }
-
-  let init: { uploadUrl: string; uid: string }
-  try {
-    init = await streamCreateTusUpload({ filename: safe, size: args.size })
-  } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : 'Stream upload init failed',
-    }
-  }
-
-  const admin = createAdminClient()
-  const { error } = await admin.from('media_videos').insert({
-    property_id: args.propertyId,
-    stream_uid: init.uid,
-    filename: safe,
-    size: args.size,
-    status: 'pending',
-  })
-  if (error) {
-    // Best-effort cleanup: nothing to do server-side — the tus URL will
-    // expire on its own and Stream will GC the half-uploaded object.
-    return { ok: false, error: error.message }
-  }
-
-  return {
-    ok: true,
-    uid: init.uid,
-    uploadUrl: init.uploadUrl,
-    key: streamKey(init.uid),
-  }
-}
 
 /**
  * Browser calls this after the tus upload finishes. We pull the latest
