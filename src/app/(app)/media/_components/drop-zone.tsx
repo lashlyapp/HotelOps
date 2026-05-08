@@ -64,9 +64,17 @@ export function DropZone({
     }))
     setJobs((prev) => [...prev, ...newJobs])
 
+    // Track videos whose in-memory auto-poster didn't land — typically a
+    // transient PUT failure or the occasional blob-URL decode hiccup. We
+    // retry these from R2 once the batch settles (see retryMissingPosters).
+    const posterRetryQueue: string[] = []
+    const onPosterFailure = (videoKey: string) => {
+      posterRetryQueue.push(videoKey)
+    }
+
     const results = await runWithLimit(incoming, FILES_IN_FLIGHT, (file, i) =>
       uploadOne(file, newJobs[i].id, (pct) =>
-        updateJob(newJobs[i].id, pct),
+        updateJob(newJobs[i].id, pct), onPosterFailure,
       ).catch((err) => {
         // runWithLimit's workers swallow errors otherwise — make sure we
         // always end the job in a visible state.
@@ -82,6 +90,16 @@ export function DropZone({
         await revalidateAfterUploadAction(propertySlug)
         router.refresh()
       })
+    }
+
+    // Non-blocking second pass: now that uploads are done and R2 has the
+    // video objects, try once more for any whose in-memory capture failed.
+    // This catches transient failures (network hiccup on the poster PUT,
+    // tab throttling mid-decode); genuine codec problems like HEVC .mov on
+    // Chrome will still fail, and the user can pick a cover manually from
+    // the preview dialog.
+    if (posterRetryQueue.length > 0) {
+      void retryMissingPosters(posterRetryQueue)
     }
   }
 
@@ -121,6 +139,7 @@ export function DropZone({
     file: File,
     jobId: string,
     onProgress: (pct: number) => void,
+    onPosterFailure: (videoKey: string) => void,
   ): Promise<boolean> {
     const contentType = file.type || 'application/octet-stream'
     const result =
@@ -128,11 +147,17 @@ export function DropZone({
         ? await uploadSingle(file, contentType, jobId, onProgress)
         : await uploadMultipart(file, contentType, jobId, onProgress)
     if (result.ok && contentType.startsWith('video/')) {
-      void attachDefaultPoster(file, result.key).catch((err) => {
-        // Non-fatal — the video is up, the catalog just shows a placeholder
-        // until the user picks a cover manually.
-        console.warn('[upload] default poster capture failed', err)
-      })
+      const videoKey = result.key
+      void attachDefaultPoster(file, videoKey)
+        .then((posterOk) => {
+          if (!posterOk) onPosterFailure(videoKey)
+        })
+        .catch((err) => {
+          // Non-fatal — the video is up, the catalog just shows a placeholder
+          // until the user picks a cover manually.
+          console.warn('[upload] default poster capture failed', err)
+          onPosterFailure(videoKey)
+        })
     }
     return result.ok
   }
@@ -249,13 +274,13 @@ export function DropZone({
 
   /**
    * Capture a default cover frame from the just-uploaded File (still in
-   * memory client-side) and attach it as the video's poster. Best-effort —
-   * if the browser can't decode the codec, we silently skip and let the
-   * user pick a cover from the preview dialog later.
+   * memory client-side) and attach it as the video's poster. Returns true
+   * on success, false if the browser couldn't decode the file (the caller
+   * queues a retry from the R2 URL once the batch settles).
    */
-  async function attachDefaultPoster(file: File, videoKey: string): Promise<void> {
+  async function attachDefaultPoster(file: File, videoKey: string): Promise<boolean> {
     const blob = await captureFrameBlobFromFile(file, DEFAULT_POSTER_TIME_S)
-    if (!blob) return
+    if (!blob) return false
     const presign = await presignPosterUploadAction({
       propertyId,
       videoKey,
@@ -270,6 +295,45 @@ export function DropZone({
     })
     if (!result.ok) throw new Error(result.error)
     router.refresh()
+    return true
+  }
+
+  /**
+   * Second-chance pass for any video whose in-memory auto-poster didn't
+   * land. Decodes from the R2 public URL with `crossOrigin="anonymous"` so
+   * canvas reads aren't tainted. Only one retry — if R2 also can't decode,
+   * the file is genuinely unsupported (typically iPhone HEVC .mov on
+   * Chrome) and the user has to pick a cover manually.
+   */
+  async function retryMissingPosters(videoKeys: string[]): Promise<void> {
+    for (const videoKey of videoKeys) {
+      try {
+        const blob = await captureFrameBlobFromUrl(
+          publicUrlForKey(videoKey),
+          DEFAULT_POSTER_TIME_S,
+        )
+        if (!blob) {
+          console.warn('[upload] retry poster: still undecodable', videoKey)
+          continue
+        }
+        const presign = await presignPosterUploadAction({
+          propertyId,
+          videoKey,
+          size: blob.size,
+        })
+        if (!presign.ok) throw new Error(presign.error)
+        await xhrPut(presign.url, blob, 'image/jpeg', () => {})
+        const result = await setVideoPosterAction({
+          propertyId,
+          videoKey,
+          posterKey: presign.posterKey,
+        })
+        if (!result.ok) throw new Error(result.error)
+        router.refresh()
+      } catch (err) {
+        console.warn('[upload] retry poster failed', videoKey, err)
+      }
+    }
   }
 
   function clearFinished() {
@@ -453,6 +517,20 @@ async function runWithLimit<T, R>(
 }
 
 /**
+ * Build the public CDN URL for an R2 key without pulling in the
+ * server-only r2/client module. NEXT_PUBLIC_R2_PUBLIC_URL is the same env
+ * var the server-side helper reads, so the two stay in sync.
+ */
+function publicUrlForKey(key: string): string {
+  const base = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL || '').replace(/\/+$/, '')
+  const encoded = key
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')
+  return `${base}/${encoded}`
+}
+
+/**
  * Off-DOM frame extraction. Loads the File via an object URL into a hidden
  * <video>, seeks to `time`, draws to a canvas, and returns a JPEG Blob.
  * Returns null if the browser can't decode the codec (typical for iPhone
@@ -465,11 +543,39 @@ async function captureFrameBlobFromFile(
 ): Promise<Blob | null> {
   if (typeof window === 'undefined') return null
   const url = URL.createObjectURL(file)
+  try {
+    return await captureFrameBlobFromVideoSrc(url, time, false)
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+/**
+ * Same as captureFrameBlobFromFile but for a public R2 URL. Used by the
+ * post-batch retry: if the in-memory capture missed (transient PUT error,
+ * tab throttled mid-decode), R2 has the file by now and a fresh decode
+ * usually succeeds. CORS is set up on the bucket to allow GET, so
+ * crossOrigin="anonymous" keeps the canvas untainted.
+ */
+async function captureFrameBlobFromUrl(
+  url: string,
+  time: number,
+): Promise<Blob | null> {
+  if (typeof window === 'undefined' || !url) return null
+  return captureFrameBlobFromVideoSrc(url, time, true)
+}
+
+async function captureFrameBlobFromVideoSrc(
+  src: string,
+  time: number,
+  crossOrigin: boolean,
+): Promise<Blob | null> {
   const video = document.createElement('video')
   video.muted = true
   video.playsInline = true
   video.preload = 'metadata'
-  video.src = url
+  if (crossOrigin) video.crossOrigin = 'anonymous'
+  video.src = src
 
   try {
     await new Promise<void>((resolve, reject) => {
@@ -527,8 +633,6 @@ async function captureFrameBlobFromFile(
     })
   } catch {
     return null
-  } finally {
-    URL.revokeObjectURL(url)
   }
 }
 
