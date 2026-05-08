@@ -76,9 +76,14 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
 
    Open [http://localhost:3000](http://localhost:3000).
 
-## Videos — R2 with browser-side cover picker
+## Videos — R2 with auto-cover + post-upload picker
 
-Videos (`video/mp4`, `video/quicktime`, `video/webm`) and images both live in R2 under the property prefix. When a tenant uploads a video, a TikTok-style picker (`src/app/(app)/media/_components/cover-picker.tsx`) loads the file as an object URL into a hidden `<video>`, draws an evenly-spaced strip of thumbnails to a `<canvas>`, and lets them pick the cover frame. The chosen JPEG is PUT to R2 alongside the video at `{property-prefix}_posters/{filename}.jpg`, and the key is recorded in `media_metadata.poster_key`. Playback uses a plain `<video src=…>` element with that poster.
+Videos (`video/mp4`, `video/quicktime`, `video/webm`) and images both live in R2 under the property prefix. The cover-image flow follows Facebook/Instagram: uploads never block on a modal.
+
+1. **At upload time**, the drop-zone PUTs the video to R2 (single PUT under 10 MB, multipart above). As soon as it lands, an off-DOM `<video>` decodes the just-uploaded file (still in memory client-side), seeks to ~0.33s — the 10th frame at 30 fps, far enough in to skip the typical fade-from-black opener — and PUTs the captured JPEG as a sibling `_posters/{filename}.jpg`. This runs in the background; a batch of N videos isn't gated on N pickers.
+2. **From the file's preview dialog**, the user can hit "Change cover" to open the frame picker (`src/app/(app)/media/_components/cover-picker.tsx`): an evenly-spaced thumbnail strip + scrubber, `crossOrigin="anonymous"` against the R2 origin so canvas reads aren't tainted. Confirming overwrites the same `_posters/{filename}.jpg` key; `media_metadata.updated_at` is appended as a `?v=` cache-buster on the public URL so the new cover appears immediately instead of waiting for the CDN edge to expire.
+
+Playback uses a plain `<video src=…>` element with the poster set, so first paint is the cover frame instead of an empty player.
 
 Why we don't use a transcoding service: Cloudflare Stream's $5 per 1000 minutes stored + $1 per 1000 minutes delivered scales linearly with the catalog forever. R2 is ~$0.015/GB-month with zero egress on the Cloudflare CDN, so a 60-second 720p H.264 MP4 (~30 MB) costs fractions of a cent.
 

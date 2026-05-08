@@ -13,9 +13,12 @@ import {
   revalidateAfterUploadAction,
   setVideoPosterAction,
 } from '@/lib/media/actions'
-import { CoverPicker, type CoverPickerResult } from './cover-picker'
 
 const SINGLE_PUT_THRESHOLD = 10 * 1024 * 1024 // 10 MB
+// Frame to grab as the auto-poster on upload. ~0.33s ≈ frame 10 at 30 fps,
+// which is far enough into the video to skip the typical fade-in-from-black
+// opener but early enough to feel like "the start" of the clip.
+const DEFAULT_POSTER_TIME_S = 0.33
 // Concurrency tuned around browser per-host connection caps (~6). Worst
 // case is 4 large images uploading multipart simultaneously, which is
 // FILES_IN_FLIGHT × PARTS_IN_FLIGHT_PER_FILE = 12 in-flight PUTs to R2;
@@ -25,16 +28,9 @@ const PARTS_IN_FLIGHT_PER_FILE = 3
 
 type Job =
   | { id: string; name: string; size: number; status: 'pending' }
-  | { id: string; name: string; size: number; status: 'awaiting-cover' }
   | { id: string; name: string; size: number; status: 'uploading'; pct: number }
   | { id: string; name: string; size: number; status: 'done' }
   | { id: string; name: string; size: number; status: 'error'; error: string }
-
-type PendingCover = {
-  jobId: string
-  file: File
-  resolve: (cover: CoverPickerResult | null) => void
-}
 
 export function DropZone({
   propertyId,
@@ -48,12 +44,8 @@ export function DropZone({
   const [over, setOver] = useState(false)
   const [open, setOpen] = useState(false)
   const [jobs, setJobs] = useState<Job[]>([])
-  const [coverQueue, setCoverQueue] = useState<PendingCover[]>([])
   const [, startTransition] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
-  // jobId → R2 key mapping so the video flow can hand the key off to the
-  // poster-attach step after the underlying file finishes uploading.
-  const videoKeyByJob = useRef(new Map<string, string>())
   const router = useRouter()
 
   function pickFiles() {
@@ -95,23 +87,12 @@ export function DropZone({
 
   function updateJob(id: string, pct: number) {
     setJobs((prev) =>
-      prev.map((j) => {
-        if (j.id !== id) return j
-        if (j.status === 'uploading') return { ...j, pct }
-        if (j.status === 'pending' || j.status === 'awaiting-cover') {
-          return { ...j, status: 'uploading', pct }
-        }
-        return j
-      }),
-    )
-  }
-
-  function setJobStatus(id: string, status: 'pending' | 'awaiting-cover') {
-    setJobs((prev) =>
       prev.map((j) =>
-        j.id === id
-          ? ({ id: j.id, name: j.name, size: j.size, status } as Job)
-          : j,
+        j.id === id && j.status === 'uploading'
+          ? { ...j, pct }
+          : j.id === id && j.status === 'pending'
+            ? { ...j, status: 'uploading', pct }
+            : j,
       ),
     )
   }
@@ -129,90 +110,31 @@ export function DropZone({
   }
 
   /**
-   * Show the cover-picker for a single video. Resolves with the picker's
-   * output, or `null` if the user cancelled or the browser couldn't decode
-   * the file. Multiple concurrent video uploads queue up — only one picker
-   * is mounted at a time.
+   * Both images and videos take the same R2 path: single PUT under 10 MB,
+   * multipart above. After a video lands we grab a default cover frame in
+   * the background (~0.33s in to skip fade-in-from-black) and PUT it as a
+   * sibling poster — fire-and-forget, so a batch of N videos isn't gated on
+   * N modal pickers. The user can swap the cover later from the preview
+   * dialog (Facebook/Instagram-style "Change cover").
    */
-  function requestCover(jobId: string, file: File): Promise<CoverPickerResult | null> {
-    return new Promise((resolve) => {
-      setCoverQueue((prev) => [...prev, { jobId, file, resolve }])
-    })
-  }
-
-  function resolveCover(result: { ok: true; value: CoverPickerResult } | { ok: false }) {
-    setCoverQueue((prev) => {
-      const [head, ...rest] = prev
-      if (head) head.resolve(result.ok ? result.value : null)
-      return rest
-    })
-  }
-
   async function uploadOne(
     file: File,
     jobId: string,
     onProgress: (pct: number) => void,
   ): Promise<boolean> {
     const contentType = file.type || 'application/octet-stream'
-    if (contentType.startsWith('video/')) {
-      return uploadVideo(file, contentType, jobId, onProgress)
-    }
-    if (file.size <= SINGLE_PUT_THRESHOLD) {
-      return uploadSingle(file, contentType, jobId, onProgress)
-    }
-    return uploadMultipart(file, contentType, jobId, onProgress)
-  }
-
-  /**
-   * Videos: pause for the cover picker first, then upload the video to R2
-   * (multipart for anything over 10 MB — which is essentially every video)
-   * and the captured JPEG poster in parallel. Both PUTs go directly from
-   * the browser to R2 via presigned URLs; we only round-trip through Vercel
-   * to mint URLs and to record poster_key in media_metadata at the end.
-   */
-  async function uploadVideo(
-    file: File,
-    contentType: string,
-    jobId: string,
-    onProgress: (pct: number) => void,
-  ): Promise<boolean> {
-    setJobStatus(jobId, 'awaiting-cover')
-    const cover = await requestCover(jobId, file)
-    if (!cover) {
-      // User cancelled or HEVC-style decode failure. Surface a recoverable
-      // error rather than uploading a video with no poster.
-      failJob(
-        jobId,
-        'Cover image required. If your video is HEVC (.mov from iPhone), please export as MP4 first.',
-      )
-      return false
-    }
-
-    setJobStatus(jobId, 'pending')
-    const ok =
+    const result =
       file.size <= SINGLE_PUT_THRESHOLD
         ? await uploadSingle(file, contentType, jobId, onProgress)
         : await uploadMultipart(file, contentType, jobId, onProgress)
-    if (!ok) return false
-
-    // Find the key the upload landed at. Both uploadSingle/uploadMultipart
-    // record it on the job before flipping to "done"; pull it back out so
-    // we can attach the poster.
-    const videoKey = videoKeyByJob.current.get(jobId)
-    if (!videoKey) return true
-
-    try {
-      await uploadPoster({
-        propertyId,
-        videoKey,
-        poster: cover.poster,
+    if (result.ok && contentType.startsWith('video/')) {
+      void attachDefaultPoster(file, result.key).catch((err) => {
+        // Non-fatal — the video is up, the catalog just shows a placeholder
+        // until the user picks a cover manually.
+        console.warn('[upload] default poster capture failed', err)
       })
-    } catch (err) {
-      // Non-fatal: video is up, just no poster. The catalog will render the
-      // video with a generic placeholder until the user re-uploads.
-      console.error('[upload] poster attach failed', err)
     }
-    return true
+    return result.ok
   }
 
   async function uploadSingle(
@@ -220,7 +142,7 @@ export function DropZone({
     contentType: string,
     jobId: string,
     onProgress: (pct: number) => void,
-  ): Promise<boolean> {
+  ): Promise<{ ok: true; key: string } | { ok: false }> {
     const presign = await presignUploadAction({
       propertyId,
       filename: file.name,
@@ -229,16 +151,15 @@ export function DropZone({
     })
     if (!presign.ok) {
       failJob(jobId, presign.error)
-      return false
+      return { ok: false }
     }
     try {
       await xhrPut(presign.url, file, contentType, onProgress)
-      videoKeyByJob.current.set(jobId, presign.key)
       finishJob(jobId)
-      return true
+      return { ok: true, key: presign.key }
     } catch (err) {
       failJob(jobId, err instanceof Error ? err.message : 'Upload failed')
-      return false
+      return { ok: false }
     }
   }
 
@@ -247,7 +168,7 @@ export function DropZone({
     contentType: string,
     jobId: string,
     onProgress: (pct: number) => void,
-  ): Promise<boolean> {
+  ): Promise<{ ok: true; key: string } | { ok: false }> {
     const init = await initMultipartUploadAction({
       propertyId,
       filename: file.name,
@@ -256,7 +177,7 @@ export function DropZone({
     })
     if (!init.ok) {
       failJob(jobId, init.error)
-      return false
+      return { ok: false }
     }
 
     const partCount = init.partUrls.length
@@ -309,13 +230,12 @@ export function DropZone({
           key: init.key,
           uploadId: init.uploadId,
         })
-        return false
+        return { ok: false }
       }
 
       onProgress(100)
-      videoKeyByJob.current.set(jobId, init.key)
       finishJob(jobId)
-      return true
+      return { ok: true, key: init.key }
     } catch (err) {
       failJob(jobId, err instanceof Error ? err.message : 'Upload failed')
       await abortMultipartUploadAction({
@@ -323,28 +243,33 @@ export function DropZone({
         key: init.key,
         uploadId: init.uploadId,
       })
-      return false
+      return { ok: false }
     }
   }
 
-  async function uploadPoster(args: {
-    propertyId: string
-    videoKey: string
-    poster: Blob
-  }): Promise<void> {
+  /**
+   * Capture a default cover frame from the just-uploaded File (still in
+   * memory client-side) and attach it as the video's poster. Best-effort —
+   * if the browser can't decode the codec, we silently skip and let the
+   * user pick a cover from the preview dialog later.
+   */
+  async function attachDefaultPoster(file: File, videoKey: string): Promise<void> {
+    const blob = await captureFrameBlobFromFile(file, DEFAULT_POSTER_TIME_S)
+    if (!blob) return
     const presign = await presignPosterUploadAction({
-      propertyId: args.propertyId,
-      videoKey: args.videoKey,
-      size: args.poster.size,
+      propertyId,
+      videoKey,
+      size: blob.size,
     })
     if (!presign.ok) throw new Error(presign.error)
-    await xhrPut(presign.url, args.poster, 'image/jpeg', () => {})
+    await xhrPut(presign.url, blob, 'image/jpeg', () => {})
     const result = await setVideoPosterAction({
-      propertyId: args.propertyId,
-      videoKey: args.videoKey,
+      propertyId,
+      videoKey,
       posterKey: presign.posterKey,
     })
     if (!result.ok) throw new Error(result.error)
+    router.refresh()
   }
 
   function clearFinished() {
@@ -356,8 +281,6 @@ export function DropZone({
   function dismissJob(id: string) {
     setJobs((prev) => prev.filter((j) => j.id !== id))
   }
-
-  const activeCover = coverQueue[0] ?? null
 
   return (
     <div className="space-y-2">
@@ -383,8 +306,8 @@ export function DropZone({
           <div className="p-4 text-center space-y-2">
             <div className="flex items-center justify-between gap-2 text-left">
               <p className="text-xs text-subtle">
-                Images and videos up to 5 GB. Videos prompt for a cover image
-                after upload starts. Uploads to{' '}
+                Images and videos up to 5 GB. Each video gets an auto-cover
+                you can change later from its preview. Uploads to{' '}
                 <span className="text-fg">{propertyName}</span>.
               </p>
               <button
@@ -446,20 +369,6 @@ export function DropZone({
           </ul>
         </div>
       ) : null}
-
-      {activeCover ? (
-        <CoverPicker
-          key={activeCover.jobId}
-          file={activeCover.file}
-          onResolve={(result) => {
-            if (result.ok) {
-              resolveCover({ ok: true, value: result.value })
-            } else {
-              resolveCover({ ok: false })
-            }
-          }}
-        />
-      ) : null}
     </div>
   )
 }
@@ -476,18 +385,16 @@ function JobRow({
       <span className="flex-1 min-w-0 truncate text-fg" title={job.name}>
         {job.name}
       </span>
-      <div className="w-40 text-right">
+      <div className="w-32 text-right">
         {job.status === 'pending' ? (
           <span className="text-xs text-subtle">Queued…</span>
-        ) : job.status === 'awaiting-cover' ? (
-          <span className="text-xs text-subtle">Pick cover…</span>
         ) : job.status === 'uploading' ? (
           <ProgressBar pct={job.pct} />
         ) : job.status === 'done' ? (
           <span className="text-xs text-success-fg">Done</span>
         ) : (
           <span className="text-xs text-danger-fg" title={job.error}>
-            {job.error.length > 30 ? 'Failed' : job.error}
+            Failed
           </span>
         )}
       </div>
@@ -543,6 +450,86 @@ async function runWithLimit<T, R>(
   )
   await Promise.all(workers)
   return results
+}
+
+/**
+ * Off-DOM frame extraction. Loads the File via an object URL into a hidden
+ * <video>, seeks to `time`, draws to a canvas, and returns a JPEG Blob.
+ * Returns null if the browser can't decode the codec (typical for iPhone
+ * HEVC .mov on Chrome/Firefox) — caller treats that as "no auto-poster,
+ * user picks one later".
+ */
+async function captureFrameBlobFromFile(
+  file: File,
+  time: number,
+): Promise<Blob | null> {
+  if (typeof window === 'undefined') return null
+  const url = URL.createObjectURL(file)
+  const video = document.createElement('video')
+  video.muted = true
+  video.playsInline = true
+  video.preload = 'metadata'
+  video.src = url
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const onLoaded = () => {
+        cleanup()
+        resolve()
+      }
+      const onError = () => {
+        cleanup()
+        reject(new Error('metadata load failed'))
+      }
+      function cleanup() {
+        video.removeEventListener('loadedmetadata', onLoaded)
+        video.removeEventListener('error', onError)
+      }
+      video.addEventListener('loadedmetadata', onLoaded)
+      video.addEventListener('error', onError)
+    })
+    if (video.videoWidth === 0 || video.videoHeight === 0) return null
+
+    // Clamp the seek target so very short clips still produce a frame.
+    const target = Math.min(time, Math.max(0, (video.duration || 0) - 0.05))
+    await new Promise<void>((resolve, reject) => {
+      const onSeeked = () => {
+        cleanup()
+        resolve()
+      }
+      const onError = () => {
+        cleanup()
+        reject(new Error('seek failed'))
+      }
+      function cleanup() {
+        video.removeEventListener('seeked', onSeeked)
+        video.removeEventListener('error', onError)
+      }
+      video.addEventListener('seeked', onSeeked)
+      video.addEventListener('error', onError)
+      video.currentTime = target
+    })
+
+    const maxWidth = 1280
+    const ratio =
+      video.videoWidth > maxWidth ? maxWidth / video.videoWidth : 1
+    const w = Math.round(video.videoWidth * ratio)
+    const h = Math.round(video.videoHeight * ratio)
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    ctx.drawImage(video, 0, 0, w, h)
+
+    return await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.85)
+    })
+  } catch {
+    return null
+  } finally {
+    URL.revokeObjectURL(url)
+  }
 }
 
 /** PUT a full file via XHR, reporting overall progress as a percentage. */

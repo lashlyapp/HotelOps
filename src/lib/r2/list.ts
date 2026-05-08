@@ -93,7 +93,7 @@ export async function listMediaWithTags(
       .order('tag', { ascending: true }),
     admin
       .from('media_metadata')
-      .select('file_key, display_name, description, poster_key')
+      .select('file_key, display_name, description, poster_key, updated_at')
       .eq('property_id', propertyId),
   ])
 
@@ -110,6 +110,7 @@ export async function listMediaWithTags(
       display_name: string | null
       description: string | null
       poster_key: string | null
+      updated_at: string | null
     }
   >()
   for (const row of metadataRows ?? []) {
@@ -117,21 +118,36 @@ export async function listMediaWithTags(
       display_name: row.display_name,
       description: row.description,
       poster_key: row.poster_key,
+      updated_at: row.updated_at,
     })
   }
 
   return r2Files
     .map((f) => {
       const meta = metaByKey.get(f.key)
+      // Cache-bust the poster on metadata mutations so picking a new cover
+      // shows up immediately instead of waiting for the CDN edge to expire
+      // its copy of the same R2 key.
+      const posterUrl = meta?.poster_key
+        ? cacheBust(r2PublicUrl(meta.poster_key), meta.updated_at)
+        : null
       return {
         ...f,
         displayName: meta?.display_name?.trim() || f.displayName,
         description: meta?.description ?? null,
-        posterUrl: meta?.poster_key ? r2PublicUrl(meta.poster_key) : null,
+        posterUrl,
         tags: tagsByKey.get(f.key) ?? [],
       }
     })
     .sort((a, b) => a.filename.localeCompare(b.filename))
+}
+
+function cacheBust(url: string, version: string | null): string {
+  if (!version) return url
+  // Cloudflare's CDN includes the query string in the cache key by default,
+  // so a different `v=` value bypasses the stale entry without us having to
+  // mint a fresh R2 key per replacement.
+  return `${url}?v=${encodeURIComponent(version)}`
 }
 
 function guessContentType(filename: string): string | null {

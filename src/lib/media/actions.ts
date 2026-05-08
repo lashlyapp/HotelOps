@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireOrgUser } from '@/lib/auth/session'
+import { r2PublicUrl } from '@/lib/r2/client'
 import {
   r2AbortMultipartUpload,
   r2CompleteMultipartUpload,
@@ -217,7 +218,7 @@ export async function setVideoPosterAction(args: {
   propertyId: string
   videoKey: string
   posterKey: string
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<{ ok: true; posterUrl: string } | { ok: false; error: string }> {
   const session = await requireOrgUser()
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return { ok: false, error: 'Property not found.' }
@@ -245,7 +246,7 @@ export async function setVideoPosterAction(args: {
   if (error) return { ok: false, error: error.message }
 
   revalidatePath('/media')
-  return { ok: true }
+  return { ok: true, posterUrl: r2PublicUrl(args.posterKey) }
 }
 
 function posterKeyFor(propertyPrefix: string, videoKey: string): string {

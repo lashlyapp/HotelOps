@@ -8,9 +8,7 @@ const POSTER_MAX_WIDTH = 1280
 const POSTER_QUALITY = 0.85
 
 export type CoverPickerResult = {
-  // JPEG of the chosen frame, ready to PUT to R2.
   poster: Blob
-  // Time (in seconds) the user selected — surfaced to the caller for UI/logs.
   capturedAt: number
 }
 
@@ -19,20 +17,21 @@ export type CoverPickerError =
   | { kind: 'aborted' }
 
 /**
- * TikTok-style cover picker. Loads the video file as an object URL into a
- * hidden <video>, generates an evenly-spaced thumbnail strip, and lets the
- * user click a thumbnail or scrub the timeline to pick the cover. On confirm
- * we draw the current frame to a canvas and hand back a JPEG Blob.
- *
- * `onResolve` is called exactly once: with `{ poster, capturedAt }` if the
- * user picks a frame, or with an error otherwise. The caller is expected to
- * unmount us after either outcome.
+ * Frame-picker for already-uploaded R2 videos. Loads the file with
+ * `crossOrigin="anonymous"` so canvas reads aren't tainted, generates an
+ * evenly-spaced thumbnail strip, and lets the user fine-tune the timestamp.
+ * On confirm we draw the chosen frame to a canvas and hand back a JPEG Blob
+ * the caller can PUT to R2.
  */
 export function CoverPicker({
-  file,
+  videoUrl,
+  videoLabel,
+  initialTime,
   onResolve,
 }: {
-  file: File
+  videoUrl: string
+  videoLabel: string
+  initialTime?: number
   onResolve: (
     result: { ok: true; value: CoverPickerResult } | { ok: false; error: CoverPickerError },
   ) => void
@@ -40,19 +39,9 @@ export function CoverPicker({
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [duration, setDuration] = useState<number | null>(null)
   const [thumbnails, setThumbnails] = useState<Array<{ time: number; dataUrl: string }>>([])
-  const [currentTime, setCurrentTime] = useState(0)
+  const [currentTime, setCurrentTime] = useState(initialTime ?? 0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // Object URL: created once on mount, revoked on unmount. Drop-zone keys
-  // each picker by jobId so a new file always gets a fresh component.
-  const [objectUrl] = useState(() =>
-    typeof window === 'undefined' ? '' : URL.createObjectURL(file),
-  )
-  useEffect(() => {
-    return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl)
-    }
-  }, [objectUrl])
 
   // Generate the thumbnail strip once the video has metadata.
   useEffect(() => {
@@ -78,7 +67,7 @@ export function CoverPicker({
       const dur = Number.isFinite(video!.duration) ? video!.duration : 0
       if (!cancelled) {
         setDuration(dur > 0 ? dur : null)
-        setCurrentTime(Math.min(1, dur || 0))
+        if (initialTime === undefined) setCurrentTime(Math.min(1, dur || 0))
       }
 
       // Pick frame times evenly across the timeline; clamp the last sample
@@ -99,12 +88,11 @@ export function CoverPicker({
           // Skip frames the browser can't decode at this offset; keep going.
         }
       }
-      // After the strip is built, leave the video parked at the first frame
-      // so the live preview matches the "selected" thumbnail by default.
       if (!cancelled) {
         try {
-          await seek(video!, frames[0]?.time ?? 0)
-          setCurrentTime(frames[0]?.time ?? 0)
+          const target = initialTime ?? frames[0]?.time ?? 0
+          await seek(video!, target)
+          setCurrentTime(target)
         } catch {
           // ignore
         }
@@ -115,7 +103,7 @@ export function CoverPicker({
     return () => {
       cancelled = true
     }
-  }, [onResolve])
+  }, [onResolve, initialTime])
 
   async function selectTime(t: number) {
     const video = videoRef.current
@@ -152,15 +140,14 @@ export function CoverPicker({
       role="dialog"
       aria-modal="true"
       aria-label="Choose a cover image"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4"
     >
       <div className="bg-surface text-fg w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-lg shadow-lg flex flex-col">
         <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-base font-semibold">Choose a cover image</h2>
-            <p className="text-xs text-subtle">
-              Pick a frame from <span className="font-mono">{file.name}</span> —
-              this is what guests see in the catalog and on your website.
+            <p className="truncate text-xs text-subtle">
+              <span className="font-mono">{videoLabel}</span>
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={cancel} disabled={busy}>
@@ -172,7 +159,8 @@ export function CoverPicker({
           <div className="aspect-video w-full overflow-hidden rounded-md bg-black">
             <video
               ref={videoRef}
-              src={objectUrl || undefined}
+              src={videoUrl}
+              crossOrigin="anonymous"
               muted
               playsInline
               preload="metadata"
@@ -279,8 +267,6 @@ function waitForMetadata(video: HTMLVideoElement): Promise<void> {
 }
 
 function seek(video: HTMLVideoElement, time: number): Promise<void> {
-  // Already at the target — Safari sometimes doesn't fire `seeked` for
-  // sub-frame deltas, so short-circuit.
   if (Math.abs(video.currentTime - time) < 0.001) return Promise.resolve()
   return new Promise<void>((resolve, reject) => {
     const onSeeked = () => {
@@ -334,8 +320,7 @@ function drawFrame(
   video: HTMLVideoElement,
   maxWidth: number,
 ): { canvas: HTMLCanvasElement } {
-  const ratio =
-    video.videoWidth > maxWidth ? maxWidth / video.videoWidth : 1
+  const ratio = video.videoWidth > maxWidth ? maxWidth / video.videoWidth : 1
   const w = Math.round(video.videoWidth * ratio)
   const h = Math.round(video.videoHeight * ratio)
   const canvas = document.createElement('canvas')
