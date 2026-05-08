@@ -11,7 +11,14 @@ export default async function HomePage() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (user) redirect('/media')
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+    redirect(profile?.role === 'platform_admin' ? '/admin' : '/media')
+  }
 
   return (
     <div className="flex flex-1 flex-col">

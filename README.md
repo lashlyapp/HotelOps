@@ -12,7 +12,9 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
 ## Features (v1)
 
 - **Public landing page** at `/`
-- **Invite-only auth** with set-password flow on first login
+- **Three-tier roles**: platform admin (us) → tenant owner (customer) → tenant staff
+- **Admin portal** (`/admin`) — list tenants, create new tenants with initial owner credentials
+- **Tenant portal** (`/media`, `/billing`, `/team`, `/account`) — owner manages their team; staff can browse the catalog
 - **Media catalog** — per-property tabs, search, type filter, click-to-preview lightbox, copy permanent URL
 - **Library stats** — file count, storage used, breakdown by type, last updated
 - **Billing** — invoice list with check-payment instructions
@@ -34,19 +36,24 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
    - **CI/CD (recommended):** push to GitHub. The `Database` workflow runs `supabase db push` against the linked remote project. Set the repo secrets listed under [CI / CD](#ci--cd).
    - **Manual one-time:** open Supabase Dashboard → SQL Editor and paste the contents of the latest file in `supabase/migrations/`.
 
-3. Onboard a tenant (organization + properties + optional owner invite). One-off, per customer. Two options:
+3. Bootstrap the first platform admin (one-time). They can then create tenants from the UI:
 
-   - **CI/CD (recommended):** GitHub → Actions → **Onboard tenant** → Run workflow. Fill in the slug, name, owner email, and a comma-separated `slug:Name,slug:Name` list of properties.
+   - **CI/CD (recommended):** add a temporary `BOOTSTRAP_ADMIN_PASSWORD` repo secret, then GitHub → Actions → **Bootstrap platform admin** → Run workflow → enter email (default `support@myhotelops.com`). Sign in at `/login`. After signing in, you may delete the secret.
    - **Local:**
 
      ```bash
-     npm run onboard:tenant -- \
-       --slug=cg-hotel-group \
-       --name="CG Hotel Group" \
-       --owner=nathan@cghotelgroup.com \
-       --property=cupertino-hotel:"Cupertino Hotel" \
-       --property=grand-hotel:"Grand Hotel"
+     npm run bootstrap:admin -- \
+       --email=support@myhotelops.com \
+       --password=<strong-password>
      ```
+
+4. Create tenants and team members from the UI:
+
+   - **Platform admin** (`/admin`): create tenants — sets the org slug, name, properties, and the initial owner's email + temporary password.
+   - **Tenant owner** (`/team`, visible to `org_owner` role only): adds team members with email + temporary password.
+   - **Anyone**: change their own password from `/account` → "Set a new one".
+
+   The `Onboard tenant` GitHub Actions workflow remains as an ops fallback for non-UI provisioning.
 
 4. Smoke-test R2 access:
 

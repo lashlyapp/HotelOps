@@ -12,12 +12,25 @@ export async function signIn(formData: FormData) {
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
 
-  if (error) {
+  if (error || !data.user) {
     redirect('/login?error=invalid')
   }
 
+  // Route to the role-appropriate landing page.
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', data.user.id)
+    .maybeSingle()
+
+  if (profile?.role === 'platform_admin') {
+    redirect('/admin')
+  }
   redirect('/media')
 }
 
