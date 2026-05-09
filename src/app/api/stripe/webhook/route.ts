@@ -64,8 +64,7 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
     case 'customer.subscription.updated':
     case 'customer.subscription.deleted':
     case 'customer.subscription.paused':
-    case 'customer.subscription.resumed':
-    case 'customer.subscription.trial_will_end': {
+    case 'customer.subscription.resumed': {
       const subscription = event.data.object as Stripe.Subscription
       const orgId = orgIdFromMetadata(subscription.metadata)
       if (!orgId) return
@@ -87,8 +86,13 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
 
 /**
  * Setup-mode Checkout finishes with a Setup Intent that has a payment method
- * but no subscription attached. Promote that pm to the subscription's default
- * so it's used when the trial ends.
+ * but no subscription attached. Promote that pm to:
+ *   1. The customer's default invoice payment method;
+ *   2. The subscription's default_payment_method;
+ * and flip the subscription from `send_invoice` to `charge_automatically` so
+ * future (recurring) invoices auto-charge. The currently-open first invoice
+ * is left alone — it's already listed in the billing UI for the customer to
+ * pay through their preferred channel.
  */
 async function handleCheckoutCompleted(
   checkoutSession: Stripe.Checkout.Session,
@@ -116,9 +120,6 @@ async function handleCheckoutCompleted(
       : setupIntent.payment_method?.id
   if (!paymentMethodId) return
 
-  // Make the new card the customer's default for invoices AND attach it as
-  // the subscription's default. Both are needed so the trial-end charge
-  // succeeds.
   const customerId =
     typeof setupIntent.customer === 'string'
       ? setupIntent.customer
@@ -131,8 +132,12 @@ async function handleCheckoutCompleted(
 
   const subscription = await stripe().subscriptions.update(subscriptionId, {
     default_payment_method: paymentMethodId,
+    collection_method: 'charge_automatically',
   })
-  await syncSubscriptionToDb(orgId, subscription)
+
+  // Card on file → grace period no longer applies. Clear the deadline so the
+  // billing UI stops showing the "X days remaining" countdown.
+  await syncSubscriptionToDb(orgId, subscription, { paymentMethodDueAt: null })
 }
 
 function orgIdFromMetadata(

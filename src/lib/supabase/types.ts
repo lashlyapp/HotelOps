@@ -206,10 +206,13 @@ export type BillingSubscription = {
   stripe_subscription_id: string | null
   stripe_price_id: string | null
   status: BillingSubscriptionStatus
-  trial_end: string | null
+  payment_method_due_at: string | null
   current_period_start: string | null
   current_period_end: string | null
   cancel_at_period_end: boolean
+  unit_amount_cents: number | null
+  quantity: number
+  currency: string
   default_payment_method_id: string | null
   default_payment_brand: string | null
   default_payment_last4: string | null

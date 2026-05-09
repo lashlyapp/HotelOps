@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server'
 import { requireOrgOwner } from '@/lib/auth/session'
-import { stripe, stripePriceId } from '@/lib/stripe/client'
-import { ensureStripeCustomer, getSubscriptionForOrg } from '@/lib/stripe/subscriptions'
+import {
+  stripe,
+  stripePriceId,
+  stripeSetupFeePriceId,
+} from '@/lib/stripe/client'
+import {
+  countPropertiesForOrg,
+  ensureStripeCustomer,
+  getSubscriptionForOrg,
+} from '@/lib/stripe/subscriptions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -10,14 +18,14 @@ export const dynamic = 'force-dynamic'
  * Owner-only: create a Stripe Checkout session that the customer uses to save
  * a card. We pick the mode based on whether a subscription already exists:
  *
- *  - Subscription exists (admin-created with 14-day trial) → mode=setup. The
- *    saved card is attached to the customer, then promoted to the
- *    subscription's default_payment_method via the webhook so it's used when
- *    the trial ends.
+ *  - Subscription exists (admin-created via start-subscription script) →
+ *    mode=setup. The saved card is attached to the customer, then promoted
+ *    to the subscription's default_payment_method via the webhook and the
+ *    subscription is flipped from send_invoice to charge_automatically.
  *
- *  - No subscription yet → mode=subscription. Stripe creates the subscription
- *    AND collects the card in one step. (Used if the org self-onboards
- *    instead of being admin-onboarded.)
+ *  - No subscription yet → mode=subscription. Stripe creates the per-property
+ *    subscription AND collects the card in one step. (Used if the org self-
+ *    onboards instead of being admin-onboarded.)
  *
  * The returned URL is opened in the same tab; success/cancel both bounce back
  * to /billing where the webhook will have updated state by the time the user
@@ -56,15 +64,26 @@ export async function POST() {
     return NextResponse.json({ url: checkout.url })
   }
 
+  // Self-serve path: no admin-created subscription yet. Checkout collects
+  // the card and creates the subscription in one step (charge_automatically
+  // — there's no need for a grace period when a card is provided up front).
+  // Quantity = property count; setup fee tacks onto invoice 1.
+  const quantity = Math.max(
+    1,
+    await countPropertiesForOrg(session.organization.id),
+  )
+  const setupFeePriceId = stripeSetupFeePriceId()
+
   const checkout = await stripe().checkout.sessions.create({
     mode: 'subscription',
     customer: customerId,
-    line_items: [{ price: stripePriceId(), quantity: 1 }],
+    line_items: [
+      { price: stripePriceId(), quantity },
+      ...(setupFeePriceId
+        ? [{ price: setupFeePriceId, quantity: 1 }]
+        : []),
+    ],
     subscription_data: {
-      trial_period_days: 14,
-      trial_settings: {
-        end_behavior: { missing_payment_method: 'pause' },
-      },
       metadata: { org_id: session.organization.id, app: 'hotelops' },
     },
     success_url: successUrl,
