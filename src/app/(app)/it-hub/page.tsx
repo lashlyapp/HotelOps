@@ -4,29 +4,44 @@ import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requireOrgUser } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type {
+  ItDocument,
   ItEquipment,
   ItNetwork,
   ItVendor,
 } from '@/lib/supabase/types'
-import { NETWORK_TYPE_LABELS, VENDOR_TYPE_LABELS } from './_lib/labels'
+import {
+  DOCUMENT_CATEGORY_LABELS,
+  NETWORK_TYPE_LABELS,
+  VENDOR_TYPE_LABELS,
+} from './_lib/labels'
 
 export default async function ItHubOverviewPage() {
   const session = await requireOrgUser()
   const orgId = session.organization.id
 
   const admin = createAdminClient()
-  const [{ data: networks }, { data: credentials }, { data: equipment }, { data: vendors }] =
-    await Promise.all([
-      admin.from('it_networks').select('*').eq('org_id', orgId),
-      admin.from('it_credentials').select('*').eq('org_id', orgId),
-      admin.from('it_equipment').select('*').eq('org_id', orgId),
-      admin
-        .from('it_vendors')
-        .select('*')
-        .eq('org_id', orgId)
-        .order('is_emergency', { ascending: false })
-        .order('name', { ascending: true }),
-    ])
+  const [
+    { data: networks },
+    { data: credentials },
+    { data: equipment },
+    { data: vendors },
+    { data: documents },
+  ] = await Promise.all([
+    admin.from('it_networks').select('*').eq('org_id', orgId),
+    admin.from('it_credentials').select('*').eq('org_id', orgId),
+    admin.from('it_equipment').select('*').eq('org_id', orgId),
+    admin
+      .from('it_vendors')
+      .select('*')
+      .eq('org_id', orgId)
+      .order('is_emergency', { ascending: false })
+      .order('name', { ascending: true }),
+    admin
+      .from('it_documents')
+      .select('*')
+      .eq('org_id', orgId)
+      .order('updated_at', { ascending: false }),
+  ])
 
   const guestNetworks = ((networks ?? []) as ItNetwork[]).filter(
     (n) => n.network_type === 'guest' || n.is_shareable,
@@ -39,11 +54,32 @@ export default async function ItHubOverviewPage() {
     (e) => e.status === 'broken',
   ).length
 
+  const allDocuments = (documents ?? []) as ItDocument[]
+  const today = new Date()
+  const soon = new Date(today)
+  soon.setDate(today.getDate() + 30)
+  const expiringDocs = allDocuments.filter((d) => {
+    if (!d.expires_at) return false
+    const exp = new Date(d.expires_at)
+    return exp >= today && exp <= soon
+  })
+  const expiredDocs = allDocuments.filter((d) => {
+    if (!d.expires_at) return false
+    return new Date(d.expires_at) < today
+  })
+  const docHint =
+    expiredDocs.length > 0
+      ? `${expiredDocs.length} expired`
+      : expiringDocs.length > 0
+        ? `${expiringDocs.length} expire within 30 days`
+        : undefined
+  const recentDocs = allDocuments.slice(0, 5)
+
   return (
     <div className="p-8 space-y-6">
       <section
         aria-label="At a glance"
-        className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+        className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
       >
         <KpiTile
           label="Wi-Fi networks"
@@ -61,6 +97,13 @@ export default async function ItHubOverviewPage() {
           hint={brokenCount > 0 ? `${brokenCount} flagged broken` : undefined}
           tone={brokenCount > 0 ? 'warning' : 'neutral'}
           href="/it-hub/equipment"
+        />
+        <KpiTile
+          label="Documents"
+          value={allDocuments.length}
+          hint={docHint}
+          tone={expiredDocs.length > 0 || expiringDocs.length > 0 ? 'warning' : 'neutral'}
+          href="/it-hub/documents"
         />
         <KpiTile
           label="Vendors"
@@ -192,10 +235,74 @@ export default async function ItHubOverviewPage() {
       </div>
 
       <Card>
+        <CardHeader className="flex items-center justify-between">
+          <CardTitle>Recent documents</CardTitle>
+          <Link
+            href="/it-hub/documents"
+            className="focus-ring rounded-sm text-xs font-medium text-muted hover:text-fg"
+          >
+            All documents →
+          </Link>
+        </CardHeader>
+        <CardBody className="p-0">
+          {recentDocs.length === 0 ? (
+            <div className="p-5 text-sm text-muted">
+              No documents uploaded yet.{' '}
+              <Link
+                href="/it-hub/documents"
+                className="focus-ring rounded-sm font-medium text-fg underline"
+              >
+                Upload your first
+              </Link>{' '}
+              — start with the contract you’d need to find fast.
+            </div>
+          ) : (
+            <ul className="divide-y divide-border-subtle">
+              {recentDocs.map((d) => {
+                const exp = d.expires_at ? new Date(d.expires_at) : null
+                const expired = exp && exp < today
+                const expiringSoon = exp && exp >= today && exp <= soon
+                return (
+                  <li
+                    key={d.id}
+                    className="flex flex-wrap items-center justify-between gap-3 px-5 py-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-fg truncate">
+                          {d.title}
+                        </p>
+                        <Badge tone="info">
+                          {DOCUMENT_CATEGORY_LABELS[d.category]}
+                        </Badge>
+                        {expired ? (
+                          <Badge tone="danger">Expired</Badge>
+                        ) : expiringSoon ? (
+                          <Badge tone="warning">Expires soon</Badge>
+                        ) : null}
+                      </div>
+                      <p className="mt-0.5 text-xs text-subtle">
+                        Updated{' '}
+                        {new Date(d.updated_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </p>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </CardBody>
+      </Card>
+
+      <Card>
         <CardHeader>
           <CardTitle>Quick links</CardTitle>
         </CardHeader>
-        <CardBody className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <CardBody className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <QuickLink
             href="/it-hub/wifi"
             title="Wi-Fi networks"
@@ -210,6 +317,11 @@ export default async function ItHubOverviewPage() {
             href="/it-hub/equipment"
             title="Equipment list"
             blurb="TVs, routers, printers, cameras — what you have and where it lives."
+          />
+          <QuickLink
+            href="/it-hub/documents"
+            title="Documents"
+            blurb="Contracts, runbooks, decks, manuals, warranties — uploaded once, found in seconds."
           />
           <QuickLink
             href="/it-hub/vendors"

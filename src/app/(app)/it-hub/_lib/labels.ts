@@ -1,5 +1,6 @@
 import type {
   ItCredentialCategory,
+  ItDocumentCategory,
   ItEquipmentCategory,
   ItEquipmentStatus,
   ItNetworkType,
@@ -49,6 +50,19 @@ export const EQUIPMENT_STATUS_LABELS: Record<ItEquipmentStatus, string> = {
   spare: 'Spare',
   retired: 'Retired',
   broken: 'Broken',
+}
+
+export const DOCUMENT_CATEGORY_LABELS: Record<ItDocumentCategory, string> = {
+  contract: 'Contract',
+  runbook: 'Runbook / SOP',
+  presentation: 'Presentation',
+  manual: 'Manual',
+  network_diagram: 'Network diagram',
+  license: 'License',
+  warranty: 'Warranty',
+  invoice: 'Invoice',
+  policy: 'Policy',
+  other: 'Other',
 }
 
 export const VENDOR_TYPE_LABELS: Record<ItVendorType, string> = {

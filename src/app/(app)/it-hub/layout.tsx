@@ -29,6 +29,7 @@ export default function ItHubLayout({
           <SubNavLink href="/it-hub/wifi">Wi-Fi</SubNavLink>
           <SubNavLink href="/it-hub/logins">Logins</SubNavLink>
           <SubNavLink href="/it-hub/equipment">Equipment</SubNavLink>
+          <SubNavLink href="/it-hub/documents">Documents</SubNavLink>
           <SubNavLink href="/it-hub/vendors">Vendors &amp; contacts</SubNavLink>
         </nav>
       </header>

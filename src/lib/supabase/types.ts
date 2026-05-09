@@ -142,6 +142,36 @@ export type ItVendor = {
   updated_at: string
 }
 
+export type ItDocumentCategory =
+  | 'contract'
+  | 'runbook'
+  | 'presentation'
+  | 'manual'
+  | 'network_diagram'
+  | 'license'
+  | 'warranty'
+  | 'invoice'
+  | 'policy'
+  | 'other'
+
+export type ItDocument = {
+  id: string
+  org_id: string
+  property_id: string | null
+  title: string
+  category: ItDocumentCategory
+  r2_key: string
+  file_name: string
+  content_type: string | null
+  size_bytes: number
+  expires_at: string | null
+  notes: string | null
+  uploaded_by: string | null
+  uploaded_by_email: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type Invoice = {
   id: string
   org_id: string
