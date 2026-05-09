@@ -17,9 +17,7 @@ export default function ItHubLayout({
               Everything tech, in one place
             </h1>
             <p className="mt-1 max-w-xl text-sm text-muted">
-              Wi-Fi passwords, vendor logins, equipment, and IT contacts —
-              centralized so the front desk never has to dig through emails
-              again.
+              All your hotel tech info in one place.
             </p>
           </div>
         </div>
