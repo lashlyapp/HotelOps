@@ -115,6 +115,16 @@ Each file is served from `https://cdn.myhotelops.com/{key}`. Filenames are human
 
 The bucket is configured with **public access enabled** and a custom domain bound to the platform CDN. New tenants don't require any R2 changes — the platform-admin "Create tenant" form (and the tenant-owner "Add property" form) compute the R2 prefix from the slugs you supply, and R2 creates folders lazily on first upload.
 
+## Vercel Cron — scheduled cleanup
+
+Schedules live in [`vercel.json`](vercel.json); routes live under `src/app/api/cron/`. Vercel calls each route on the configured schedule with `Authorization: Bearer ${CRON_SECRET}`; the handler rejects anything else.
+
+| Schedule        | Route                       | Purpose                                                                                                                                           |
+| --------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0 4 * * *` UTC | `/api/cron/orphan-posters`  | Delete `_posters/` JPEGs whose owning video is no longer in R2 — closes the leak when a delete fails between the video and poster object DELETEs. |
+
+Set `CRON_SECRET` (any high-entropy string — `openssl rand -base64 32`) as a Vercel project env var; copy the same value into `.env.local` if you want to hit the route locally for testing (`curl -H "Authorization: Bearer …" http://localhost:3000/api/cron/orphan-posters`).
+
 ## Tenant model
 
 - **organizations** — top-level tenant. Slug, name.
