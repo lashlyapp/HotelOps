@@ -29,6 +29,7 @@ export default async function AppLayout({
         <nav className="flex-1 px-3 py-4 space-y-1 text-sm">
           <NavLink href="/dashboard">Dashboard</NavLink>
           <NavLink href="/media">Media catalog</NavLink>
+          <NavLink href="/it-hub">IT Hub</NavLink>
           {session.profile.role === 'org_owner' ? (
             <NavLink href="/properties">Properties</NavLink>
           ) : null}
