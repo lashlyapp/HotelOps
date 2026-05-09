@@ -205,8 +205,42 @@ See [`docs/design-system.md`](docs/design-system.md). TL;DR: every color in mark
 - `npm run lint` — lint
 - `npm run onboard:tenant -- --slug=... --name=... --owner=... --property=...` — onboard a tenant from the CLI (manual fallback when the UI isn't an option)
 - `npm run bootstrap:admin -- --email=... --password=...` — create the first platform admin (one-time)
+- `npm run start:subscription -- --org-slug=... [--price=price_XXXX] [--trial-days=14]` — start a Stripe subscription for an existing org with a 14-day trial
 - `npx tsx scripts/smoke-r2.ts` — R2 connectivity smoke test
+
+## Stripe billing
+
+HotelOps uses its own Stripe account (separate from Lashly). Each organization
+maps 1:1 to a Stripe Customer + Subscription. The flow:
+
+1. **Admin starts the subscription** (`npm run start:subscription -- --org-slug=...`).
+   This creates the Stripe Customer and a Subscription with a 14-day trial.
+   No payment method is required up front.
+2. **Customer adds a card** during the trial via `/billing` → "Add payment method".
+   The CTA opens a Stripe Checkout session in `setup` mode; the saved card is
+   promoted to the subscription's default payment method via webhook.
+3. **Stripe charges automatically** when the trial ends. If no card was added,
+   `trial_settings.end_behavior.missing_payment_method = "pause"` pauses the
+   subscription instead of marking it `unpaid`, and the billing page surfaces
+   a "Resume by adding a payment method" message.
+4. **Customer manages billing** at `/billing` → "Manage billing", which opens
+   the Stripe Billing Portal (update card, view invoices, cancel).
+
+### Setup
+
+1. Create a separate Stripe account for HotelOps (sole-prop is fine to start).
+2. Create a recurring Price in the Dashboard, copy its id into `STRIPE_PRICE_ID`.
+3. Configure the webhook endpoint at `https://app.myhotelops.com/api/stripe/webhook`
+   with these events: `customer.subscription.created`,
+   `customer.subscription.updated`, `customer.subscription.deleted`,
+   `customer.subscription.paused`, `customer.subscription.resumed`,
+   `customer.subscription.trial_will_end`, `checkout.session.completed`. Copy
+   the signing secret into `STRIPE_WEBHOOK_SECRET`.
+4. Enable the Customer Portal under Dashboard → Settings → Billing → Customer
+   portal (allow card updates and cancellation; invoice history is on by default).
+5. For local dev, run `stripe listen --forward-to localhost:3000/api/stripe/webhook`
+   and use the printed `whsec_...` as `STRIPE_WEBHOOK_SECRET`.
 
 ## Roadmap
 
-Modules planned beyond v1: reservations, housekeeping, staff scheduling, online (Stripe) billing, multi-org users / staff invitations, owner-editable file descriptions, AI-assisted captioning.
+Modules planned beyond v1: reservations, housekeeping, staff scheduling, multi-org users / staff invitations, owner-editable file descriptions, AI-assisted captioning.
