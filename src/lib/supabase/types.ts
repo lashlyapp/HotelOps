@@ -186,3 +186,142 @@ export type Invoice = {
   notes: string | null
   created_at: string
 }
+
+// ----------------------------------------------------------------------------
+// Events
+// ----------------------------------------------------------------------------
+export type EventStatus =
+  | 'inquiry'
+  | 'tentative'
+  | 'proposal_sent'
+  | 'definite'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled'
+  | 'lost'
+
+export type EventType =
+  | 'wedding'
+  | 'corporate'
+  | 'social'
+  | 'catering'
+  | 'meeting'
+  | 'other'
+
+export type EventLineSection =
+  | 'venue'
+  | 'food'
+  | 'beverage'
+  | 'av'
+  | 'staffing'
+  | 'rentals'
+  | 'other'
+
+export type EventPaymentMethod =
+  | 'check'
+  | 'cash'
+  | 'ach'
+  | 'wire'
+  | 'card'
+  | 'other'
+
+export type EventProposalResponse = 'accepted' | 'declined'
+
+export type EventSpace = {
+  id: string
+  org_id: string
+  property_id: string
+  name: string
+  capacity_seated: number | null
+  capacity_standing: number | null
+  hourly_rate_cents: number | null
+  flat_rate_cents: number | null
+  notes: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type Event = {
+  id: string
+  org_id: string
+  property_id: string
+  reference: string
+  name: string
+  event_type: EventType
+  status: EventStatus
+  starts_at: string | null
+  ends_at: string | null
+  guests_expected: number | null
+  guests_guaranteed: number | null
+  guests_actual: number | null
+  contact_name: string | null
+  contact_email: string | null
+  contact_phone: string | null
+  contact_company: string | null
+  subtotal_cents: number
+  service_charge_pct: number
+  tax_pct: number
+  total_cents: number
+  proposal_token: string | null
+  proposal_sent_at: string | null
+  proposal_viewed_at: string | null
+  proposal_responded_at: string | null
+  proposal_response: EventProposalResponse | null
+  internal_notes: string | null
+  source: string | null
+  owner_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type EventScheduleBlock = {
+  id: string
+  event_id: string
+  org_id: string
+  space_id: string | null
+  label: string
+  starts_at: string
+  ends_at: string
+  setup_style: string | null
+  notes: string | null
+  created_at: string
+}
+
+export type EventLineItem = {
+  id: string
+  event_id: string
+  org_id: string
+  section: EventLineSection
+  description: string
+  quantity: number
+  unit_price_cents: number
+  taxable: boolean
+  service_chargeable: boolean
+  sort_order: number
+  created_at: string
+}
+
+export type EventPayment = {
+  id: string
+  event_id: string
+  org_id: string
+  amount_cents: number
+  method: EventPaymentMethod
+  received_at: string
+  reference: string | null
+  notes: string | null
+  recorded_by: string | null
+  created_at: string
+}
+
+export type EventActivity = {
+  id: string
+  event_id: string
+  org_id: string
+  kind: string
+  message: string
+  actor_id: string | null
+  actor_label: string | null
+  created_at: string
+}
