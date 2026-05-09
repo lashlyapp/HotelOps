@@ -188,6 +188,36 @@ export type Invoice = {
 }
 
 // ----------------------------------------------------------------------------
+// Stripe-backed billing
+// ----------------------------------------------------------------------------
+export type BillingSubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'unpaid'
+  | 'canceled'
+  | 'incomplete'
+  | 'incomplete_expired'
+  | 'paused'
+
+export type BillingSubscription = {
+  org_id: string
+  stripe_customer_id: string
+  stripe_subscription_id: string | null
+  stripe_price_id: string | null
+  status: BillingSubscriptionStatus
+  trial_end: string | null
+  current_period_start: string | null
+  current_period_end: string | null
+  cancel_at_period_end: boolean
+  default_payment_method_id: string | null
+  default_payment_brand: string | null
+  default_payment_last4: string | null
+  created_at: string
+  updated_at: string
+}
+
+// ----------------------------------------------------------------------------
 // Events
 // ----------------------------------------------------------------------------
 export type EventStatus =
