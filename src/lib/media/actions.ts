@@ -1,7 +1,10 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { randomBytes } from 'node:crypto'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { requireOrgUser } from '@/lib/auth/session'
+import { mediaCacheTag } from '@/lib/media/cache-tags'
+import { r2PublicUrl } from '@/lib/r2/client'
 import {
   r2AbortMultipartUpload,
   r2CompleteMultipartUpload,
@@ -12,17 +15,12 @@ import {
   r2PresignParts,
   r2PresignPutUrl,
 } from '@/lib/r2/upload'
-import {
-  streamDeleteVideo,
-  streamEnableMp4Download,
-  streamGetVideo,
-  streamMp4DownloadUrl,
-} from '@/lib/stream/client'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-// Image uploads still go to R2; videos route to Cloudflare Stream via the
-// dedicated /api/media/stream-upload route handler and don't pass through
-// this allowlist.
+// Both images and videos go through R2 now; videos used to take the
+// Cloudflare Stream side-path but the per-minute storage cost made that
+// untenable for a multi-tenant catalog feeding consumer-facing room pages.
 const ALLOWED_MIME = new Set([
   'image/jpeg',
   'image/png',
@@ -30,21 +28,34 @@ const ALLOWED_MIME = new Set([
   'image/gif',
   'image/avif',
   'image/svg+xml',
+  'video/mp4',
+  'video/quicktime',
+  'video/webm',
 ])
-const MAX_FILE_BYTES = 2 * 1024 * 1024 * 1024 // 2 GB cap on R2 image uploads
-
-// All Stream-hosted videos use this synthetic file_key so existing
-// media_metadata + media_tags rows continue to apply uniformly.
-const STREAM_KEY_PREFIX = 'stream:'
-function streamUidFromKey(key: string): string | null {
-  return key.startsWith(STREAM_KEY_PREFIX)
-    ? key.slice(STREAM_KEY_PREFIX.length)
-    : null
-}
+const MAX_FILE_BYTES = 5 * 1024 * 1024 * 1024 // 5 GB cap covers HD room videos comfortably.
 
 const TAG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
 const TAG_MAX_LENGTH = 30
 const MAX_TAGS_PER_FILE = 20
+
+// Cover images live next to the video they describe, under a hidden
+// _posters/ subprefix so they don't show up in the catalog listing.
+const POSTER_PREFIX = '_posters/'
+const POSTER_CONTENT_TYPE = 'image/jpeg'
+const MAX_POSTER_BYTES = 5 * 1024 * 1024
+
+// Bust the catalog's unstable_cache entry for one property. Used by every
+// write path so a freshly-uploaded file shows up on the next /media render
+// instead of waiting out the 30-second TTL.
+function bustMediaCache(propertyId: string) {
+  revalidateTag(mediaCacheTag(propertyId), 'max')
+}
+
+// Per-user rate limit for presign + multipart-init endpoints. 60 requests
+// per minute = 1/sec sustained — generous for a tenant batch-uploading
+// images and videos, low enough to throttle a runaway client. The check is
+// best-effort across function instances (see lib/rate-limit.ts).
+const PRESIGN_LIMIT = { limit: 60, windowMs: 60_000 } as const
 
 // ----------------------------------------------------------------------------
 // Upload — presigned URL flow
@@ -66,11 +77,16 @@ export async function presignUploadAction(args: {
 }): Promise<PresignResult> {
   const session = await requireOrgUser()
 
+  const rl = checkRateLimit(`presign:${session.userId}`, PRESIGN_LIMIT)
+  if (!rl.ok) {
+    return { ok: false, error: 'Too many upload requests — slow down a moment.' }
+  }
+
   if (!ALLOWED_MIME.has(args.contentType)) {
     return { ok: false, error: `${args.contentType} is not an allowed file type.` }
   }
   if (args.size > MAX_FILE_BYTES) {
-    return { ok: false, error: 'File exceeds 2 GB limit.' }
+    return { ok: false, error: 'File exceeds 5 GB limit.' }
   }
   if (args.size <= 0) {
     return { ok: false, error: 'Empty file.' }
@@ -92,12 +108,18 @@ export async function presignUploadAction(args: {
  * file write happens in the browser → R2; this is just a cache-bust + a
  * place to do post-upload bookkeeping later (e.g. virus scan kickoff).
  */
-export async function revalidateAfterUploadAction(propertySlug: string) {
-  await requireOrgUser()
+export async function revalidateAfterUploadAction(args: {
+  propertySlug: string
+  propertyId: string
+}) {
+  const session = await requireOrgUser()
+  if (session.properties.some((p) => p.id === args.propertyId)) {
+    bustMediaCache(args.propertyId)
+  }
   revalidatePath(`/media`)
   revalidatePath(`/dashboard`)
-  // No-op header to read the slug for path scoping later if needed.
-  void propertySlug
+  // Slug retained for future per-property path scoping.
+  void args.propertySlug
 }
 
 // ----------------------------------------------------------------------------
@@ -127,11 +149,16 @@ export async function initMultipartUploadAction(args: {
 }): Promise<InitMultipartResult> {
   const session = await requireOrgUser()
 
+  const rl = checkRateLimit(`presign:${session.userId}`, PRESIGN_LIMIT)
+  if (!rl.ok) {
+    return { ok: false, error: 'Too many upload requests — slow down a moment.' }
+  }
+
   if (!ALLOWED_MIME.has(args.contentType)) {
     return { ok: false, error: `${args.contentType} is not an allowed file type.` }
   }
   if (args.size > MAX_FILE_BYTES) {
-    return { ok: false, error: 'File exceeds 2 GB limit.' }
+    return { ok: false, error: 'File exceeds 5 GB limit.' }
   }
   if (args.size <= 0) {
     return { ok: false, error: 'Empty file.' }
@@ -189,6 +216,87 @@ export async function abortMultipartUploadAction(args: {
 }
 
 // ----------------------------------------------------------------------------
+// Cover image — captured client-side from the video file. Two-step flow so
+// the browser can PUT the JPEG directly to R2 (same pattern as the video
+// upload itself), then notify the server to record poster_key against the
+// owning video's media_metadata row.
+// ----------------------------------------------------------------------------
+
+export type PresignPosterResult =
+  | { ok: true; posterKey: string; url: string }
+  | { ok: false; error: string }
+
+export async function presignPosterUploadAction(args: {
+  propertyId: string
+  videoKey: string
+  size: number
+}): Promise<PresignPosterResult> {
+  const session = await requireOrgUser()
+
+  const rl = checkRateLimit(`presign:${session.userId}`, PRESIGN_LIMIT)
+  if (!rl.ok) {
+    return { ok: false, error: 'Too many upload requests — slow down a moment.' }
+  }
+
+  const property = session.properties.find((p) => p.id === args.propertyId)
+  if (!property) return { ok: false, error: 'Property not found.' }
+  if (!args.videoKey.startsWith(property.r2_prefix)) {
+    return { ok: false, error: 'Video does not belong to this property.' }
+  }
+  if (args.size <= 0 || args.size > MAX_POSTER_BYTES) {
+    return { ok: false, error: 'Invalid poster size.' }
+  }
+
+  const posterKey = posterKeyFor(property.r2_prefix, args.videoKey)
+  const url = await r2PresignPutUrl(posterKey, POSTER_CONTENT_TYPE)
+  return { ok: true, posterKey, url }
+}
+
+export async function setVideoPosterAction(args: {
+  propertyId: string
+  videoKey: string
+  posterKey: string
+}): Promise<{ ok: true; posterUrl: string } | { ok: false; error: string }> {
+  const session = await requireOrgUser()
+  const property = session.properties.find((p) => p.id === args.propertyId)
+  if (!property) return { ok: false, error: 'Property not found.' }
+  if (!args.videoKey.startsWith(property.r2_prefix)) {
+    return { ok: false, error: 'Video does not belong to this property.' }
+  }
+  // Belt-and-suspenders: poster_key must live under _posters/ in the same
+  // property prefix the video lives under, so a hostile client can't point
+  // poster_key at an arbitrary R2 object.
+  const expected = posterKeyFor(property.r2_prefix, args.videoKey)
+  if (args.posterKey !== expected) {
+    return { ok: false, error: 'Invalid poster key.' }
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('media_metadata').upsert(
+    {
+      property_id: args.propertyId,
+      file_key: args.videoKey,
+      poster_key: args.posterKey,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'property_id,file_key' },
+  )
+  if (error) return { ok: false, error: error.message }
+
+  bustMediaCache(args.propertyId)
+  revalidatePath('/media')
+  return { ok: true, posterUrl: r2PublicUrl(args.posterKey) }
+}
+
+function posterKeyFor(propertyPrefix: string, videoKey: string): string {
+  // videoKey is "{propertyPrefix}{filename}". Place the poster under
+  // {propertyPrefix}_posters/{filename}.jpg so the catalog listing's
+  // _posters/ filter hides it from the user-facing file list.
+  const filename = videoKey.slice(propertyPrefix.length)
+  return `${propertyPrefix}${POSTER_PREFIX}${filename}.jpg`
+}
+
+// ----------------------------------------------------------------------------
 // Delete a media file
 // ----------------------------------------------------------------------------
 
@@ -197,29 +305,23 @@ async function deleteOneByKey(args: {
   r2Prefix: string
   key: string
 }): Promise<boolean> {
-  const uid = streamUidFromKey(args.key)
-  if (uid) {
-    // Stream-hosted video. Belongs to this property iff a row exists in
-    // media_videos under (property_id, stream_uid).
-    const admin = createAdminClient()
-    const { data, error } = await admin
-      .from('media_videos')
-      .select('stream_uid')
-      .eq('property_id', args.propertyId)
-      .eq('stream_uid', uid)
-      .maybeSingle()
-    if (error || !data) return false
-    await streamDeleteVideo(uid)
-    await admin
-      .from('media_videos')
-      .delete()
-      .eq('property_id', args.propertyId)
-      .eq('stream_uid', uid)
-    return true
-  }
-  // R2-hosted file. Tenant guard: key must live under the property prefix.
+  // Tenant guard: key must live under the property prefix.
   if (!args.key.startsWith(args.r2Prefix)) return false
   await r2DeleteObject(args.key)
+
+  // If the file had a poster, drop that sibling object too. We look up the
+  // poster_key from media_metadata rather than recomputing it because a
+  // future v2 might allow custom poster keys.
+  const admin = createAdminClient()
+  const { data: meta } = await admin
+    .from('media_metadata')
+    .select('poster_key')
+    .eq('property_id', args.propertyId)
+    .eq('file_key', args.key)
+    .maybeSingle()
+  if (meta?.poster_key) {
+    await r2DeleteObject(meta.poster_key)
+  }
   return true
 }
 
@@ -251,6 +353,7 @@ export async function deleteMediaAction(args: {
     .eq('property_id', args.propertyId)
     .eq('file_key', args.key)
 
+  bustMediaCache(args.propertyId)
   revalidatePath('/media')
   revalidatePath('/dashboard')
 }
@@ -298,13 +401,14 @@ export async function bulkDeleteMediaAction(args: {
       .in('file_key', deletedKeys)
   }
 
+  bustMediaCache(args.propertyId)
   revalidatePath('/media')
   revalidatePath('/dashboard')
   return { ok: true, deleted: deletedKeys.length }
 }
 
 // ----------------------------------------------------------------------------
-// Download — presigned GET (R2) or public MP4 (Stream)
+// Download — presigned GET (R2)
 // ----------------------------------------------------------------------------
 
 export type DownloadUrlResult =
@@ -320,101 +424,11 @@ export async function presignDownloadAction(args: {
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return { ok: false, error: 'Property not found.' }
 
-  const uid = streamUidFromKey(args.key)
-  if (uid) {
-    // Verify ownership: the Stream UID must belong to this property.
-    const admin = createAdminClient()
-    const { data } = await admin
-      .from('media_videos')
-      .select('stream_uid')
-      .eq('property_id', args.propertyId)
-      .eq('stream_uid', uid)
-      .maybeSingle()
-    if (!data) return { ok: false, error: 'Video not found.' }
-    return { ok: true, url: streamMp4DownloadUrl(uid) }
-  }
-
   if (!args.key.startsWith(property.r2_prefix)) {
     return { ok: false, error: 'File does not belong to this property.' }
   }
   const url = await r2PresignDownloadUrl(args.key, args.filename)
   return { ok: true, url }
-}
-
-// ----------------------------------------------------------------------------
-// Stream — Direct Creator Upload finalize step.
-// (The tus CREATE goes through the /api/media/stream-upload route handler,
-// which proxies the Cloudflare API and inserts the media_videos row.)
-// ----------------------------------------------------------------------------
-
-/**
- * Browser calls this after the tus upload finishes. We pull the latest
- * status from Stream and flip the row to "ready" once Cloudflare reports
- * readyToStream — the catalog can then render the thumbnail / iframe.
- */
-export async function finalizeStreamVideoUploadAction(args: {
-  propertyId: string
-  uid: string
-}): Promise<{ ok: true; status: 'pending' | 'ready' | 'error' } | { ok: false; error: string }> {
-  const session = await requireOrgUser()
-  const property = session.properties.find((p) => p.id === args.propertyId)
-  if (!property) return { ok: false, error: 'Property not found.' }
-
-  const admin = createAdminClient()
-  const { data: row } = await admin
-    .from('media_videos')
-    .select('stream_uid, status')
-    .eq('property_id', args.propertyId)
-    .eq('stream_uid', args.uid)
-    .maybeSingle()
-  if (!row) return { ok: false, error: 'Video not found.' }
-
-  let video
-  try {
-    video = await streamGetVideo(args.uid)
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Stream lookup failed' }
-  }
-  if (!video) return { ok: false, error: 'Stream returned no video.' }
-
-  const nextStatus: 'pending' | 'ready' | 'error' =
-    video.status === 'error'
-      ? 'error'
-      : video.readyToStream
-        ? 'ready'
-        : 'pending'
-
-  await admin
-    .from('media_videos')
-    .update({
-      status: nextStatus,
-      duration_seconds: video.duration ? Math.round(video.duration) : null,
-      ready_at: nextStatus === 'ready' ? new Date().toISOString() : null,
-    })
-    .eq('property_id', args.propertyId)
-    .eq('stream_uid', args.uid)
-
-  if (nextStatus === 'ready') {
-    // Kick off MP4 build the first time the video transitions to ready,
-    // so the catalog "Download" button has something to point at. The
-    // build itself is async on Cloudflare's side; the static
-    // /downloads/default.mp4 URL 404s until it lands.
-    if (row.status !== 'ready') {
-      try {
-        await streamEnableMp4Download(args.uid)
-      } catch (err) {
-        // Non-fatal: the video still streams + has a thumbnail. We just
-        // log so a misconfigured token surfaces in Vercel function logs
-        // rather than silently breaking download.
-        console.error('[stream] enable MP4 download failed', {
-          uid: args.uid,
-          message: err instanceof Error ? err.message : String(err),
-        })
-      }
-    }
-    revalidatePath('/media')
-  }
-  return { ok: true, status: nextStatus }
 }
 
 // ----------------------------------------------------------------------------
@@ -457,6 +471,7 @@ export async function updateMediaMetadataAction(args: {
   )
   if (error) return { ok: false, error: error.message }
 
+  bustMediaCache(args.propertyId)
   revalidatePath('/media')
   return { ok: true, displayName, description }
 }
@@ -506,6 +521,7 @@ export async function addTagAction(args: {
   }
 
   const updated = await listTagsForFile(args.propertyId, args.key)
+  bustMediaCache(args.propertyId)
   revalidatePath('/media')
   return { ok: true, tags: updated }
 }
@@ -535,6 +551,7 @@ export async function removeTagAction(args: {
   if (error) return { ok: false, error: error.message }
 
   const updated = await listTagsForFile(args.propertyId, args.key)
+  bustMediaCache(args.propertyId)
   revalidatePath('/media')
   return { ok: true, tags: updated }
 }
@@ -569,21 +586,18 @@ function sanitizeFilename(raw: string): string | null {
 }
 
 async function uniqueKey(prefix: string, filename: string): Promise<string> {
-  // If the exact key isn't taken, use it. Otherwise append "-2", "-3", ...
-  // before the extension.
+  // Preserve the user's filename when there's no collision (1 HEAD call).
+  // Under contention or for repeat names, append 8 hex chars (4 random
+  // bytes = 4 billion candidates) so even a busy property never sequential-
+  // probes 50× HEAD calls in a row to find a free slot.
   const proposed = `${prefix}${filename}`
   if (!(await r2ObjectExists(proposed))) return proposed
 
   const dot = filename.lastIndexOf('.')
   const stem = dot === -1 ? filename : filename.slice(0, dot)
   const ext = dot === -1 ? '' : filename.slice(dot)
-
-  for (let n = 2; n < 1000; n += 1) {
-    const candidate = `${prefix}${stem}-${n}${ext}`
-    if (!(await r2ObjectExists(candidate))) return candidate
-  }
-  // Fallback (basically never reached): timestamp-suffixed.
-  return `${prefix}${stem}-${Date.now()}${ext}`
+  const suffix = randomBytes(4).toString('hex')
+  return `${prefix}${stem}-${suffix}${ext}`
 }
 
 function normalizeTag(raw: string): string | null {

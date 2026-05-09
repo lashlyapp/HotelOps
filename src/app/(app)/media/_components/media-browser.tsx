@@ -13,8 +13,11 @@ import {
   bulkDeleteMediaAction,
   deleteMediaAction,
   presignDownloadAction,
+  presignPosterUploadAction,
+  setVideoPosterAction,
   updateMediaMetadataAction,
 } from '@/lib/media/actions'
+import { CoverPicker } from './cover-picker'
 import { DropZone } from './drop-zone'
 import { TagEditor } from './tag-editor'
 
@@ -180,6 +183,15 @@ export function MediaBrowser({
     )
   }
 
+  function handlePosterChange(key: string, posterUrl: string) {
+    setFiles((prev) =>
+      prev.map((f) => (f.key === key ? { ...f, posterUrl } : f)),
+    )
+    setActive((curr) =>
+      curr && curr.key === key ? { ...curr, posterUrl } : curr,
+    )
+  }
+
   return (
     <div className="space-y-5">
       <DropZone
@@ -269,6 +281,7 @@ export function MediaBrowser({
             setActive(null)
           }}
           onMetadataChange={handleMetadataChange}
+          onPosterChange={handlePosterChange}
         />
       ) : null}
     </div>
@@ -756,12 +769,12 @@ function MediaCard({
 }
 
 /**
- * Catalog thumbnail for video files. Stream-hosted videos hand back a
- * server-rendered, edge-cached JPEG via posterUrl (set in listMediaWithTags)
- * — no client-side capture, no DB column needed. Stream rows that haven't
- * finished encoding show an "Encoding…" placeholder; legacy R2 videos that
- * predate the Stream migration show a plain placeholder so the catalog
- * still renders without trying to fetch a frame from a 250 MB MP4.
+ * Catalog thumbnail for video files. The user picks a frame at upload time
+ * via the cover-picker; that JPEG lives next to the video in R2 and the
+ * key is recorded in media_metadata.poster_key. Files that predate the
+ * cover-picker (or where attaching the poster failed) render a static
+ * placeholder so the catalog never has to fetch metadata ranges from a
+ * multi-hundred-MB MP4.
  */
 function VideoThumbnail({ file }: { file: MediaFile }) {
   if (file.posterUrl) {
@@ -778,15 +791,9 @@ function VideoThumbnail({ file }: { file: MediaFile }) {
   }
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-surface-muted">
-      {file.streamStatus === 'pending' ? (
-        <span className="text-xs uppercase tracking-wider text-subtle">
-          Encoding…
-        </span>
-      ) : file.streamStatus === 'error' ? (
-        <span className="text-xs uppercase tracking-wider text-danger-fg">
-          Encoding failed
-        </span>
-      ) : null}
+      <span className="text-xs uppercase tracking-wider text-subtle">
+        Video
+      </span>
     </div>
   )
 }
@@ -839,6 +846,7 @@ function PreviewDialog({
   onClose,
   onDeleted,
   onMetadataChange,
+  onPosterChange,
 }: {
   file: MediaFile
   propertyId: string
@@ -848,6 +856,7 @@ function PreviewDialog({
     key: string,
     next: { displayName: string; description: string | null },
   ) => void
+  onPosterChange: (key: string, posterUrl: string) => void
 }) {
   const [, startTransition] = useTransition()
   const [deleting, setDeleting] = useState(false)
@@ -855,6 +864,9 @@ function PreviewDialog({
   const [description, setDescription] = useState(file.description ?? '')
   const [savingMeta, setSavingMeta] = useState(false)
   const [metaError, setMetaError] = useState<string | null>(null)
+  const [coverOpen, setCoverOpen] = useState(false)
+  const [coverError, setCoverError] = useState<string | null>(null)
+  const [savingCover, setSavingCover] = useState(false)
 
   const dirty =
     displayName.trim() !== file.displayName.trim() ||
@@ -904,6 +916,48 @@ function PreviewDialog({
     })
   }
 
+  async function handleCoverPicked(blob: Blob) {
+    setSavingCover(true)
+    setCoverError(null)
+    try {
+      const presign = await presignPosterUploadAction({
+        propertyId,
+        videoKey: file.key,
+        size: blob.size,
+      })
+      if (!presign.ok) throw new Error(presign.error)
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.open('PUT', presign.url)
+        xhr.setRequestHeader('Content-Type', 'image/jpeg')
+        xhr.onload = () =>
+          xhr.status >= 200 && xhr.status < 300
+            ? resolve()
+            : reject(new Error(`Upload failed (${xhr.status})`))
+        xhr.onerror = () => reject(new Error('Network error'))
+        xhr.send(blob)
+      })
+
+      const result = await setVideoPosterAction({
+        propertyId,
+        videoKey: file.key,
+        posterKey: presign.posterKey,
+      })
+      if (!result.ok) throw new Error(result.error)
+
+      // Cache-bust the public URL so the freshly-overwritten poster shows
+      // immediately instead of the stale CDN copy.
+      const fresh = `${result.posterUrl}?v=${Date.now()}`
+      onPosterChange(file.key, fresh)
+      setCoverOpen(false)
+    } catch (err) {
+      setCoverError(err instanceof Error ? err.message : 'Cover save failed')
+    } finally {
+      setSavingCover(false)
+    }
+  }
+
   return (
     <div
       role="dialog"
@@ -926,18 +980,15 @@ function PreviewDialog({
               unoptimized
               className="max-h-[70vh] w-auto object-contain"
             />
-          ) : isVideo && file.streamUid ? (
-            // Stream's iframe ships an adaptive-bitrate player; for legacy
-            // R2 videos `streamUid` is null and we fall back to <video>.
-            <iframe
-              src={file.url}
-              title={file.displayName}
-              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-              allowFullScreen
-              className="aspect-video max-h-[70vh] w-full"
-            />
           ) : isVideo ? (
-            <video src={file.url} controls className="max-h-[70vh] w-full" />
+            <video
+              src={file.url}
+              poster={file.posterUrl ?? undefined}
+              controls
+              playsInline
+              preload="metadata"
+              className="max-h-[70vh] w-full"
+            />
           ) : (
             <div className="p-12 text-sm text-muted">
               No inline preview for {file.contentType ?? 'this file type'}.
@@ -1010,6 +1061,36 @@ function PreviewDialog({
             <p className="text-xs text-danger-fg">{metaError}</p>
           ) : null}
 
+          {isVideo ? (
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border-subtle bg-surface-muted/40 p-2">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
+                  Cover image
+                </p>
+                <p className="text-xs text-muted">
+                  {file.posterUrl
+                    ? 'Showing the auto-selected frame. Pick a different one any time.'
+                    : 'No cover yet — pick one to replace the placeholder.'}
+                </p>
+                {coverError ? (
+                  <p className="mt-1 text-xs text-danger-fg">{coverError}</p>
+                ) : null}
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setCoverOpen(true)}
+                disabled={savingCover}
+              >
+                {savingCover
+                  ? 'Saving…'
+                  : file.posterUrl
+                    ? 'Change cover'
+                    : 'Choose cover'}
+              </Button>
+            </div>
+          ) : null}
+
           <CopyableUrl url={file.url} />
 
           <div className="flex items-center justify-between pt-2 border-t border-border-subtle">
@@ -1031,6 +1112,25 @@ function PreviewDialog({
           </div>
         </div>
       </div>
+
+      {coverOpen ? (
+        <CoverPicker
+          videoUrl={file.url}
+          videoLabel={file.displayName}
+          onResolve={(result) => {
+            if (result.ok) {
+              void handleCoverPicked(result.value.poster)
+            } else {
+              setCoverOpen(false)
+              if (result.error.kind === 'undecodable') {
+                setCoverError(
+                  'This video can’t be decoded in your browser. If it’s an iPhone HEVC .mov, please re-upload as MP4.',
+                )
+              }
+            }
+          }}
+        />
+      ) : null}
     </div>
   )
 }

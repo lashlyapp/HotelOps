@@ -2,19 +2,23 @@
 
 import { useRouter } from 'next/navigation'
 import { useRef, useState, useTransition } from 'react'
-import * as tus from 'tus-js-client'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
 import {
   abortMultipartUploadAction,
   completeMultipartUploadAction,
-  finalizeStreamVideoUploadAction,
   initMultipartUploadAction,
+  presignPosterUploadAction,
   presignUploadAction,
   revalidateAfterUploadAction,
+  setVideoPosterAction,
 } from '@/lib/media/actions'
 
 const SINGLE_PUT_THRESHOLD = 10 * 1024 * 1024 // 10 MB
+// Frame to grab as the auto-poster on upload. ~0.33s ≈ frame 10 at 30 fps,
+// which is far enough into the video to skip the typical fade-in-from-black
+// opener but early enough to feel like "the start" of the clip.
+const DEFAULT_POSTER_TIME_S = 0.33
 // Concurrency tuned around browser per-host connection caps (~6). Worst
 // case is 4 large images uploading multipart simultaneously, which is
 // FILES_IN_FLIGHT × PARTS_IN_FLIGHT_PER_FILE = 12 in-flight PUTs to R2;
@@ -60,9 +64,17 @@ export function DropZone({
     }))
     setJobs((prev) => [...prev, ...newJobs])
 
+    // Track videos whose in-memory auto-poster didn't land — typically a
+    // transient PUT failure or the occasional blob-URL decode hiccup. We
+    // retry these from R2 once the batch settles (see retryMissingPosters).
+    const posterRetryQueue: string[] = []
+    const onPosterFailure = (videoKey: string) => {
+      posterRetryQueue.push(videoKey)
+    }
+
     const results = await runWithLimit(incoming, FILES_IN_FLIGHT, (file, i) =>
       uploadOne(file, newJobs[i].id, (pct) =>
-        updateJob(newJobs[i].id, pct),
+        updateJob(newJobs[i].id, pct), onPosterFailure,
       ).catch((err) => {
         // runWithLimit's workers swallow errors otherwise — make sure we
         // always end the job in a visible state.
@@ -75,8 +87,19 @@ export function DropZone({
 
     if (results.some(Boolean)) {
       startTransition(async () => {
-        await revalidateAfterUploadAction(propertySlug)
+        await revalidateAfterUploadAction({ propertySlug, propertyId })
+        router.refresh()
       })
+    }
+
+    // Non-blocking second pass: now that uploads are done and R2 has the
+    // video objects, try once more for any whose in-memory capture failed.
+    // This catches transient failures (network hiccup on the poster PUT,
+    // tab throttling mid-decode); genuine codec problems like HEVC .mov on
+    // Chrome will still fail, and the user can pick a cover manually from
+    // the preview dialog.
+    if (posterRetryQueue.length > 0) {
+      void retryMissingPosters(posterRetryQueue)
     }
   }
 
@@ -104,59 +127,39 @@ export function DropZone({
     )
   }
 
+  /**
+   * Both images and videos take the same R2 path: single PUT under 10 MB,
+   * multipart above. After a video lands we grab a default cover frame in
+   * the background (~0.33s in to skip fade-in-from-black) and PUT it as a
+   * sibling poster — fire-and-forget, so a batch of N videos isn't gated on
+   * N modal pickers. The user can swap the cover later from the preview
+   * dialog (Facebook/Instagram-style "Change cover").
+   */
   async function uploadOne(
     file: File,
     jobId: string,
     onProgress: (pct: number) => void,
+    onPosterFailure: (videoKey: string) => void,
   ): Promise<boolean> {
     const contentType = file.type || 'application/octet-stream'
-    if (contentType.startsWith('video/')) {
-      return uploadVideoToStream(file, contentType, jobId, onProgress)
+    const result =
+      file.size <= SINGLE_PUT_THRESHOLD
+        ? await uploadSingle(file, contentType, jobId, onProgress)
+        : await uploadMultipart(file, contentType, jobId, onProgress)
+    if (result.ok && contentType.startsWith('video/')) {
+      const videoKey = result.key
+      void attachDefaultPoster(file, videoKey)
+        .then((posterOk) => {
+          if (!posterOk) onPosterFailure(videoKey)
+        })
+        .catch((err) => {
+          // Non-fatal — the video is up, the catalog just shows a placeholder
+          // until the user picks a cover manually.
+          console.warn('[upload] default poster capture failed', err)
+          onPosterFailure(videoKey)
+        })
     }
-    if (file.size <= SINGLE_PUT_THRESHOLD) {
-      return uploadSingle(file, contentType, jobId, onProgress)
-    }
-    return uploadMultipart(file, contentType, jobId, onProgress)
-  }
-
-  /**
-   * Videos go to Cloudflare Stream via the tus-resumable Direct Creator
-   * Upload flow. tus-js-client uses our /api/media/stream-upload route as
-   * the CREATE endpoint (the route adds the Cloudflare API token, mints a
-   * Stream upload URL, and inserts the media_videos row); the chunk
-   * PATCHes go straight to Cloudflare. Stream handles transcoding,
-   * thumbnails, and adaptive playback so the catalog gets a real preview
-   * without any client-side frame capture.
-   */
-  async function uploadVideoToStream(
-    file: File,
-    _contentType: string,
-    jobId: string,
-    onProgress: (pct: number) => void,
-  ): Promise<boolean> {
-    let uid = ''
-    try {
-      uid = await tusUpload(
-        `/api/media/stream-upload?propertyId=${encodeURIComponent(propertyId)}`,
-        file,
-        onProgress,
-      )
-    } catch (err) {
-      failJob(jobId, err instanceof Error ? err.message : 'Stream upload failed')
-      return false
-    }
-
-    onProgress(100)
-    finishJob(jobId)
-    if (uid) {
-      // Cloudflare hasn't finished transcoding by the time tus reports
-      // success — typical 250 MB clip takes a couple minutes. Poll the
-      // finalize action until the row flips to ready (or we hit a hard
-      // ceiling) so the catalog can swap "Encoding…" for the thumbnail
-      // without the user having to refresh.
-      void pollStreamUntilReady(propertyId, uid, () => router.refresh())
-    }
-    return true
+    return result.ok
   }
 
   async function uploadSingle(
@@ -164,7 +167,7 @@ export function DropZone({
     contentType: string,
     jobId: string,
     onProgress: (pct: number) => void,
-  ): Promise<boolean> {
+  ): Promise<{ ok: true; key: string } | { ok: false }> {
     const presign = await presignUploadAction({
       propertyId,
       filename: file.name,
@@ -173,15 +176,15 @@ export function DropZone({
     })
     if (!presign.ok) {
       failJob(jobId, presign.error)
-      return false
+      return { ok: false }
     }
     try {
       await xhrPut(presign.url, file, contentType, onProgress)
       finishJob(jobId)
-      return true
+      return { ok: true, key: presign.key }
     } catch (err) {
       failJob(jobId, err instanceof Error ? err.message : 'Upload failed')
-      return false
+      return { ok: false }
     }
   }
 
@@ -190,7 +193,7 @@ export function DropZone({
     contentType: string,
     jobId: string,
     onProgress: (pct: number) => void,
-  ): Promise<boolean> {
+  ): Promise<{ ok: true; key: string } | { ok: false }> {
     const init = await initMultipartUploadAction({
       propertyId,
       filename: file.name,
@@ -199,7 +202,7 @@ export function DropZone({
     })
     if (!init.ok) {
       failJob(jobId, init.error)
-      return false
+      return { ok: false }
     }
 
     const partCount = init.partUrls.length
@@ -252,12 +255,12 @@ export function DropZone({
           key: init.key,
           uploadId: init.uploadId,
         })
-        return false
+        return { ok: false }
       }
 
       onProgress(100)
       finishJob(jobId)
-      return true
+      return { ok: true, key: init.key }
     } catch (err) {
       failJob(jobId, err instanceof Error ? err.message : 'Upload failed')
       await abortMultipartUploadAction({
@@ -265,7 +268,71 @@ export function DropZone({
         key: init.key,
         uploadId: init.uploadId,
       })
-      return false
+      return { ok: false }
+    }
+  }
+
+  /**
+   * Capture a default cover frame from the just-uploaded File (still in
+   * memory client-side) and attach it as the video's poster. Returns true
+   * on success, false if the browser couldn't decode the file (the caller
+   * queues a retry from the R2 URL once the batch settles).
+   */
+  async function attachDefaultPoster(file: File, videoKey: string): Promise<boolean> {
+    const blob = await captureFrameBlobFromFile(file, DEFAULT_POSTER_TIME_S)
+    if (!blob) return false
+    const presign = await presignPosterUploadAction({
+      propertyId,
+      videoKey,
+      size: blob.size,
+    })
+    if (!presign.ok) throw new Error(presign.error)
+    await xhrPut(presign.url, blob, 'image/jpeg', () => {})
+    const result = await setVideoPosterAction({
+      propertyId,
+      videoKey,
+      posterKey: presign.posterKey,
+    })
+    if (!result.ok) throw new Error(result.error)
+    router.refresh()
+    return true
+  }
+
+  /**
+   * Second-chance pass for any video whose in-memory auto-poster didn't
+   * land. Decodes from the R2 public URL with `crossOrigin="anonymous"` so
+   * canvas reads aren't tainted. Only one retry — if R2 also can't decode,
+   * the file is genuinely unsupported (typically iPhone HEVC .mov on
+   * Chrome) and the user has to pick a cover manually.
+   */
+  async function retryMissingPosters(videoKeys: string[]): Promise<void> {
+    for (const videoKey of videoKeys) {
+      try {
+        const blob = await captureFrameBlobFromUrl(
+          publicUrlForKey(videoKey),
+          DEFAULT_POSTER_TIME_S,
+        )
+        if (!blob) {
+          console.warn('[upload] retry poster: still undecodable', videoKey)
+          continue
+        }
+        const presign = await presignPosterUploadAction({
+          propertyId,
+          videoKey,
+          size: blob.size,
+        })
+        if (!presign.ok) throw new Error(presign.error)
+        await xhrPut(presign.url, blob, 'image/jpeg', () => {})
+        const result = await setVideoPosterAction({
+          propertyId,
+          videoKey,
+          posterKey: presign.posterKey,
+        })
+        if (!result.ok) throw new Error(result.error)
+        router.refresh()
+      } catch (err) {
+        console.warn('[upload] retry poster failed', videoKey, err)
+      }
     }
   }
 
@@ -303,8 +370,9 @@ export function DropZone({
           <div className="p-4 text-center space-y-2">
             <div className="flex items-center justify-between gap-2 text-left">
               <p className="text-xs text-subtle">
-                Images up to 2 GB, videos up to 30 GB (Cloudflare Stream).
-                Uploads to <span className="text-fg">{propertyName}</span>.
+                Images and videos up to 5 GB. Each video gets an auto-cover
+                you can change later from its preview. Uploads to{' '}
+                <span className="text-fg">{propertyName}</span>.
               </p>
               <button
                 type="button"
@@ -449,78 +517,123 @@ async function runWithLimit<T, R>(
 }
 
 /**
- * Poll finalizeStreamVideoUploadAction until Cloudflare finishes encoding,
- * then refresh the catalog so "Encoding…" placeholders swap to thumbnails.
- *
- * Tuned for typical hotel clips: 4 s between polls, ~5 min ceiling. The
- * loop is best-effort — if the user navigates away the unmounted Promise
- * is dropped, and any next visit picks up the (by then) ready row.
+ * Build the public CDN URL for an R2 key without pulling in the
+ * server-only r2/client module. NEXT_PUBLIC_R2_PUBLIC_URL is the same env
+ * var the server-side helper reads, so the two stay in sync.
  */
-async function pollStreamUntilReady(
-  propertyId: string,
-  uid: string,
-  onReady: () => void,
-): Promise<void> {
-  const POLL_INTERVAL_MS = 4_000
-  const MAX_POLLS = 75
-  for (let i = 0; i < MAX_POLLS; i += 1) {
-    let result
-    try {
-      result = await finalizeStreamVideoUploadAction({ propertyId, uid })
-    } catch {
-      return
-    }
-    if (!result.ok) return
-    if (result.status !== 'pending') {
-      onReady()
-      return
-    }
-    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
+function publicUrlForKey(key: string): string {
+  const base = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL || '').replace(/\/+$/, '')
+  const encoded = key
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')
+  return `${base}/${encoded}`
+}
+
+/**
+ * Off-DOM frame extraction. Loads the File via an object URL into a hidden
+ * <video>, seeks to `time`, draws to a canvas, and returns a JPEG Blob.
+ * Returns null if the browser can't decode the codec (typical for iPhone
+ * HEVC .mov on Chrome/Firefox) — caller treats that as "no auto-poster,
+ * user picks one later".
+ */
+async function captureFrameBlobFromFile(
+  file: File,
+  time: number,
+): Promise<Blob | null> {
+  if (typeof window === 'undefined') return null
+  const url = URL.createObjectURL(file)
+  try {
+    return await captureFrameBlobFromVideoSrc(url, time, false)
+  } finally {
+    URL.revokeObjectURL(url)
   }
 }
 
 /**
- * Drive a tus-resumable upload through our /api/media/stream-upload proxy
- * to Cloudflare Stream. tus-js-client makes the initial CREATE against
- * `endpoint`; our route returns the Cloudflare upload URL in `Location`
- * (and the future video UID in `stream-media-id`). tus then PATCHes
- * chunks straight to Cloudflare — that endpoint is browser-CORS-enabled
- * because we minted it with `direct_user=true`. Progress is normalized
- * to 0–99%; the caller stamps 100 after finalize.
- *
- * Resolves with the Stream UID extracted from the create response so the
- * caller can run finalizeStreamVideoUploadAction.
+ * Same as captureFrameBlobFromFile but for a public R2 URL. Used by the
+ * post-batch retry: if the in-memory capture missed (transient PUT error,
+ * tab throttled mid-decode), R2 has the file by now and a fresh decode
+ * usually succeeds. CORS is set up on the bucket to allow GET, so
+ * crossOrigin="anonymous" keeps the canvas untainted.
  */
-function tusUpload(
-  endpoint: string,
-  file: File,
-  onProgress: (pct: number) => void,
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    let uid = ''
-    const upload = new tus.Upload(file, {
-      endpoint,
-      retryDelays: [0, 1_000, 3_000, 5_000, 10_000],
-      // Stream requires resumable chunks be multiples of 256 KiB; 50 MiB
-      // is what Cloudflare's example uses.
-      chunkSize: 50 * 1024 * 1024,
-      uploadSize: file.size,
-      metadata: { name: file.name, filetype: file.type },
-      onError: (err) =>
-        reject(err instanceof Error ? err : new Error(String(err))),
-      onProgress: (bytesUploaded, bytesTotal) => {
-        const pct = Math.round((bytesUploaded / bytesTotal) * 100)
-        onProgress(Math.min(pct, 99))
-      },
-      onAfterResponse: (_req, res) => {
-        // Cloudflare echoes the UID on the CREATE response only.
-        const header = res.getHeader('stream-media-id')
-        if (header) uid = header
-      },
-      onSuccess: () => resolve(uid),
+async function captureFrameBlobFromUrl(
+  url: string,
+  time: number,
+): Promise<Blob | null> {
+  if (typeof window === 'undefined' || !url) return null
+  return captureFrameBlobFromVideoSrc(url, time, true)
+}
+
+async function captureFrameBlobFromVideoSrc(
+  src: string,
+  time: number,
+  crossOrigin: boolean,
+): Promise<Blob | null> {
+  const video = document.createElement('video')
+  video.muted = true
+  video.playsInline = true
+  video.preload = 'metadata'
+  if (crossOrigin) video.crossOrigin = 'anonymous'
+  video.src = src
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const onLoaded = () => {
+        cleanup()
+        resolve()
+      }
+      const onError = () => {
+        cleanup()
+        reject(new Error('metadata load failed'))
+      }
+      function cleanup() {
+        video.removeEventListener('loadedmetadata', onLoaded)
+        video.removeEventListener('error', onError)
+      }
+      video.addEventListener('loadedmetadata', onLoaded)
+      video.addEventListener('error', onError)
     })
-    upload.start()
-  })
+    if (video.videoWidth === 0 || video.videoHeight === 0) return null
+
+    // Clamp the seek target so very short clips still produce a frame.
+    const target = Math.min(time, Math.max(0, (video.duration || 0) - 0.05))
+    await new Promise<void>((resolve, reject) => {
+      const onSeeked = () => {
+        cleanup()
+        resolve()
+      }
+      const onError = () => {
+        cleanup()
+        reject(new Error('seek failed'))
+      }
+      function cleanup() {
+        video.removeEventListener('seeked', onSeeked)
+        video.removeEventListener('error', onError)
+      }
+      video.addEventListener('seeked', onSeeked)
+      video.addEventListener('error', onError)
+      video.currentTime = target
+    })
+
+    const maxWidth = 1280
+    const ratio =
+      video.videoWidth > maxWidth ? maxWidth / video.videoWidth : 1
+    const w = Math.round(video.videoWidth * ratio)
+    const h = Math.round(video.videoHeight * ratio)
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    ctx.drawImage(video, 0, 0, w, h)
+
+    return await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.85)
+    })
+  } catch {
+    return null
+  }
 }
 
 /** PUT a full file via XHR, reporting overall progress as a percentage. */

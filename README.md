@@ -76,23 +76,22 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
 
    Open [http://localhost:3000](http://localhost:3000).
 
-## Cloudflare Stream — videos
+## Videos — R2 with auto-cover + post-upload picker
 
-Video files (`video/mp4`, `video/quicktime`, `video/webm`) bypass R2 and go to **Cloudflare Stream** via the tus-resumable Direct Creator Upload flow. Stream gives us edge-served thumbnails, adaptive-bitrate playback, and a 30 GB / 8-hour ceiling per video — without the page having to capture frames in the browser.
+Videos (`video/mp4`, `video/quicktime`, `video/webm`) and images both live in R2 under the property prefix. The cover-image flow follows Facebook/Instagram: uploads never block on a modal.
 
-The browser drives the upload directly to Cloudflare; the app just mints a one-time tus URL via `initStreamVideoUploadAction`. Each upload is tracked in `media_videos (property_id, stream_uid, …)`, and `listMediaWithTags` joins those rows in alongside the R2 object listing.
+1. **At upload time**, the drop-zone PUTs the video to R2 (single PUT under 10 MB, multipart above). As soon as it lands, an off-DOM `<video>` decodes the just-uploaded file (still in memory client-side), seeks to ~0.33s — the 10th frame at 30 fps, far enough in to skip the typical fade-from-black opener — and PUTs the captured JPEG as a sibling `_posters/{filename}.jpg`. This runs in the background; a batch of N videos isn't gated on N pickers.
+2. **From the file's preview dialog**, the user can hit "Change cover" to open the frame picker (`src/app/(app)/media/_components/cover-picker.tsx`): an evenly-spaced thumbnail strip + scrubber, `crossOrigin="anonymous"` against the R2 origin so canvas reads aren't tainted. Confirming overwrites the same `_posters/{filename}.jpg` key; `media_metadata.updated_at` is appended as a `?v=` cache-buster on the public URL so the new cover appears immediately instead of waiting for the CDN edge to expire.
 
-**Required env vars** (see `.env.example`):
+Playback uses a plain `<video src=…>` element with the poster set, so first paint is the cover frame instead of an empty player.
 
-- `CLOUDFLARE_API_TOKEN` — must include `Account Stream:Edit` and `Account Stream:Read` (in addition to the `Account Analytics:Read` scope already used for the bandwidth widget).
-- `CLOUDFLARE_ACCOUNT_ID` — same Cloudflare account that owns R2.
-- `CLOUDFLARE_STREAM_SUBDOMAIN` — your `customer-XXXX.cloudflarestream.com` host (no protocol). Find it in any Stream embed code under the dashboard.
+Why we don't use a transcoding service: Cloudflare Stream's $5 per 1000 minutes stored + $1 per 1000 minutes delivered scales linearly with the catalog forever. R2 is ~$0.015/GB-month with zero egress on the Cloudflare CDN, so a 60-second 720p H.264 MP4 (~30 MB) costs fractions of a cent.
 
-Images still flow through R2 — only videos move.
+**Codec note:** iPhone HEVC `.mov` files don't decode in non-Safari browsers. The cover picker detects the failure (metadata loads but `videoWidth === 0`) and surfaces an error asking the user to export as MP4 H.264 first. Adding a server-side transcode (Cloud Run / R2 event hook → ffmpeg) is the obvious next step if HEVC keeps showing up.
 
 ## R2 CORS — required for direct-to-R2 uploads
 
-The drag-and-drop uploader has the browser PUT image files directly to R2 (single PUT for files ≤10 MB, multipart upload for larger files). Without this, large originals would have to traverse the Vercel serverless function and hit the 4.5 MB body limit. (Videos no longer hit R2 — see Cloudflare Stream above.)
+The drag-and-drop uploader has the browser PUT files directly to R2 (single PUT for files ≤10 MB, multipart upload for larger files — videos almost always take the multipart path). Without this, large originals would have to traverse the Vercel serverless function and hit the 4.5 MB body limit.
 
 **The R2 bucket needs a CORS policy that allows the app origin to PUT and exposes the `ETag` header** (multipart uses the ETag of each uploaded part to finalize the upload).
 
@@ -115,6 +114,16 @@ app-hotelops/                       ← bucket (one for the entire platform)
 Each file is served from `https://cdn.myhotelops.com/{key}`. Filenames are humanized into descriptions on the fly (e.g. `lobby-view-01.jpg` → "Lobby View 01").
 
 The bucket is configured with **public access enabled** and a custom domain bound to the platform CDN. New tenants don't require any R2 changes — the platform-admin "Create tenant" form (and the tenant-owner "Add property" form) compute the R2 prefix from the slugs you supply, and R2 creates folders lazily on first upload.
+
+## Vercel Cron — scheduled cleanup
+
+Schedules live in [`vercel.json`](vercel.json); routes live under `src/app/api/cron/`. Vercel calls each route on the configured schedule with `Authorization: Bearer ${CRON_SECRET}`; the handler rejects anything else.
+
+| Schedule        | Route                       | Purpose                                                                                                                                           |
+| --------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0 4 * * *` UTC | `/api/cron/orphan-posters`  | Delete `_posters/` JPEGs whose owning video is no longer in R2 — closes the leak when a delete fails between the video and poster object DELETEs. |
+
+Set `CRON_SECRET` (any high-entropy string — `openssl rand -base64 32`) as a Vercel project env var; copy the same value into `.env.local` if you want to hit the route locally for testing (`curl -H "Authorization: Bearer …" http://localhost:3000/api/cron/orphan-posters`).
 
 ## Tenant model
 
