@@ -2,9 +2,17 @@ import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requireSession } from '@/lib/auth/session'
 import { BRAND, BRAND_ADDRESS_LINES } from '@/lib/brand'
-import { getSubscriptionForOrg } from '@/lib/stripe/subscriptions'
+import {
+  getSubscriptionForOrg,
+  listStripeInvoices,
+  type StripeInvoiceSummary,
+} from '@/lib/stripe/subscriptions'
 import { createClient } from '@/lib/supabase/server'
-import type { BillingSubscription, BillingSubscriptionStatus, Invoice } from '@/lib/supabase/types'
+import type {
+  BillingSubscription,
+  BillingSubscriptionStatus,
+  Invoice,
+} from '@/lib/supabase/types'
 import { StripeRedirectButton } from './_components/billing-actions'
 
 export default async function BillingPage() {
@@ -17,8 +25,11 @@ export default async function BillingPage() {
     .order('period_end', { ascending: false })
 
   if (error) throw error
-  const invoices = (data ?? []) as Invoice[]
+  const checkInvoices = (data ?? []) as Invoice[]
   const subscription = await getSubscriptionForOrg(session.organization.id)
+  const stripeInvoices = subscription?.stripe_customer_id
+    ? await listStripeInvoices(subscription.stripe_customer_id)
+    : []
   const isOwner = session.profile.role === 'org_owner'
 
   return (
@@ -34,61 +45,20 @@ export default async function BillingPage() {
 
       <SubscriptionCard subscription={subscription} canManage={isOwner} />
 
-      <Card className="overflow-hidden">
-        <div className="px-5 py-4 border-b border-border-subtle">
-          <h2 className="text-sm font-semibold text-fg">Invoices</h2>
-          <p className="text-xs text-muted mt-0.5">
-            Past invoices billed by check.
-          </p>
-        </div>
-        <table className="w-full text-sm">
-          <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
-            <tr>
-              <th className="px-4 py-3 font-medium">Period</th>
-              <th className="px-4 py-3 font-medium">Amount</th>
-              <th className="px-4 py-3 font-medium">Due</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border-subtle">
-            {invoices.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={4}
-                  className="px-4 py-10 text-center text-sm text-muted"
-                >
-                  No invoices yet.
-                </td>
-              </tr>
-            ) : (
-              invoices.map((invoice) => (
-                <tr key={invoice.id}>
-                  <td className="px-4 py-3 text-fg">
-                    {formatDate(invoice.period_start)} —{' '}
-                    {formatDate(invoice.period_end)}
-                  </td>
-                  <td className="px-4 py-3 font-medium text-fg tabular-nums">
-                    {formatMoney(invoice.amount_cents, invoice.currency)}
-                  </td>
-                  <td className="px-4 py-3 text-muted">
-                    {invoice.due_date ? formatDate(invoice.due_date) : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <InvoiceStatusBadge status={invoice.status} />
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </Card>
+      <StripeInvoicesCard invoices={stripeInvoices} />
+
+      {checkInvoices.length > 0 ? (
+        <CheckInvoicesCard invoices={checkInvoices} />
+      ) : null}
 
       <Card>
         <div className="p-5 space-y-2">
-          <h2 className="text-sm font-semibold text-fg">Mailing instructions</h2>
+          <h2 className="text-sm font-semibold text-fg">
+            Pay by check (alternate method)
+          </h2>
           <p className="text-sm text-muted">
-            Make checks payable to <span className="text-fg font-medium">{BRAND.legalName}</span>.
-            Mail to:
+            Make checks payable to{' '}
+            <span className="text-fg font-medium">{BRAND.legalName}</span>. Mail to:
           </p>
           <address className="not-italic text-sm text-muted leading-6">
             {BRAND_ADDRESS_LINES.map((line) => (
@@ -132,8 +102,7 @@ function SubscriptionCard({
   }
 
   const hasCard = Boolean(subscription.default_payment_method_id)
-  const trialDaysLeft = daysUntil(subscription.trial_end)
-  const renewsOn = subscription.current_period_end
+  const daysLeft = daysUntil(subscription.payment_method_due_at)
 
   return (
     <Card>
@@ -143,38 +112,35 @@ function SubscriptionCard({
           <SubscriptionStatusBadge status={subscription.status} />
         </div>
 
-        {subscription.status === 'trialing' && trialDaysLeft !== null ? (
-          <p className="text-sm text-muted">
-            You&apos;re in your{' '}
-            <span className="text-fg font-medium">
-              14-day onboarding period
-            </span>
-            .{' '}
-            {trialDaysLeft > 0
-              ? `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} remaining`
-              : 'Ends today'}
-            {subscription.trial_end
-              ? ` (ends ${formatDate(subscription.trial_end)})`
-              : ''}
-            . Add a payment method before then to keep service running without
-            interruption.
-          </p>
+        {!hasCard ? (
+          <div className="rounded-md border border-warning-bg/40 bg-warning-bg/40 px-4 py-3 text-sm text-warning-fg">
+            <p className="font-medium">
+              Save a payment method for auto-renewal
+            </p>
+            <p className="mt-1">
+              Your subscription is active. Add a credit card so future monthly
+              invoices charge automatically.
+              {subscription.payment_method_due_at && daysLeft !== null
+                ? ` You have ${daysLeft} day${daysLeft === 1 ? '' : 's'} (until ${formatDate(subscription.payment_method_due_at)}) before the first invoice goes past due.`
+                : ''}
+            </p>
+          </div>
         ) : null}
 
         {subscription.status === 'past_due' || subscription.status === 'unpaid' ? (
           <p className="text-sm text-danger-fg">
-            Payment failed. Update your card to restore service.
+            Payment failed on the most recent charge. Update your card to
+            restore auto-renewal.
           </p>
         ) : null}
 
-        {subscription.status === 'paused' ? (
-          <p className="text-sm text-warning-fg">
-            Subscription is paused because no card was on file when the trial
-            ended. Add a payment method to resume.
-          </p>
-        ) : null}
-
-        <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-border-subtle">
+        <div className="grid gap-4 sm:grid-cols-3 pt-2 border-t border-border-subtle">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-subtle">Plan</p>
+            <p className="mt-1 text-sm text-fg">
+              {formatPlan(subscription)}
+            </p>
+          </div>
           <div>
             <p className="text-xs uppercase tracking-wider text-subtle">
               Payment method
@@ -187,16 +153,12 @@ function SubscriptionCard({
           </div>
           <div>
             <p className="text-xs uppercase tracking-wider text-subtle">
-              {subscription.status === 'trialing' ? 'First charge' : 'Renews'}
+              {subscription.current_period_end ? 'Next renewal' : 'First invoice'}
             </p>
             <p className="mt-1 text-sm text-fg">
-              {subscription.status === 'trialing'
-                ? subscription.trial_end
-                  ? formatDate(subscription.trial_end)
-                  : '—'
-                : renewsOn
-                  ? formatDate(renewsOn)
-                  : '—'}
+              {subscription.current_period_end
+                ? formatDate(subscription.current_period_end)
+                : '—'}
             </p>
           </div>
         </div>
@@ -205,7 +167,7 @@ function SubscriptionCard({
           <div className="pt-2 flex flex-wrap gap-3">
             {!hasCard ? (
               <StripeRedirectButton endpoint="/api/stripe/setup-checkout">
-                Add payment method
+                Save card for auto-renewal
               </StripeRedirectButton>
             ) : (
               <StripeRedirectButton
@@ -222,6 +184,113 @@ function SubscriptionCard({
           </p>
         )}
       </div>
+    </Card>
+  )
+}
+
+function StripeInvoicesCard({ invoices }: { invoices: StripeInvoiceSummary[] }) {
+  if (invoices.length === 0) {
+    return (
+      <Card>
+        <div className="p-5 space-y-1">
+          <h2 className="text-sm font-semibold text-fg">Invoices</h2>
+          <p className="text-sm text-muted">No invoices yet.</p>
+        </div>
+      </Card>
+    )
+  }
+  return (
+    <Card className="overflow-hidden">
+      <div className="px-5 py-4 border-b border-border-subtle">
+        <h2 className="text-sm font-semibold text-fg">Invoices</h2>
+      </div>
+      <table className="w-full text-sm">
+        <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
+          <tr>
+            <th className="px-4 py-3 font-medium">Number</th>
+            <th className="px-4 py-3 font-medium">Issued</th>
+            <th className="px-4 py-3 font-medium">Due</th>
+            <th className="px-4 py-3 font-medium">Amount</th>
+            <th className="px-4 py-3 font-medium">Status</th>
+            <th className="px-4 py-3 font-medium" />
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border-subtle">
+          {invoices.map((invoice) => (
+            <tr key={invoice.id}>
+              <td className="px-4 py-3 font-mono text-xs text-fg">
+                {invoice.number ?? '—'}
+              </td>
+              <td className="px-4 py-3 text-muted">
+                {formatDate(invoice.created_at)}
+              </td>
+              <td className="px-4 py-3 text-muted">
+                {invoice.due_at ? formatDate(invoice.due_at) : '—'}
+              </td>
+              <td className="px-4 py-3 font-medium text-fg tabular-nums">
+                {formatMoney(invoice.amount_due_cents, invoice.currency)}
+              </td>
+              <td className="px-4 py-3">
+                <StripeInvoiceStatusBadge status={invoice.status} />
+              </td>
+              <td className="px-4 py-3 text-right">
+                {invoice.hosted_url ? (
+                  <a
+                    href={invoice.hosted_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline text-xs"
+                  >
+                    View
+                  </a>
+                ) : null}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Card>
+  )
+}
+
+function CheckInvoicesCard({ invoices }: { invoices: Invoice[] }) {
+  return (
+    <Card className="overflow-hidden">
+      <div className="px-5 py-4 border-b border-border-subtle">
+        <h2 className="text-sm font-semibold text-fg">Check payment history</h2>
+        <p className="text-xs text-muted mt-0.5">
+          Legacy invoices billed by check.
+        </p>
+      </div>
+      <table className="w-full text-sm">
+        <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
+          <tr>
+            <th className="px-4 py-3 font-medium">Period</th>
+            <th className="px-4 py-3 font-medium">Amount</th>
+            <th className="px-4 py-3 font-medium">Due</th>
+            <th className="px-4 py-3 font-medium">Status</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border-subtle">
+          {invoices.map((invoice) => (
+            <tr key={invoice.id}>
+              <td className="px-4 py-3 text-fg">
+                {formatDate(invoice.period_start)} —{' '}
+                {formatDate(invoice.period_end)}
+              </td>
+              <td className="px-4 py-3 font-medium text-fg tabular-nums">
+                {formatMoney(invoice.amount_cents, invoice.currency)}
+              </td>
+              <td className="px-4 py-3 text-muted">
+                {invoice.due_date ? formatDate(invoice.due_date) : '—'}
+              </td>
+              <td className="px-4 py-3">
+                <CheckInvoiceStatusBadge status={invoice.status} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </Card>
   )
 }
@@ -245,16 +314,40 @@ function SubscriptionStatusBadge({
   return <Badge tone={tone}>{label}</Badge>
 }
 
-function InvoiceStatusBadge({ status }: { status: Invoice['status'] }) {
+function StripeInvoiceStatusBadge({
+  status,
+}: {
+  status: StripeInvoiceSummary['status']
+}) {
+  const tone: BadgeProps['tone'] =
+    status === 'paid'
+      ? 'success'
+      : status === 'open'
+        ? 'warning'
+        : status === 'uncollectible' || status === 'void'
+          ? 'danger'
+          : 'neutral'
+  return <Badge tone={tone}>{status ?? 'unknown'}</Badge>
+}
+
+function CheckInvoiceStatusBadge({ status }: { status: Invoice['status'] }) {
   const tone: BadgeProps['tone'] =
     status === 'paid' ? 'success' : status === 'pending' ? 'warning' : 'neutral'
   return <Badge tone={tone}>{status}</Badge>
 }
 
+function formatPlan(s: BillingSubscription): string {
+  if (s.unit_amount_cents == null) return '—'
+  const per = formatMoney(s.unit_amount_cents, s.currency)
+  if (s.quantity <= 1) return `${per}/mo`
+  const total = formatMoney(s.unit_amount_cents * s.quantity, s.currency)
+  return `${per} × ${s.quantity} properties = ${total}/mo`
+}
+
 function formatMoney(cents: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: currency || 'USD',
+    currency: (currency || 'USD').toUpperCase(),
   }).format(cents / 100)
 }
 

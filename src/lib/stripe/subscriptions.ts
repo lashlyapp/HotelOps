@@ -5,11 +5,12 @@ import type { BillingSubscription, BillingSubscriptionStatus } from '@/lib/supab
 import { stripe } from './client'
 
 /**
- * The 14-day cooling period between admin onboarding and first charge. The
- * subscription is created immediately so revenue is "on the books" but Stripe
- * defers billing until the trial ends, giving the customer time to add a card.
+ * Days the customer has, after the subscription starts, to attach a payment
+ * method before the first invoice goes past due. Implemented Stripe-side as
+ * collection_method='send_invoice' + days_until_due=N. The subscription is
+ * `active` from day one — this is *not* a trial.
  */
-export const TRIAL_PERIOD_DAYS = 14
+export const PAYMENT_METHOD_GRACE_DAYS = 14
 
 type EnsureCustomerInput = {
   orgId: string
@@ -71,40 +72,55 @@ type StartSubscriptionInput = {
   orgId: string
   customerId: string
   priceId: string
-  trialDays?: number
+  quantity: number
+  graceDays?: number
+  /** Optional one-time setup fee Price id; tacked onto the first invoice. */
+  setupFeePriceId?: string
 }
 
 /**
- * Create a subscription with a trial. No payment method is required up front
- * — Stripe's `trial_settings.end_behavior.missing_payment_method = "pause"`
- * defers the failure mode if no card is added by trial end.
+ * Create a per-property recurring subscription. Active and billable from day
+ * one; collection_method='send_invoice' means Stripe issues the invoice but
+ * does not auto-charge — that gives the customer `graceDays` to attach a
+ * card. Once they do, the webhook flips the sub to charge_automatically.
+ *
+ * setupFeePriceId is added via add_invoice_items so it lands on the very
+ * first invoice and never recurs.
  */
 export async function startSubscription({
   orgId,
   customerId,
   priceId,
-  trialDays = TRIAL_PERIOD_DAYS,
+  quantity,
+  graceDays = PAYMENT_METHOD_GRACE_DAYS,
+  setupFeePriceId,
 }: StartSubscriptionInput): Promise<Stripe.Subscription> {
-  const subscription = await stripe().subscriptions.create(
-    {
-      customer: customerId,
-      items: [{ price: priceId }],
-      trial_period_days: trialDays,
-      payment_behavior: 'default_incomplete',
-      payment_settings: {
-        save_default_payment_method: 'on_subscription',
-        payment_method_types: ['card'],
-      },
-      trial_settings: {
-        end_behavior: { missing_payment_method: 'pause' },
-      },
-      metadata: { org_id: orgId, app: 'hotelops' },
-    },
-    { idempotencyKey: `subscription:${orgId}:${priceId}` },
-  )
+  const params: Stripe.SubscriptionCreateParams = {
+    customer: customerId,
+    items: [{ price: priceId, quantity }],
+    collection_method: 'send_invoice',
+    days_until_due: graceDays,
+    metadata: { org_id: orgId, app: 'hotelops' },
+  }
+  if (setupFeePriceId) {
+    params.add_invoice_items = [{ price: setupFeePriceId, quantity: 1 }]
+  }
 
-  await syncSubscriptionToDb(orgId, subscription)
+  const subscription = await stripe().subscriptions.create(params, {
+    idempotencyKey: `subscription:${orgId}:${priceId}`,
+  })
+
+  // Stamp the cooling-period deadline so the billing page can show a
+  // countdown without parsing invoices.
+  const dueAt = new Date(Date.now() + graceDays * 24 * 60 * 60 * 1000)
+  await syncSubscriptionToDb(orgId, subscription, { paymentMethodDueAt: dueAt })
   return subscription
+}
+
+type SyncOptions = {
+  /** Override the stored cooling-period deadline (set on creation, cleared
+   *  on card attach). Omit to leave the existing value unchanged. */
+  paymentMethodDueAt?: Date | null
 }
 
 /**
@@ -116,9 +132,11 @@ export async function startSubscription({
 export async function syncSubscriptionToDb(
   orgId: string,
   subscription: Stripe.Subscription,
+  options: SyncOptions = {},
 ): Promise<void> {
   const admin = createAdminClient()
   const item = subscription.items.data[0]
+  const price = item?.price
 
   const defaultPmId = resolveDefaultPaymentMethodId(subscription)
   let pmBrand: string | null = null
@@ -133,18 +151,15 @@ export async function syncSubscriptionToDb(
     }
   }
 
-  const update = {
+  const update: Record<string, unknown> = {
     org_id: orgId,
     stripe_customer_id:
       typeof subscription.customer === 'string'
         ? subscription.customer
         : subscription.customer.id,
     stripe_subscription_id: subscription.id,
-    stripe_price_id: item?.price.id ?? null,
+    stripe_price_id: price?.id ?? null,
     status: subscription.status as BillingSubscriptionStatus,
-    trial_end: subscription.trial_end
-      ? new Date(subscription.trial_end * 1000).toISOString()
-      : null,
     current_period_start: item?.current_period_start
       ? new Date(item.current_period_start * 1000).toISOString()
       : null,
@@ -152,10 +167,18 @@ export async function syncSubscriptionToDb(
       ? new Date(item.current_period_end * 1000).toISOString()
       : null,
     cancel_at_period_end: subscription.cancel_at_period_end,
+    unit_amount_cents: price?.unit_amount ?? null,
+    quantity: item?.quantity ?? 1,
+    currency: price?.currency ?? 'usd',
     default_payment_method_id: defaultPmId,
     default_payment_brand: pmBrand,
     default_payment_last4: pmLast4,
     updated_at: new Date().toISOString(),
+  }
+  if (Object.prototype.hasOwnProperty.call(options, 'paymentMethodDueAt')) {
+    update.payment_method_due_at = options.paymentMethodDueAt
+      ? options.paymentMethodDueAt.toISOString()
+      : null
   }
 
   const { error } = await admin
@@ -183,4 +206,63 @@ export async function getSubscriptionForOrg(
     .maybeSingle()
   if (error) throw error
   return (data as BillingSubscription | null) ?? null
+}
+
+/** How many properties an org has — the default subscription quantity. */
+export async function countPropertiesForOrg(orgId: string): Promise<number> {
+  const admin = createAdminClient()
+  const { count, error } = await admin
+    .from('properties')
+    .select('id', { count: 'exact', head: true })
+    .eq('org_id', orgId)
+  if (error) throw error
+  return count ?? 0
+}
+
+export type StripeInvoiceSummary = {
+  id: string
+  number: string | null
+  status: Stripe.Invoice.Status | null
+  amount_due_cents: number
+  amount_paid_cents: number
+  currency: string
+  created_at: string
+  due_at: string | null
+  hosted_url: string | null
+  pdf_url: string | null
+}
+
+/**
+ * Pull the customer's Stripe invoices for display in the billing UI. Read-
+ * only and tolerant of network failures — the page should still render the
+ * subscription card even if Stripe is unreachable.
+ */
+export async function listStripeInvoices(
+  customerId: string,
+  limit = 12,
+): Promise<StripeInvoiceSummary[]> {
+  try {
+    const result = await stripe().invoices.list({
+      customer: customerId,
+      limit,
+    })
+    return result.data.map((inv) => ({
+      id: inv.id ?? '',
+      number: inv.number ?? null,
+      status: inv.status ?? null,
+      amount_due_cents: inv.amount_due ?? 0,
+      amount_paid_cents: inv.amount_paid ?? 0,
+      currency: inv.currency ?? 'usd',
+      created_at: new Date(inv.created * 1000).toISOString(),
+      due_at: inv.due_date ? new Date(inv.due_date * 1000).toISOString() : null,
+      hosted_url: inv.hosted_invoice_url ?? null,
+      pdf_url: inv.invoice_pdf ?? null,
+    }))
+  } catch (err) {
+    console.warn(
+      '[stripe] listStripeInvoices failed',
+      err instanceof Error ? err.message : err,
+    )
+    return []
+  }
 }

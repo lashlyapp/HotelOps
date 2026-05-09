@@ -1,13 +1,17 @@
 /**
- * Start a Stripe subscription for an existing organization with a 14-day
- * trial. Use this once per tenant when admin-onboarding them — the customer
- * then sees a CTA on /billing to add their card before the trial ends.
+ * Start a per-property Stripe subscription for an existing organization. The
+ * subscription is active and billable from day one with a 14-day window for
+ * the customer to attach a payment method (collection_method=send_invoice,
+ * days_until_due=14). An optional one-time setup fee can be tacked onto the
+ * first invoice via --setup-fee or STRIPE_SETUP_FEE_PRICE_ID.
  *
  * Usage:
  *   npx tsx scripts/start-subscription.ts \
- *     --org-slug=gc-hotel-group \
+ *     --org-slug=cg-hotel-group \
  *     [--price=price_XXXX]              # defaults to STRIPE_PRICE_ID env
- *     [--trial-days=14]
+ *     [--quantity=N]                    # defaults to org's property count
+ *     [--setup-fee=price_XXXX]          # defaults to STRIPE_SETUP_FEE_PRICE_ID env
+ *     [--grace-days=14]
  *
  * Idempotent:
  *   - Reuses an existing Stripe Customer if one is already linked.
@@ -19,6 +23,7 @@
  *   SUPABASE_SERVICE_ROLE_KEY
  *   STRIPE_SECRET_KEY
  *   STRIPE_PRICE_ID                   (or pass --price)
+ *   STRIPE_SETUP_FEE_PRICE_ID         (optional; or pass --setup-fee)
  */
 
 import { resolve } from 'node:path'
@@ -34,6 +39,8 @@ const SUPABASE_URL = required('NEXT_PUBLIC_SUPABASE_URL')
 const SERVICE_ROLE = required('SUPABASE_SERVICE_ROLE_KEY')
 const STRIPE_SECRET = required('STRIPE_SECRET_KEY')
 const PRICE_ID = args.price ?? required('STRIPE_PRICE_ID')
+const SETUP_FEE_PRICE_ID =
+  args.setupFee ?? process.env.STRIPE_SETUP_FEE_PRICE_ID ?? undefined
 
 const admin: SupabaseClient = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -56,8 +63,13 @@ async function main() {
     process.exit(1)
   }
 
-  const ownerEmail = await findOwnerEmail(org.id)
+  const propertyCount = await countProperties(org.id)
+  const quantity = args.quantity ?? Math.max(1, propertyCount)
+  console.log(
+    `Org: ${org.name} (${org.id}) — ${propertyCount} propert${propertyCount === 1 ? 'y' : 'ies'} on file; subscribing quantity=${quantity}.`,
+  )
 
+  const ownerEmail = await findOwnerEmail(org.id)
   const customerId = await ensureCustomer(org.id, org.name, ownerEmail)
   console.log(`Stripe customer: ${customerId}`)
 
@@ -69,36 +81,41 @@ async function main() {
     return
   }
 
-  const subscription = await stripe.subscriptions.create(
-    {
-      customer: customerId,
-      items: [{ price: PRICE_ID }],
-      trial_period_days: args.trialDays,
-      payment_behavior: 'default_incomplete',
-      payment_settings: {
-        save_default_payment_method: 'on_subscription',
-        payment_method_types: ['card'],
-      },
-      trial_settings: {
-        end_behavior: { missing_payment_method: 'pause' },
-      },
-      metadata: { org_id: org.id, app: 'hotelops' },
-    },
-    { idempotencyKey: `subscription:${org.id}:${PRICE_ID}` },
-  )
+  const params: Stripe.SubscriptionCreateParams = {
+    customer: customerId,
+    items: [{ price: PRICE_ID, quantity }],
+    collection_method: 'send_invoice',
+    days_until_due: args.graceDays,
+    metadata: { org_id: org.id, app: 'hotelops' },
+  }
+  if (SETUP_FEE_PRICE_ID) {
+    params.add_invoice_items = [{ price: SETUP_FEE_PRICE_ID, quantity: 1 }]
+    console.log(`Setup fee: ${SETUP_FEE_PRICE_ID} on first invoice.`)
+  }
+
+  const subscription = await stripe.subscriptions.create(params, {
+    idempotencyKey: `subscription:${org.id}:${PRICE_ID}`,
+  })
   console.log(
-    `Subscription created: ${subscription.id} (status: ${subscription.status}, trial ends ${
-      subscription.trial_end
-        ? new Date(subscription.trial_end * 1000).toISOString()
-        : 'n/a'
-    })`,
+    `Subscription created: ${subscription.id} (status: ${subscription.status})`,
   )
 
-  await syncToDb(org.id, customerId, subscription)
+  await syncToDb(org.id, customerId, subscription, args.graceDays)
+
+  const dueAt = new Date(Date.now() + args.graceDays * 24 * 60 * 60 * 1000)
   console.log(`Synced billing_subscriptions row.`)
   console.log(
-    `\nDone. The customer can now add a card at /billing → "Add payment method".`,
+    `Cooling period ends ${dueAt.toISOString()} — customer must attach a card by then via /billing → "Add payment method".`,
   )
+}
+
+async function countProperties(orgId: string): Promise<number> {
+  const { count, error } = await admin
+    .from('properties')
+    .select('id', { count: 'exact', head: true })
+    .eq('org_id', orgId)
+  if (error) throw error
+  return count ?? 0
 }
 
 async function ensureCustomer(
@@ -155,18 +172,20 @@ async function syncToDb(
   orgId: string,
   customerId: string,
   subscription: Stripe.Subscription,
+  graceDays: number,
 ) {
   const item = subscription.items.data[0]
+  const price = item?.price
+  const dueAt = new Date(Date.now() + graceDays * 24 * 60 * 60 * 1000)
+
   const { error } = await admin.from('billing_subscriptions').upsert(
     {
       org_id: orgId,
       stripe_customer_id: customerId,
       stripe_subscription_id: subscription.id,
-      stripe_price_id: item?.price.id ?? null,
+      stripe_price_id: price?.id ?? null,
       status: subscription.status,
-      trial_end: subscription.trial_end
-        ? new Date(subscription.trial_end * 1000).toISOString()
-        : null,
+      payment_method_due_at: dueAt.toISOString(),
       current_period_start: item?.current_period_start
         ? new Date(item.current_period_start * 1000).toISOString()
         : null,
@@ -174,6 +193,9 @@ async function syncToDb(
         ? new Date(item.current_period_end * 1000).toISOString()
         : null,
       cancel_at_period_end: subscription.cancel_at_period_end,
+      unit_amount_cents: price?.unit_amount ?? null,
+      quantity: item?.quantity ?? 1,
+      currency: price?.currency ?? 'usd',
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'org_id' },
@@ -197,11 +219,19 @@ async function findOwnerEmail(orgId: string): Promise<string | null> {
 type Args = {
   orgSlug: string
   price?: string
-  trialDays: number
+  quantity?: number
+  setupFee?: string
+  graceDays: number
 }
 
 function parseArgs(raw: string[]): Args {
-  const out: { orgSlug?: string; price?: string; trialDays?: number } = {}
+  const out: {
+    orgSlug?: string
+    price?: string
+    quantity?: number
+    setupFee?: string
+    graceDays?: number
+  } = {}
   for (const arg of raw) {
     const eq = arg.indexOf('=')
     if (eq === -1) usage(`Unrecognized argument: ${arg}`)
@@ -209,16 +239,27 @@ function parseArgs(raw: string[]): Args {
     const value = arg.slice(eq + 1)
     if (key === 'org-slug') out.orgSlug = value
     else if (key === 'price') out.price = value
-    else if (key === 'trial-days') {
+    else if (key === 'setup-fee') out.setupFee = value
+    else if (key === 'quantity') {
+      const n = Number(value)
+      if (!Number.isInteger(n) || n < 1) usage('--quantity must be a positive integer')
+      out.quantity = n
+    } else if (key === 'grace-days') {
       const n = Number(value)
       if (!Number.isInteger(n) || n < 0 || n > 90) {
-        usage('--trial-days must be an integer between 0 and 90')
+        usage('--grace-days must be an integer between 0 and 90')
       }
-      out.trialDays = n
+      out.graceDays = n
     } else usage(`Unrecognized argument: --${key}`)
   }
   if (!out.orgSlug) usage('Missing --org-slug')
-  return { orgSlug: out.orgSlug!, price: out.price, trialDays: out.trialDays ?? 14 }
+  return {
+    orgSlug: out.orgSlug!,
+    price: out.price,
+    quantity: out.quantity,
+    setupFee: out.setupFee,
+    graceDays: out.graceDays ?? 14,
+  }
 }
 
 function required(name: string): string {
@@ -236,7 +277,9 @@ function usage(message: string): never {
     'Usage:\n  npx tsx scripts/start-subscription.ts \\\n' +
       '    --org-slug=<slug> \\\n' +
       '    [--price=price_XXXX] \\\n' +
-      '    [--trial-days=14]\n',
+      '    [--quantity=N] \\\n' +
+      '    [--setup-fee=price_XXXX] \\\n' +
+      '    [--grace-days=14]\n',
   )
   process.exit(1)
 }

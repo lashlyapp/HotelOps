@@ -211,35 +211,56 @@ See [`docs/design-system.md`](docs/design-system.md). TL;DR: every color in mark
 ## Stripe billing
 
 HotelOps uses its own Stripe account (separate from Lashly). Each organization
-maps 1:1 to a Stripe Customer + Subscription. The flow:
+maps 1:1 to a Stripe Customer + Subscription. Pricing is **$100/property/month**
+(subscription quantity = property count) plus a one-time **$250 setup fee** on
+the first invoice. The flow:
 
 1. **Admin starts the subscription** (`npm run start:subscription -- --org-slug=...`).
-   This creates the Stripe Customer and a Subscription with a 14-day trial.
-   No payment method is required up front.
-2. **Customer adds a card** during the trial via `/billing` → "Add payment method".
-   The CTA opens a Stripe Checkout session in `setup` mode; the saved card is
-   promoted to the subscription's default payment method via webhook.
-3. **Stripe charges automatically** when the trial ends. If no card was added,
-   `trial_settings.end_behavior.missing_payment_method = "pause"` pauses the
-   subscription instead of marking it `unpaid`, and the billing page surfaces
-   a "Resume by adding a payment method" message.
+   This creates the Stripe Customer and a per-property Subscription billed via
+   `collection_method=send_invoice` with a 14-day grace window
+   (`days_until_due=14`). The first invoice — including the setup fee — is
+   issued immediately and listed under `/billing`. No payment method is
+   required up front.
+2. **Customer saves a card for auto-renewal** during the 14-day window via
+   `/billing` → "Save card for auto-renewal". The CTA opens Stripe Checkout in
+   `setup` mode; the webhook attaches the card to the customer + subscription
+   and flips collection from `send_invoice` to `charge_automatically` so
+   future monthly invoices auto-charge. The first invoice stays open for the
+   customer to pay through their preferred channel.
+3. **Cooling period passes without a card:** Stripe transitions the open
+   invoice (and the subscription) to `past_due`, and the billing page surfaces
+   a recovery message.
 4. **Customer manages billing** at `/billing` → "Manage billing", which opens
    the Stripe Billing Portal (update card, view invoices, cancel).
 
 ### Setup
 
 1. Create a separate Stripe account for HotelOps (sole-prop is fine to start).
-2. Create a recurring Price in the Dashboard, copy its id into `STRIPE_PRICE_ID`.
+2. Create the recurring per-property Price ($100/mo) in the Dashboard and
+   copy its id into `STRIPE_PRICE_ID`. Create a one-time Price for the $250
+   setup fee and copy it into `STRIPE_SETUP_FEE_PRICE_ID`.
 3. Configure the webhook endpoint at `https://app.myhotelops.com/api/stripe/webhook`
    with these events: `customer.subscription.created`,
    `customer.subscription.updated`, `customer.subscription.deleted`,
    `customer.subscription.paused`, `customer.subscription.resumed`,
-   `customer.subscription.trial_will_end`, `checkout.session.completed`. Copy
-   the signing secret into `STRIPE_WEBHOOK_SECRET`.
+   `checkout.session.completed`. Copy the signing secret into
+   `STRIPE_WEBHOOK_SECRET`.
 4. Enable the Customer Portal under Dashboard → Settings → Billing → Customer
    portal (allow card updates and cancellation; invoice history is on by default).
 5. For local dev, run `stripe listen --forward-to localhost:3000/api/stripe/webhook`
    and use the printed `whsec_...` as `STRIPE_WEBHOOK_SECRET`.
+
+### Starting CG Hotel Group
+
+Once the Stripe account, Prices, and webhook are configured and the migration
+has been applied:
+
+```bash
+npm run start:subscription -- --org-slug=cg-hotel-group
+```
+
+This auto-detects the property count, creates the Stripe Customer + Subscription
+with the 14-day grace window, and adds the setup fee to the first invoice.
 
 ## Roadmap
 
