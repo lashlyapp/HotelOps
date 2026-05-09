@@ -50,8 +50,13 @@ export async function listMediaForPrefix(prefix: string): Promise<MediaFile[]> {
       // Hide platform-internal files from the customer-facing catalog:
       //   _meta/    — logos and per-property metadata
       //   _posters/ — generated still-frame thumbnails for videos
+      //   _it-docs/ — IT Hub document repository (contracts, runbooks, etc.)
       const rel = obj.Key!.slice(normalizedPrefix.length)
-      return !rel.startsWith('_meta/') && !rel.startsWith('_posters/')
+      return (
+        !rel.startsWith('_meta/') &&
+        !rel.startsWith('_posters/') &&
+        !rel.startsWith('_it-docs/')
+      )
     })
 
   return visibleObjects
