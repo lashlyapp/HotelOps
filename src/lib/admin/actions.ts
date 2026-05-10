@@ -2,10 +2,17 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { requireOrgOwner, requirePlatformAdmin, requireUser } from '@/lib/auth/session'
+import {
+  denyIfRestricted,
+  requireOrgOwner,
+  requirePlatformAdmin,
+  requireUser,
+} from '@/lib/auth/session'
+import { getGateForOrg } from '@/lib/billing/gate'
 import { isEmailConfigured } from '@/lib/email/client'
 import { sendWelcomeEmail } from '@/lib/email/send'
 import { r2DeleteObject, r2PutObject } from '@/lib/r2/upload'
+import { syncSubscriptionQuantity } from '@/lib/stripe/subscriptions'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { AppRole, Property } from '@/lib/supabase/types'
 import { slugify, uniqueSlug } from '@/lib/utils/slugify'
@@ -358,6 +365,9 @@ export async function addPropertyAction(
     return { error: error.message }
   }
 
+  // Bill for the new property on the next invoice. Best-effort.
+  await syncSubscriptionQuantity(orgId)
+
   revalidatePath(`/admin/tenants/${orgId}`)
   revalidatePath('/admin')
   return { success: `Added ${name}.` }
@@ -371,6 +381,7 @@ export async function removePropertyAction(formData: FormData) {
 
   const admin = createAdminClient()
   await admin.from('properties').delete().eq('id', propertyId)
+  await syncSubscriptionQuantity(orgId)
 
   revalidatePath(`/admin/tenants/${orgId}`)
   revalidatePath('/admin')
@@ -508,6 +519,9 @@ export async function ownerAddPropertyAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const session = await requireOrgOwner()
+  const blocked = denyIfRestricted(session)
+  if (blocked) return blocked
+
   const name = String(formData.get('name') ?? '').trim()
   if (!name) return { error: 'Name is required.' }
 
@@ -530,6 +544,9 @@ export async function ownerAddPropertyAction(
   })
   if (error) return { error: error.message }
 
+  // Bill for the new property on the next invoice. Best-effort.
+  await syncSubscriptionQuantity(session.organization.id)
+
   revalidatePath('/properties')
   revalidatePath('/dashboard')
   return { success: `Added ${name}.` }
@@ -537,6 +554,8 @@ export async function ownerAddPropertyAction(
 
 export async function ownerRemovePropertyAction(formData: FormData) {
   const session = await requireOrgOwner()
+  if (session.gate.restrictWrites) return
+
   const propertyId = String(formData.get('property_id') ?? '')
   if (!propertyId) return
 
@@ -547,6 +566,7 @@ export async function ownerRemovePropertyAction(formData: FormData) {
     .delete()
     .eq('id', propertyId)
     .eq('org_id', session.organization.id)
+  await syncSubscriptionQuantity(session.organization.id)
 
   revalidatePath('/properties')
   revalidatePath('/dashboard')
@@ -600,7 +620,11 @@ export async function updatePropertyAction(
 ): Promise<ActionResult> {
   const propertyId = String(formData.get('property_id') ?? '')
   if (!propertyId) return { error: 'Missing property.' }
-  await authorizePropertyAccess(propertyId)
+  const property = await authorizePropertyAccess(propertyId)
+  const gate = await getGateForOrg(property.org_id)
+  if (gate.restrictWrites) {
+    return { error: gate.message ?? 'Editing is locked while billing is past due.' }
+  }
 
   const update: Record<string, string | null> = {}
   for (const field of TEXT_FIELDS) {
@@ -651,6 +675,10 @@ export async function uploadPropertyLogoAction(
   const propertyId = String(formData.get('property_id') ?? '')
   if (!propertyId) return { error: 'Missing property.' }
   const property = await authorizePropertyAccess(propertyId)
+  const gate = await getGateForOrg(property.org_id)
+  if (gate.restrictWrites) {
+    return { error: gate.message ?? 'Editing is locked while billing is past due.' }
+  }
 
   const file = formData.get('logo')
   if (!(file instanceof File) || file.size === 0) {
@@ -693,6 +721,8 @@ export async function removePropertyLogoAction(formData: FormData) {
   const propertyId = String(formData.get('property_id') ?? '')
   if (!propertyId) return
   const property = await authorizePropertyAccess(propertyId)
+  const gate = await getGateForOrg(property.org_id)
+  if (gate.restrictWrites) return
 
   if (property.logo_key) {
     await r2DeleteObject(property.logo_key)

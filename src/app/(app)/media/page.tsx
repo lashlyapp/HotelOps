@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { Card } from '@/components/ui/card'
 import { requireSession } from '@/lib/auth/session'
 import { getCdnBandwidth } from '@/lib/cloudflare/analytics'
 import { listMediaWithTags } from '@/lib/r2/list'
@@ -21,6 +22,31 @@ export default async function MediaPage({
 }) {
   const session = await requireSession()
   const { property: propertySlug } = await searchParams
+
+  if (session.gate.restrictMedia) {
+    return (
+      <div className="p-8 space-y-6">
+        <PageHeader title="Media catalog" />
+        <Card>
+          <div className="p-6 space-y-3">
+            <h2 className="text-base font-semibold text-fg">
+              Media access is locked
+            </h2>
+            <p className="text-sm text-muted">
+              {session.gate.message ??
+                'Your account is past due. Update your payment method to restore access.'}
+            </p>
+            <Link
+              href="/billing"
+              className="focus-ring inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-fg hover:bg-primary-hover"
+            >
+              Open Billing
+            </Link>
+          </div>
+        </Card>
+      </div>
+    )
+  }
 
   if (session.properties.length === 0) {
     return (

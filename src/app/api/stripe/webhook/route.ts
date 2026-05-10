@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import type Stripe from 'stripe'
-import { stripe, stripeWebhookSecret } from '@/lib/stripe/client'
+import { stripe } from '@/lib/stripe/client'
 import { syncSubscriptionToDb } from '@/lib/stripe/subscriptions'
+import { orgIdFromMetadata, parseStripeEvent } from '@/lib/stripe/webhook'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text()
   let event: Stripe.Event
   try {
-    event = stripe().webhooks.constructEvent(rawBody, sig, stripeWebhookSecret())
+    event = parseStripeEvent(rawBody, sig)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'invalid signature'
     return new NextResponse(`webhook error: ${message}`, { status: 400 })
@@ -140,10 +141,3 @@ async function handleCheckoutCompleted(
   await syncSubscriptionToDb(orgId, subscription, { paymentMethodDueAt: null })
 }
 
-function orgIdFromMetadata(
-  metadata: Stripe.Metadata | null | undefined,
-): string | null {
-  if (!metadata) return null
-  if (metadata.app && metadata.app !== 'hotelops') return null
-  return metadata.org_id ?? null
-}

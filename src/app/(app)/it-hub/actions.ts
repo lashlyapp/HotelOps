@@ -102,7 +102,7 @@ export async function saveNetworkAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   const propertyId = trim(formData.get('property_id'))
   const label = trim(formData.get('label'))
@@ -148,7 +148,7 @@ export async function saveNetworkAction(
 }
 
 export async function deleteNetworkAction(formData: FormData) {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   if (!id) return
   const admin = createAdminClient()
@@ -167,7 +167,7 @@ export async function saveCredentialAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   const serviceName = trim(formData.get('service_name'))
   const category = trim(formData.get('category')) as ItCredentialCategory
@@ -214,7 +214,7 @@ export async function saveCredentialAction(
 }
 
 export async function deleteCredentialAction(formData: FormData) {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   if (!id) return
   const admin = createAdminClient()
@@ -233,7 +233,7 @@ export async function saveEquipmentAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   const propertyId = trim(formData.get('property_id'))
   const name = trim(formData.get('name'))
@@ -286,7 +286,7 @@ export async function saveEquipmentAction(
 }
 
 export async function deleteEquipmentAction(formData: FormData) {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   if (!id) return
   const admin = createAdminClient()
@@ -305,7 +305,7 @@ export async function saveVendorAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   const name = trim(formData.get('name'))
   const vendorType = trim(formData.get('vendor_type')) as ItVendorType
@@ -368,7 +368,7 @@ export async function saveVendorAction(
 }
 
 export async function deleteVendorAction(formData: FormData) {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   if (!id) return
   const admin = createAdminClient()

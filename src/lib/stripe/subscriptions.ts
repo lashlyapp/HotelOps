@@ -128,6 +128,10 @@ type SyncOptions = {
  * webhook handler on every customer.subscription.* event and from the admin
  * script after creation. The default-payment-method snapshot is denormalized
  * here so the billing page doesn't need a Stripe round-trip.
+ *
+ * past_due_since is stamped the first time we see status=past_due/unpaid
+ * and cleared when the status leaves that state — that's the timestamp the
+ * 15-day gating policy keys off.
  */
 export async function syncSubscriptionToDb(
   orgId: string,
@@ -151,6 +155,20 @@ export async function syncSubscriptionToDb(
     }
   }
 
+  const status = subscription.status as BillingSubscriptionStatus
+  const isPastDue = status === 'past_due' || status === 'unpaid'
+
+  // Look up the current row so we know whether to stamp / preserve / clear
+  // past_due_since on this transition.
+  const { data: existing } = await admin
+    .from('billing_subscriptions')
+    .select('past_due_since')
+    .eq('org_id', orgId)
+    .maybeSingle()
+  const pastDueSince = isPastDue
+    ? (existing?.past_due_since ?? new Date().toISOString())
+    : null
+
   const update: Record<string, unknown> = {
     org_id: orgId,
     stripe_customer_id:
@@ -159,7 +177,8 @@ export async function syncSubscriptionToDb(
         : subscription.customer.id,
     stripe_subscription_id: subscription.id,
     stripe_price_id: price?.id ?? null,
-    status: subscription.status as BillingSubscriptionStatus,
+    status,
+    past_due_since: pastDueSince,
     current_period_start: item?.current_period_start
       ? new Date(item.current_period_start * 1000).toISOString()
       : null,
@@ -185,6 +204,60 @@ export async function syncSubscriptionToDb(
     .from('billing_subscriptions')
     .upsert(update, { onConflict: 'org_id' })
   if (error) throw error
+}
+
+/**
+ * After a property is added or removed, push the new quantity to Stripe so
+ * billing tracks property count. Best-effort: logs and returns false on
+ * failure rather than rolling back the property change. No-op when the org
+ * has no subscription yet (admin hasn't run start-subscription) or the sub
+ * is in a terminal state.
+ *
+ * proration_behavior='create_prorations' is the default and produces a
+ * prorated charge or credit on the next invoice.
+ */
+export async function syncSubscriptionQuantity(
+  orgId: string,
+): Promise<boolean> {
+  const admin = createAdminClient()
+  const { data: row, error } = await admin
+    .from('billing_subscriptions')
+    .select('stripe_subscription_id, status, quantity')
+    .eq('org_id', orgId)
+    .maybeSingle()
+  if (error) {
+    console.warn('[billing] syncSubscriptionQuantity: load failed', error)
+    return false
+  }
+  if (!row?.stripe_subscription_id) return false
+  if (row.status === 'canceled' || row.status === 'incomplete_expired') {
+    return false
+  }
+
+  const propertyCount = await countPropertiesForOrg(orgId)
+  const newQuantity = Math.max(1, propertyCount)
+  if (newQuantity === row.quantity) return true
+
+  try {
+    const sub = await stripe().subscriptions.retrieve(row.stripe_subscription_id)
+    const itemId = sub.items.data[0]?.id
+    if (!itemId) return false
+    const updated = await stripe().subscriptions.update(
+      row.stripe_subscription_id,
+      {
+        items: [{ id: itemId, quantity: newQuantity }],
+        proration_behavior: 'create_prorations',
+      },
+    )
+    await syncSubscriptionToDb(orgId, updated)
+    return true
+  } catch (err) {
+    console.warn(
+      '[billing] syncSubscriptionQuantity: stripe update failed',
+      err instanceof Error ? err.message : err,
+    )
+    return false
+  }
 }
 
 function resolveDefaultPaymentMethodId(

@@ -33,6 +33,11 @@ create table public.billing_subscriptions (
   -- created (now + 14 days); cleared when a card is attached and the sub
   -- flips to charge_automatically.
   payment_method_due_at timestamptz,
+  -- Wall-clock timestamp of when the subscription first transitioned to
+  -- past_due. Used by the gating policy (banner immediately, restrict after
+  -- 15 days). Set in the webhook on the past_due transition; cleared when
+  -- the status leaves past_due/unpaid.
+  past_due_since timestamptz,
   current_period_start timestamptz,
   current_period_end timestamptz,
   cancel_at_period_end boolean not null default false,

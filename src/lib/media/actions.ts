@@ -75,7 +75,7 @@ export async function presignUploadAction(args: {
   contentType: string
   size: number
 }): Promise<PresignResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
 
   const rl = checkRateLimit(`presign:${session.userId}`, PRESIGN_LIMIT)
   if (!rl.ok) {
@@ -112,7 +112,7 @@ export async function revalidateAfterUploadAction(args: {
   propertySlug: string
   propertyId: string
 }) {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   if (session.properties.some((p) => p.id === args.propertyId)) {
     bustMediaCache(args.propertyId)
   }
@@ -147,7 +147,7 @@ export async function initMultipartUploadAction(args: {
   contentType: string
   size: number
 }): Promise<InitMultipartResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
 
   const rl = checkRateLimit(`presign:${session.userId}`, PRESIGN_LIMIT)
   if (!rl.ok) {
@@ -188,7 +188,7 @@ export async function completeMultipartUploadAction(args: {
   uploadId: string
   parts: Array<{ partNumber: number; etag: string }>
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return { ok: false, error: 'Property not found.' }
   if (!args.key.startsWith(property.r2_prefix)) {
@@ -208,7 +208,7 @@ export async function abortMultipartUploadAction(args: {
   key: string
   uploadId: string
 }) {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return
   if (!args.key.startsWith(property.r2_prefix)) return
@@ -231,7 +231,7 @@ export async function presignPosterUploadAction(args: {
   videoKey: string
   size: number
 }): Promise<PresignPosterResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
 
   const rl = checkRateLimit(`presign:${session.userId}`, PRESIGN_LIMIT)
   if (!rl.ok) {
@@ -257,7 +257,7 @@ export async function setVideoPosterAction(args: {
   videoKey: string
   posterKey: string
 }): Promise<{ ok: true; posterUrl: string } | { ok: false; error: string }> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return { ok: false, error: 'Property not found.' }
   if (!args.videoKey.startsWith(property.r2_prefix)) {
@@ -329,7 +329,7 @@ export async function deleteMediaAction(args: {
   propertyId: string
   key: string
 }) {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return
 
@@ -364,7 +364,7 @@ export async function bulkDeleteMediaAction(args: {
   propertyId: string
   keys: string[]
 }): Promise<{ ok: true; deleted: number } | { ok: false; error: string }> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return { ok: false, error: 'Property not found.' }
 
@@ -420,7 +420,7 @@ export async function presignDownloadAction(args: {
   key: string
   filename: string
 }): Promise<DownloadUrlResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return { ok: false, error: 'Property not found.' }
 
@@ -448,7 +448,7 @@ export async function updateMediaMetadataAction(args: {
   displayName: string
   description: string
 }): Promise<MetadataResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return { ok: false, error: 'Property not found.' }
   if (!args.key.startsWith(property.r2_prefix)) {
@@ -489,7 +489,7 @@ export async function addTagAction(args: {
   key: string
   tag: string
 }): Promise<TagResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return { ok: false, error: 'Property not found.' }
   if (!args.key.startsWith(property.r2_prefix)) {
@@ -531,7 +531,7 @@ export async function removeTagAction(args: {
   key: string
   tag: string
 }): Promise<TagResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return { ok: false, error: 'Property not found.' }
   if (!args.key.startsWith(property.r2_prefix)) {

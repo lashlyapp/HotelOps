@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { BillingBanner } from '@/components/billing/billing-banner'
 import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
 import { signOut } from '@/app/login/actions'
@@ -61,6 +62,7 @@ export default async function AppLayout({
       </aside>
 
       <div className="flex flex-1 min-h-0 flex-col">
+        <BillingBanner gate={session.gate} />
         <main className="flex-1 min-h-0 overflow-auto">{children}</main>
         <Footer variant="app" />
       </div>
