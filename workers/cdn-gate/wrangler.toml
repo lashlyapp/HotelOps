@@ -1,0 +1,32 @@
+# cdn-gate Worker config.
+#
+# Deploys to cdn.myhotelops.com (or whatever NEXT_PUBLIC_R2_PUBLIC_URL points
+# at). Replace the placeholders below before the first `wrangler deploy`.
+#
+# Bindings:
+#   - MEDIA: R2 bucket holding tenant media (the same bucket the app writes
+#     to via aws-sdk).
+#   - GATE: KV namespace; the app writes `gate:<org-slug>` = "1" when an
+#     org's subscription is restricted, deletes the key when restored.
+
+name = "hotelops-cdn-gate"
+main = "index.ts"
+compatibility_date = "2026-01-15"
+
+# Once the worker route is enabled, ALL requests to cdn.myhotelops.com hit
+# the worker first. R2 custom domain takes the request path and serves the
+# bucket; with a worker route in place, the worker intercepts and only
+# falls through via the MEDIA binding, so the public bucket URL must be
+# turned off in R2 (or the worker becomes purely an additive filter,
+# leaving a public path open).
+routes = [
+  { pattern = "cdn.myhotelops.com/*", zone_name = "myhotelops.com" },
+]
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "REPLACE_WITH_R2_BUCKET_NAME"
+
+[[kv_namespaces]]
+binding = "GATE"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"

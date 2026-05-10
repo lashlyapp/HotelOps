@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Worker has its own tsconfig + @cloudflare/workers-types; it's not a
+    // Next.js source. Lint it via `cd workers/cdn-gate && tsc --noEmit`.
+    "workers/**",
   ]),
 ]);
 
