@@ -51,87 +51,110 @@ tenant B. The shared-fate concern is the request path itself:
   its own KV key, proxies to R2. Can't serve A's content to B because
   R2 keys are deterministic from the request URL.
 
-### Rollout strategy (do this, not a one-shot deploy)
+### Deploying
 
-The Worker enters every tenant's request path the moment its route is
-live, so a bad first deploy = global media outage. Roll it out
-incrementally:
+Deploys go through `.github/workflows/deploy-cdn-gate.yml` — never run
+`wrangler deploy` from a laptop. CI keeps Cloudflare credentials off
+developer machines, makes every deploy auditable (who pressed the
+button, when, why), and forces the rollout to walk through phases
+because each one is a separate manual workflow_dispatch.
 
-1.  **Deploy without a route first.** In `wrangler.toml`, comment out
-    the `routes = [...]` block, then `wrangler deploy`. The Worker
-    exists but receives no traffic. Verify it's healthy in the
-    dashboard.
+The workflow exposes one input — **target** — with these phases:
 
-2.  **Canary on one tenant** before flipping the catch-all. Add a
-    narrow route for one internal/test tenant first:
-    ```toml
-    routes = [
-      { pattern = "cdn.myhotelops.com/canary-tenant/*", zone_name = "myhotelops.com" },
-    ]
-    ```
-    Deploy, then exercise the canary tenant's media (in-app, locked
-    state, unlock, cache purge) for ~24hr. Watch `wrangler tail` and
-    the Workers Analytics error rate.
+| target                 | what it does                                                       | when |
+|------------------------|--------------------------------------------------------------------|------|
+| `upload-only`          | `wrangler deploy --dry-run` — validates build + bindings           | first run, or after any non-trivial code change |
+| `canary`               | deploys with route limited to one tenant (`canary_slug` input)     | after upload-only is green |
+| `production`           | deploys with the catch-all route on `cdn.myhotelops.com/*`         | after canary has been clean for ~24hr |
+| `rollback-canary`      | `wrangler rollback --env canary` — reverts to previous version     | canary regression |
+| `rollback-production`  | `wrangler rollback --env production` — reverts to previous version | production regression |
 
-3.  **Gradual rollout to 100%.** Once the canary is clean, switch to
-    the catch-all route and use `wrangler versions` instead of a
-    direct `deploy` so traffic shifts gradually:
-    ```sh
-    npx wrangler versions upload          # uploads, doesn't activate
-    npx wrangler versions deploy --percentage 1    # 1% of traffic
-    # observe error rate for ~30min
-    npx wrangler versions deploy --percentage 10   # then 10
-    npx wrangler versions deploy --percentage 100  # then full
-    ```
-    Roll back instantly with `wrangler rollback` if error rate spikes.
+Required repo secrets (Settings → Secrets and variables → Actions):
 
-4.  **Health alert before going to 100%.** In the Cloudflare dashboard,
-    add a Notification on the Worker:
-    - Trigger: `hotelops-cdn-gate` request error rate > 1% over 5min,
-      OR p95 CPU time > 50ms over 5min.
-    - Channel: PagerDuty / Slack / email — whichever the on-call uses.
-    Without this, a regression after deploy is noticed via support
-    tickets, not metrics.
+| secret                          | what                                                                                   |
+|---------------------------------|----------------------------------------------------------------------------------------|
+| `CLOUDFLARE_API_TOKEN`          | scoped: Workers Scripts:Edit, Workers KV Storage:Edit, Workers Routes:Edit, Cache Purge |
+| `CLOUDFLARE_ACCOUNT_ID`         | the account that owns the R2 bucket                                                     |
+| `R2_BUCKET`                     | the bucket name (matches `R2_BUCKET` in app `.env`)                                     |
+| `CDN_GATE_KV_NAMESPACE_ID`      | the KV namespace id (created once via `wrangler kv namespace create`)                   |
 
-5.  **Subsequent code changes** (Worker logic, not just KV writes) go
-    through the same `wrangler versions` flow. KV/cache state changes
-    from the app side don't need this; they're per-tenant and
-    reversible.
+The repo's `wrangler.toml` keeps these out of source — CI substitutes
+them at deploy time so a wrong-account checkout can't accidentally
+publish to production.
 
-### First-time setup
+Recommended GitHub Environment protection: configure the
+`cdn-gate-production` environment with required reviewers. That turns
+every workflow_dispatch into a two-person approval gate, which is the
+cheapest enforcement of "no solo deploys to a thing that touches every
+tenant".
 
-1.  **Create the KV namespace** (one-time, in the Cloudflare dashboard or
-    CLI) and copy its id into `wrangler.toml` next to
-    `REPLACE_WITH_KV_NAMESPACE_ID`. Also set
-    `CLOUDFLARE_KV_GATE_NAMESPACE_ID` in the app's env so the app-side
-    updater knows which namespace to write to.
+### Rollout discipline
 
+The phases above exist because the Worker enters every tenant's
+request path the moment its route is live — a bad first deploy = global
+media outage. The CI workflow forces serialization (concurrency group),
+forces audit trail (deploy `--message` includes actor + reason), and
+forces human-in-the-loop between phases (no auto-promotion).
+
+Between `canary` and `production`, do these by hand once:
+
+- **Watch the canary for ~24hr.** Cloudflare → Workers → `hotelops-cdn-gate`
+  → Logs (live) and Metrics. Exercise the canary tenant: load media,
+  trigger a lock via the billing webhook, verify 403 starts firing,
+  unlock, verify 200 returns.
+- **Wire a Cloudflare Notification** before pressing `production`:
+  - Trigger: Worker request error rate > 1% over 5min, OR p95 CPU
+    time > 50ms over 5min.
+  - Channel: whatever the on-call uses (PagerDuty / Slack / email).
+  - Without this, a post-deploy regression surfaces via support
+    tickets instead of an alert.
+
+For finer-grained gradual rollout (1% → 10% → 100% within `production`),
+use `wrangler versions deploy <version-id>@<percent>` from a local
+checkout with operator credentials — that flow is too version-id-dependent
+to script cleanly in `workflow_dispatch`. The `production` target above
+does an atomic 100% deploy, which is fine for a Worker this small after
+24hr of canary baking.
+
+### First-time setup (one-off, before the first CI deploy)
+
+These are the bootstrap steps that have to happen once before CI can
+deploy. They're done by hand, not in CI, because they create the
+resources that CI then references via secrets.
+
+1.  **Create the KV namespace** locally, then store its id as the
+    `CDN_GATE_KV_NAMESPACE_ID` repo secret AND in the app env as
+    `CLOUDFLARE_KV_GATE_NAMESPACE_ID` (Vercel / `.env.local`):
     ```sh
     npx wrangler kv namespace create hotelops-gate
     ```
 
-2.  **Wire the R2 binding**: replace `REPLACE_WITH_R2_BUCKET_NAME` with
-    the same bucket name the app writes to (matches `R2_BUCKET` in
-    `.env.local`).
+2.  **Set repo secrets** (Settings → Secrets and variables → Actions):
+    `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `R2_BUCKET`,
+    `CDN_GATE_KV_NAMESPACE_ID`. See the table above for token scopes.
 
-3.  **Deploy**:
-    ```sh
-    cd workers/cdn-gate
-    npm install
-    npx wrangler deploy
-    ```
+3.  **Run the workflow** with `target=upload-only` to validate that
+    secrets + bindings + the Worker code all line up. No traffic is
+    affected.
 
-4.  **Disable the R2 public access path** — once the Worker route is up,
+4.  **Run again with `target=canary`** and a real test-tenant slug.
+    Watch for ~24hr (see "Rollout discipline").
+
+5.  **Run again with `target=production`** once canary is clean and the
+    Cloudflare Notification is wired up.
+
+6.  **Disable the R2 public access path** in the Cloudflare dashboard —
     the bucket should NOT also be reachable via its raw `*.r2.dev`
-    address or via a second custom domain. Otherwise customers can
-    bypass the gate by guessing the public URL.
+    address or a second custom domain. Otherwise customers can bypass
+    the gate by guessing the public URL.
 
-5.  **Backfill KV** from current subscription state so locked orgs are
-    immediately gated:
+7.  **Backfill KV** from current subscription state so already-locked
+    orgs are immediately gated:
     ```sh
-    npm run sync:cdn-gate
+    npm run sync:cdn-gate -- --apply
     ```
-    Re-run after enabling the Worker, or any time KV gets out of sync.
+    Re-run any time KV drifts from the DB (manual edits, namespace
+    rotation, etc.).
 
 ### Required env in Vercel / `.env.local`
 
