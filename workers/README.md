@@ -31,6 +31,73 @@ lock-application time after KV write is ~1hr unless we also purge the
 zone's cache for that prefix (Enterprise tag-purge or per-URL purges via
 the CF API).
 
+### Multi-tenant impact
+
+The bucket is shared across all tenants, so once the Worker route is on
+**every** media request flows through the Worker — paying or not. The
+gate's *decision* is per-tenant (KV key includes the org slug, cache is
+tagged per org), so a lock on tenant A can never accidentally affect
+tenant B. The shared-fate concern is the request path itself:
+
+- **Latency tax**: ~2–5ms per request (Worker exec + edge KV read,
+  warm-path sub-ms after first hit per colo). All tenants pay this.
+- **Worker bug / Cloudflare incident**: a bad deploy or a Workers
+  outage takes down media for all tenants, not just locked ones. The
+  Worker is intentionally tiny (no third-party deps) to minimize this.
+- **KV unreachable**: handled — Worker fails OPEN, paying tenants keep
+  getting served while we lose enforcement on locked ones for the
+  duration of the incident.
+- **No data crossover**: Worker only reads the request path, looks up
+  its own KV key, proxies to R2. Can't serve A's content to B because
+  R2 keys are deterministic from the request URL.
+
+### Rollout strategy (do this, not a one-shot deploy)
+
+The Worker enters every tenant's request path the moment its route is
+live, so a bad first deploy = global media outage. Roll it out
+incrementally:
+
+1.  **Deploy without a route first.** In `wrangler.toml`, comment out
+    the `routes = [...]` block, then `wrangler deploy`. The Worker
+    exists but receives no traffic. Verify it's healthy in the
+    dashboard.
+
+2.  **Canary on one tenant** before flipping the catch-all. Add a
+    narrow route for one internal/test tenant first:
+    ```toml
+    routes = [
+      { pattern = "cdn.myhotelops.com/canary-tenant/*", zone_name = "myhotelops.com" },
+    ]
+    ```
+    Deploy, then exercise the canary tenant's media (in-app, locked
+    state, unlock, cache purge) for ~24hr. Watch `wrangler tail` and
+    the Workers Analytics error rate.
+
+3.  **Gradual rollout to 100%.** Once the canary is clean, switch to
+    the catch-all route and use `wrangler versions` instead of a
+    direct `deploy` so traffic shifts gradually:
+    ```sh
+    npx wrangler versions upload          # uploads, doesn't activate
+    npx wrangler versions deploy --percentage 1    # 1% of traffic
+    # observe error rate for ~30min
+    npx wrangler versions deploy --percentage 10   # then 10
+    npx wrangler versions deploy --percentage 100  # then full
+    ```
+    Roll back instantly with `wrangler rollback` if error rate spikes.
+
+4.  **Health alert before going to 100%.** In the Cloudflare dashboard,
+    add a Notification on the Worker:
+    - Trigger: `hotelops-cdn-gate` request error rate > 1% over 5min,
+      OR p95 CPU time > 50ms over 5min.
+    - Channel: PagerDuty / Slack / email — whichever the on-call uses.
+    Without this, a regression after deploy is noticed via support
+    tickets, not metrics.
+
+5.  **Subsequent code changes** (Worker logic, not just KV writes) go
+    through the same `wrangler versions` flow. KV/cache state changes
+    from the app side don't need this; they're per-tenant and
+    reversible.
+
 ### First-time setup
 
 1.  **Create the KV namespace** (one-time, in the Cloudflare dashboard or
