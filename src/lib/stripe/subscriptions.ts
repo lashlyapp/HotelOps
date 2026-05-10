@@ -1,5 +1,6 @@
 import 'server-only'
 import type Stripe from 'stripe'
+import { syncGateToCdn } from '@/lib/billing/cdn-gate'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { BillingSubscription, BillingSubscriptionStatus } from '@/lib/supabase/types'
 import { stripe } from './client'
@@ -204,6 +205,18 @@ export async function syncSubscriptionToDb(
     .from('billing_subscriptions')
     .upsert(update, { onConflict: 'org_id' })
   if (error) throw error
+
+  // Propagate the (possibly new) gate state to Cloudflare KV so the
+  // cdn-gate Worker enforces it on incoming media requests. No-op when CF
+  // env isn't configured (local dev / pre-deploy).
+  try {
+    await syncGateToCdn(orgId)
+  } catch (err) {
+    console.warn(
+      '[billing] syncGateToCdn failed; CDN gate may be stale until next event',
+      err instanceof Error ? err.message : err,
+    )
+  }
 }
 
 /**

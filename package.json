@@ -9,6 +9,8 @@
     "lint": "eslint",
     "test": "tsx --conditions=react-server --test \"src/**/*.test.ts\"",
     "onboard:tenant": "tsx scripts/onboard-tenant.ts",
+    "sync:cdn-gate": "tsx --conditions=react-server scripts/sync-cdn-gate.ts",
+    "verify:billing-readiness": "tsx --conditions=react-server scripts/verify-billing-readiness.ts",
     "bootstrap:admin": "tsx scripts/bootstrap-admin.ts",
     "start:subscription": "tsx scripts/start-subscription.ts"
   },
