@@ -1,0 +1,147 @@
+# Manual-trigger deploy for the cdn-gate Worker. Never auto-deploys —
+# this Worker enters the request path of every tenant the moment its
+# route is live, so each phase requires a human pressing the button.
+#
+# Roll-out sequence (separate workflow runs, with observation windows
+# between them — see workers/README.md):
+#   1. target=upload-only            → validates build + bindings, no traffic
+#   2. target=canary  + canary_slug  → one tenant only, watch for ~24hr
+#   3. target=production             → catch-all route, all tenants
+#
+# Emergency rollback (reverts to previous Worker version on the same env,
+# bindings + routes unchanged — fastest way to undo a bad code deploy):
+#   target=rollback-canary
+#   target=rollback-production
+
+name: Deploy cdn-gate Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deployment phase
+        required: true
+        type: choice
+        options:
+          - upload-only
+          - canary
+          - production
+          - rollback-canary
+          - rollback-production
+      canary_slug:
+        description: 'Org slug to canary (only used when target=canary)'
+        required: false
+        default: canary-tenant
+      reason:
+        description: 'Reason / linked alert (audit trail in deploy message)'
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  # Serialize deploys so two operators can't race each other into a
+  # half-rolled-out state.
+  group: cdn-gate-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: ${{ inputs.target }}
+    runs-on: ubuntu-latest
+    # Configure this environment in GitHub repo settings with required
+    # reviewers — that turns every dispatch into an approval gate, which
+    # is the cheapest way to enforce two-person sign-off on changes that
+    # touch every tenant.
+    environment: cdn-gate-production
+    defaults:
+      run:
+        working-directory: workers/cdn-gate
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: workers/cdn-gate/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Type-check Worker
+        run: npx tsc --noEmit
+
+      - name: Substitute placeholders into wrangler.toml
+        # Real values live in repo secrets so a checkout in a fork or
+        # wrong account can't deploy to production by accident. The
+        # working `wrangler.toml` is regenerated per run and discarded.
+        env:
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          KV_ID: ${{ secrets.CDN_GATE_KV_NAMESPACE_ID }}
+          CANARY_SLUG: ${{ inputs.canary_slug }}
+        run: |
+          set -euo pipefail
+          : "${R2_BUCKET:?secret R2_BUCKET is not set}"
+          : "${KV_ID:?secret CDN_GATE_KV_NAMESPACE_ID is not set}"
+          sed -i \
+            -e "s|REPLACE_WITH_R2_BUCKET_NAME|${R2_BUCKET}|g" \
+            -e "s|REPLACE_WITH_KV_NAMESPACE_ID|${KV_ID}|g" \
+            -e "s|CANARY_SLUG|${CANARY_SLUG}|g" \
+            wrangler.toml
+          echo '── effective wrangler.toml ──' >&2
+          cat wrangler.toml >&2
+
+      # ─── upload-only: validate build + bindings, no traffic ────────────
+      - name: Upload-only (dry run)
+        if: inputs.target == 'upload-only'
+        run: |
+          npx wrangler deploy --dry-run --outdir dist
+          echo '✅ dry-run OK — no Worker pushed, no traffic affected'
+
+      # ─── canary: deploy to single-tenant route ─────────────────────────
+      - name: Deploy canary
+        if: inputs.target == 'canary'
+        run: |
+          : "${CANARY_SLUG:?inputs.canary_slug is required for target=canary}"
+          npx wrangler deploy \
+            --env canary \
+            --message "canary[$CANARY_SLUG] · ${{ github.actor }} · ${{ inputs.reason }}"
+        env:
+          CANARY_SLUG: ${{ inputs.canary_slug }}
+
+      # ─── production: catch-all route, all tenants ──────────────────────
+      - name: Deploy production
+        if: inputs.target == 'production'
+        run: |
+          npx wrangler deploy \
+            --env production \
+            --message "production · ${{ github.actor }} · ${{ inputs.reason }}"
+
+      # ─── rollback: revert to previous Worker version on the env ────────
+      - name: Rollback canary
+        if: inputs.target == 'rollback-canary'
+        run: |
+          npx wrangler rollback --env canary \
+            --message "rollback · ${{ github.actor }} · ${{ inputs.reason }}"
+
+      - name: Rollback production
+        if: inputs.target == 'rollback-production'
+        run: |
+          npx wrangler rollback --env production \
+            --message "rollback · ${{ github.actor }} · ${{ inputs.reason }}"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## cdn-gate deploy: ${{ inputs.target }}"
+            echo ""
+            echo "- actor: ${{ github.actor }}"
+            echo "- canary_slug: \`${{ inputs.canary_slug }}\`"
+            echo "- reason: ${{ inputs.reason }}"
+            echo "- result: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
