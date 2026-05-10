@@ -8,6 +8,11 @@
 #   2. target=canary  + canary_slug  → one tenant only, watch for ~24hr
 #   3. target=production             → catch-all route, all tenants
 #
+# Backfill (`sync:cdn-gate --apply`) runs automatically after both
+# canary and production deploys so KV reflects current sub state the
+# moment the new route is live. `target=sync-only` re-runs it without
+# touching the Worker (handy if KV ever drifts from the DB).
+#
 # Emergency rollback (reverts to previous Worker version on the same env,
 # bindings + routes unchanged — fastest way to undo a bad code deploy):
 #   target=rollback-canary
@@ -26,6 +31,7 @@ on:
           - upload-only
           - canary
           - production
+          - sync-only
           - rollback-canary
           - rollback-production
       canary_slug:
@@ -54,9 +60,6 @@ jobs:
     # is the cheapest way to enforce two-person sign-off on changes that
     # touch every tenant.
     environment: cdn-gate-production
-    defaults:
-      run:
-        working-directory: workers/cdn-gate
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -67,26 +70,64 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: workers/cdn-gate/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            workers/cdn-gate/package-lock.json
 
-      - name: Install
+      - name: Install Worker deps
+        working-directory: workers/cdn-gate
         run: npm ci
 
       - name: Type-check Worker
+        working-directory: workers/cdn-gate
         run: npx tsc --noEmit
 
+      # Discover or create the KV namespace so the operator never has to
+      # run `wrangler kv namespace create` by hand. Idempotent: if a
+      # namespace titled hotelops-gate already exists in the account,
+      # we use its id; otherwise we create one and use the new id.
+      # The id is printed to the job summary so it can be pasted into
+      # Vercel as CLOUDFLARE_KV_GATE_NAMESPACE_ID (one-time, since the
+      # app side also needs it to write KV from the webhook handler).
+      - name: Discover or create KV namespace
+        id: kv
+        working-directory: workers/cdn-gate
+        run: |
+          set -euo pipefail
+          NS_TITLE=hotelops-gate
+          LIST_JSON=$(npx wrangler kv namespace list)
+          KV_ID=$(echo "$LIST_JSON" | jq -r --arg t "$NS_TITLE" \
+            '.[] | select(.title == $t) | .id' | head -n1)
+          if [ -z "$KV_ID" ]; then
+            echo "No '$NS_TITLE' KV namespace found; creating…"
+            CREATE_OUT=$(npx wrangler kv namespace create "$NS_TITLE")
+            echo "$CREATE_OUT"
+            # wrangler prints `id = "abcdef…"` (TOML snippet).
+            KV_ID=$(echo "$CREATE_OUT" | grep -oE '"[0-9a-f]{32}"' | head -n1 | tr -d '"')
+          fi
+          if [ -z "$KV_ID" ]; then
+            echo "Failed to discover or create KV namespace '$NS_TITLE'." >&2
+            exit 1
+          fi
+          echo "kv_id=$KV_ID" >> "$GITHUB_OUTPUT"
+          {
+            echo "## KV namespace"
+            echo ""
+            echo "Using \`$NS_TITLE\` = \`$KV_ID\`"
+            echo ""
+            echo "If \`CLOUDFLARE_KV_GATE_NAMESPACE_ID\` isn't set in the app env (Vercel), paste the value above so the webhook handler can write KV from the app side."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Substitute placeholders into wrangler.toml
-        # Real values live in repo secrets so a checkout in a fork or
-        # wrong account can't deploy to production by accident. The
-        # working `wrangler.toml` is regenerated per run and discarded.
+        working-directory: workers/cdn-gate
         env:
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
-          KV_ID: ${{ secrets.CDN_GATE_KV_NAMESPACE_ID }}
+          KV_ID: ${{ steps.kv.outputs.kv_id }}
           CANARY_SLUG: ${{ inputs.canary_slug }}
         run: |
           set -euo pipefail
           : "${R2_BUCKET:?secret R2_BUCKET is not set}"
-          : "${KV_ID:?secret CDN_GATE_KV_NAMESPACE_ID is not set}"
+          : "${KV_ID:?KV namespace id was not resolved}"
           sed -i \
             -e "s|REPLACE_WITH_R2_BUCKET_NAME|${R2_BUCKET}|g" \
             -e "s|REPLACE_WITH_KV_NAMESPACE_ID|${KV_ID}|g" \
@@ -98,6 +139,7 @@ jobs:
       # ─── upload-only: validate build + bindings, no traffic ────────────
       - name: Upload-only (dry run)
         if: inputs.target == 'upload-only'
+        working-directory: workers/cdn-gate
         run: |
           npx wrangler deploy --dry-run --outdir dist
           echo '✅ dry-run OK — no Worker pushed, no traffic affected'
@@ -105,17 +147,19 @@ jobs:
       # ─── canary: deploy to single-tenant route ─────────────────────────
       - name: Deploy canary
         if: inputs.target == 'canary'
+        working-directory: workers/cdn-gate
+        env:
+          CANARY_SLUG: ${{ inputs.canary_slug }}
         run: |
           : "${CANARY_SLUG:?inputs.canary_slug is required for target=canary}"
           npx wrangler deploy \
             --env canary \
             --message "canary[$CANARY_SLUG] · ${{ github.actor }} · ${{ inputs.reason }}"
-        env:
-          CANARY_SLUG: ${{ inputs.canary_slug }}
 
       # ─── production: catch-all route, all tenants ──────────────────────
       - name: Deploy production
         if: inputs.target == 'production'
+        working-directory: workers/cdn-gate
         run: |
           npx wrangler deploy \
             --env production \
@@ -124,20 +168,39 @@ jobs:
       # ─── rollback: revert to previous Worker version on the env ────────
       - name: Rollback canary
         if: inputs.target == 'rollback-canary'
+        working-directory: workers/cdn-gate
         run: |
           npx wrangler rollback --env canary \
             --message "rollback · ${{ github.actor }} · ${{ inputs.reason }}"
 
       - name: Rollback production
         if: inputs.target == 'rollback-production'
+        working-directory: workers/cdn-gate
         run: |
           npx wrangler rollback --env production \
             --message "rollback · ${{ github.actor }} · ${{ inputs.reason }}"
+
+      # ─── backfill KV from DB ──────────────────────────────────────────
+      # Runs after canary / production deploys so KV reflects current
+      # sub state the moment the new route is live. Also the entire job
+      # for sync-only target. Re-running is idempotent.
+      - name: Install app deps (for backfill script)
+        if: contains(fromJSON('["canary","production","sync-only"]'), inputs.target)
+        run: npm ci
+
+      - name: Backfill KV from current subscription state
+        if: contains(fromJSON('["canary","production","sync-only"]'), inputs.target)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CLOUDFLARE_KV_GATE_NAMESPACE_ID: ${{ steps.kv.outputs.kv_id }}
+        run: npm run sync:cdn-gate -- --apply
 
       - name: Summary
         if: always()
         run: |
           {
+            echo ""
             echo "## cdn-gate deploy: ${{ inputs.target }}"
             echo ""
             echo "- actor: ${{ github.actor }}"

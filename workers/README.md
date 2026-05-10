@@ -61,22 +61,32 @@ because each one is a separate manual workflow_dispatch.
 
 The workflow exposes one input — **target** — with these phases:
 
-| target                 | what it does                                                       | when |
-|------------------------|--------------------------------------------------------------------|------|
-| `upload-only`          | `wrangler deploy --dry-run` — validates build + bindings           | first run, or after any non-trivial code change |
-| `canary`               | deploys with route limited to one tenant (`canary_slug` input)     | after upload-only is green |
-| `production`           | deploys with the catch-all route on `cdn.myhotelops.com/*`         | after canary has been clean for ~24hr |
-| `rollback-canary`      | `wrangler rollback --env canary` — reverts to previous version     | canary regression |
-| `rollback-production`  | `wrangler rollback --env production` — reverts to previous version | production regression |
+| target                 | what it does                                                                       | when |
+|------------------------|------------------------------------------------------------------------------------|------|
+| `upload-only`          | `wrangler deploy --dry-run` — validates build + bindings                           | first run, or after any non-trivial code change |
+| `canary`               | deploys with route limited to one tenant (`canary_slug` input) + backfills KV     | after upload-only is green |
+| `production`           | deploys with the catch-all route on `cdn.myhotelops.com/*` + backfills KV         | after canary has been clean for ~24hr |
+| `sync-only`            | re-runs `npm run sync:cdn-gate -- --apply` only (no Worker deploy)                | KV drift after manual edits / namespace rotation |
+| `rollback-canary`      | `wrangler rollback --env canary` — reverts to previous version                     | canary regression |
+| `rollback-production`  | `wrangler rollback --env production` — reverts to previous version                 | production regression |
+
+The workflow handles the KV namespace itself: on every run it looks for
+a namespace titled `hotelops-gate` in your Cloudflare account, creates
+it if missing, and uses that id for the deploy + backfill. No manual
+`wrangler kv namespace create` step. The id is printed to the workflow
+job summary so you can paste it into Vercel as
+`CLOUDFLARE_KV_GATE_NAMESPACE_ID` (the one piece the app side also
+needs, so the webhook handler can write KV from server actions).
 
 Required repo secrets (Settings → Secrets and variables → Actions):
 
-| secret                          | what                                                                                   |
-|---------------------------------|----------------------------------------------------------------------------------------|
-| `CLOUDFLARE_API_TOKEN`          | scoped: Workers Scripts:Edit, Workers KV Storage:Edit, Workers Routes:Edit, Cache Purge |
-| `CLOUDFLARE_ACCOUNT_ID`         | the account that owns the R2 bucket                                                     |
-| `R2_BUCKET`                     | the bucket name (matches `R2_BUCKET` in app `.env`)                                     |
-| `CDN_GATE_KV_NAMESPACE_ID`      | the KV namespace id (created once via `wrangler kv namespace create`)                   |
+| secret                        | what                                                                                                |
+|-------------------------------|-----------------------------------------------------------------------------------------------------|
+| `CLOUDFLARE_API_TOKEN`        | scoped: Workers Scripts:Edit, Workers KV Storage:Edit, Workers Routes:Edit, Cache Purge             |
+| `CLOUDFLARE_ACCOUNT_ID`       | the account that owns the R2 bucket                                                                 |
+| `R2_BUCKET`                   | the bucket name (same value as the app's `R2_BUCKET` env)                                           |
+| `NEXT_PUBLIC_SUPABASE_URL`    | for backfill: lets the workflow read `billing_subscriptions` + `organizations` to compute KV state  |
+| `SUPABASE_SERVICE_ROLE_KEY`   | same — service-role read on the billing tables                                                      |
 
 The repo's `wrangler.toml` keeps these out of source — CI substitutes
 them at deploy time so a wrong-account checkout can't accidentally
@@ -118,43 +128,38 @@ does an atomic 100% deploy, which is fine for a Worker this small after
 
 ### First-time setup (one-off, before the first CI deploy)
 
-These are the bootstrap steps that have to happen once before CI can
-deploy. They're done by hand, not in CI, because they create the
-resources that CI then references via secrets.
+These are the bootstrap steps that have to happen once. After this,
+every deploy is just a workflow_dispatch button press.
 
-1.  **Create the KV namespace** locally, then store its id as the
-    `CDN_GATE_KV_NAMESPACE_ID` repo secret AND in the app env as
-    `CLOUDFLARE_KV_GATE_NAMESPACE_ID` (Vercel / `.env.local`):
-    ```sh
-    npx wrangler kv namespace create hotelops-gate
-    ```
-
-2.  **Set repo secrets** (Settings → Secrets and variables → Actions):
+1.  **Set repo secrets** (Settings → Secrets and variables → Actions):
     `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `R2_BUCKET`,
-    `CDN_GATE_KV_NAMESPACE_ID`. See the table above for token scopes.
+    `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. See the
+    table above for token scopes.
 
-3.  **Run the workflow** with `target=upload-only` to validate that
-    secrets + bindings + the Worker code all line up. No traffic is
-    affected.
+2.  **Run the workflow** with `target=upload-only`. This both validates
+    the wiring AND auto-creates the `hotelops-gate` KV namespace if it
+    doesn't exist. The namespace id appears in the job summary.
+
+3.  **Add the printed KV namespace id to Vercel** as
+    `CLOUDFLARE_KV_GATE_NAMESPACE_ID`. This is the one piece the app
+    side also needs — the webhook handler writes KV from server-side
+    code, and without it `syncGateToCdn` silently no-ops. Future
+    workflow runs reuse the same namespace, so this is one-time only.
 
 4.  **Run again with `target=canary`** and a real test-tenant slug.
-    Watch for ~24hr (see "Rollout discipline").
+    The workflow deploys the canary route AND backfills KV in the same
+    run. Watch for ~24hr (see "Rollout discipline").
 
 5.  **Run again with `target=production`** once canary is clean and the
-    Cloudflare Notification is wired up.
+    Cloudflare Notification is wired up. Same deal: deploy + backfill in
+    one run.
 
 6.  **Disable the R2 public access path** in the Cloudflare dashboard —
     the bucket should NOT also be reachable via its raw `*.r2.dev`
     address or a second custom domain. Otherwise customers can bypass
-    the gate by guessing the public URL.
-
-7.  **Backfill KV** from current subscription state so already-locked
-    orgs are immediately gated:
-    ```sh
-    npm run sync:cdn-gate -- --apply
-    ```
-    Re-run any time KV drifts from the DB (manual edits, namespace
-    rotation, etc.).
+    the gate by guessing the public URL. (This is the only step that
+    can't sensibly be automated — it's a one-click toggle in the R2
+    settings UI, and getting it wrong opens the bypass.)
 
 ### Required env in Vercel / `.env.local`
 
