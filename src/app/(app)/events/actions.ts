@@ -189,7 +189,7 @@ export async function saveSpaceAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   const propertyId = trim(formData.get('property_id'))
   const name = trim(formData.get('name'))
@@ -231,7 +231,7 @@ export async function saveSpaceAction(
 }
 
 export async function deleteSpaceAction(formData: FormData) {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   if (!id) return
   const admin = createAdminClient()
@@ -250,7 +250,7 @@ export async function createEventAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const propertyId = trim(formData.get('property_id'))
   const name = trim(formData.get('name'))
   const eventType = trim(formData.get('event_type')) as EventType
@@ -310,7 +310,7 @@ export async function updateEventDetailsAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   if (!id) return { error: 'Missing event.' }
   const existing = await loadEventForOrg(session.organization.id, id)
@@ -355,7 +355,7 @@ export async function updateEventDetailsAction(
 }
 
 export async function changeStatusAction(formData: FormData) {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   const next = trim(formData.get('status')) as EventStatus
   if (!id || !EVENT_STATUSES.includes(next)) return
@@ -380,7 +380,7 @@ export async function changeStatusAction(formData: FormData) {
 }
 
 export async function deleteEventAction(formData: FormData) {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   if (!id) return
   const admin = createAdminClient()
@@ -400,7 +400,7 @@ export async function updateRatesAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   if (!id) return { error: 'Missing event.' }
   const existing = await loadEventForOrg(session.organization.id, id)
@@ -436,7 +436,7 @@ export async function addLineItemAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const eventId = trim(formData.get('event_id'))
   if (!eventId) return { error: 'Missing event.' }
   const existing = await loadEventForOrg(session.organization.id, eventId)
@@ -474,7 +474,7 @@ export async function addLineItemAction(
 }
 
 export async function deleteLineItemAction(formData: FormData) {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   const eventId = trim(formData.get('event_id'))
   if (!id || !eventId) return
@@ -495,7 +495,7 @@ export async function addScheduleBlockAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const eventId = trim(formData.get('event_id'))
   if (!eventId) return { error: 'Missing event.' }
   const existing = await loadEventForOrg(session.organization.id, eventId)
@@ -530,7 +530,7 @@ export async function addScheduleBlockAction(
 }
 
 export async function deleteScheduleBlockAction(formData: FormData) {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   const eventId = trim(formData.get('event_id'))
   if (!id || !eventId) return
@@ -550,7 +550,7 @@ export async function addPaymentAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const eventId = trim(formData.get('event_id'))
   if (!eventId) return { error: 'Missing event.' }
   const existing = await loadEventForOrg(session.organization.id, eventId)
@@ -587,7 +587,7 @@ export async function addPaymentAction(
 }
 
 export async function deletePaymentAction(formData: FormData) {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   const eventId = trim(formData.get('event_id'))
   if (!id || !eventId) return
@@ -606,7 +606,7 @@ export async function deletePaymentAction(formData: FormData) {
 // email — the user copies the link from the UI in v1.
 // ----------------------------------------------------------------------------
 export async function generateProposalLinkAction(formData: FormData) {
-  const session = await requireOrgUser()
+  const session = await requireOrgUser({ write: true })
   const id = trim(formData.get('id'))
   if (!id) return
   const existing = await loadEventForOrg(session.organization.id, id)

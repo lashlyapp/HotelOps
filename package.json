@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --conditions=react-server --test \"src/**/*.test.ts\"",
     "onboard:tenant": "tsx scripts/onboard-tenant.ts",
     "bootstrap:admin": "tsx scripts/bootstrap-admin.ts",
     "start:subscription": "tsx scripts/start-subscription.ts"
@@ -20,6 +21,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^6.12.3",
+    "server-only": "^0.0.1",
     "stripe": "^22.1.1"
   },
   "devDependencies": {

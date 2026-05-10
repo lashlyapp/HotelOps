@@ -1,8 +1,15 @@
 import 'server-only'
 import { redirect } from 'next/navigation'
 import { isInternalEmail } from '@/lib/admin/policy'
+import { computeGate, type BillingGate } from '@/lib/billing/gate'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import type { Organization, Profile, Property } from '@/lib/supabase/types'
+import type {
+  BillingSubscription,
+  Organization,
+  Profile,
+  Property,
+} from '@/lib/supabase/types'
 
 /**
  * Three callers with different access requirements.
@@ -23,6 +30,9 @@ type UserSession = {
 export type OrgSession = UserSession & {
   organization: Organization
   properties: Property[]
+  /** Billing gate decision for this org. Always present so any server action
+   *  / page that uses the session can check `session.gate.restrictWrites`. */
+  gate: BillingGate
 }
 
 export async function requireUser(): Promise<UserSession> {
@@ -47,7 +57,18 @@ export async function requireUser(): Promise<UserSession> {
   }
 }
 
-export async function requireOrgUser(): Promise<OrgSession> {
+export type RequireOrgUserOptions = {
+  /**
+   * When true, redirect to /billing if the org is gated from writes
+   * (past_due ≥ 15 days, paused, canceled). Use in server actions that
+   * mutate data so the user lands on the page that explains the lock.
+   */
+  write?: boolean
+}
+
+export async function requireOrgUser(
+  opts: RequireOrgUserOptions = {},
+): Promise<OrgSession> {
   const base = await requireUser()
   if (!base.profile.org_id) {
     if (base.profile.role === 'platform_admin') redirect('/admin')
@@ -55,24 +76,39 @@ export async function requireOrgUser(): Promise<OrgSession> {
   }
 
   const supabase = await createClient()
-  const [{ data: organization }, { data: properties }] = await Promise.all([
-    supabase
-      .from('organizations')
-      .select('*')
-      .eq('id', base.profile.org_id)
-      .maybeSingle(),
-    supabase
-      .from('properties')
-      .select('*')
-      .eq('org_id', base.profile.org_id)
-      .order('name', { ascending: true }),
-  ])
+  const admin = createAdminClient()
+  const [{ data: organization }, { data: properties }, { data: subscription }] =
+    await Promise.all([
+      supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', base.profile.org_id)
+        .maybeSingle(),
+      supabase
+        .from('properties')
+        .select('*')
+        .eq('org_id', base.profile.org_id)
+        .order('name', { ascending: true }),
+      // Read with the service role so a stale session cookie from before
+      // the RLS policy was applied doesn't blow up here.
+      admin
+        .from('billing_subscriptions')
+        .select('*')
+        .eq('org_id', base.profile.org_id)
+        .maybeSingle(),
+    ])
   if (!organization) redirect('/login?error=no_org')
+
+  const gate = computeGate((subscription as BillingSubscription | null) ?? null)
+  if (opts.write && gate.restrictWrites) {
+    redirect('/billing?gated=1')
+  }
 
   return {
     ...base,
     organization: organization as Organization,
     properties: (properties ?? []) as Property[],
+    gate,
   }
 }
 
@@ -100,3 +136,21 @@ export async function requireOrgOwner(): Promise<OrgSession> {
  */
 export const requireSession = requireOrgUser
 export type Session = OrgSession
+
+/**
+ * Gate helper for ActionResult-returning server actions. Returns null when
+ * writes are allowed, or `{ error }` to short-circuit the action.
+ *
+ *   const blocked = denyIfRestricted(session)
+ *   if (blocked) return blocked
+ */
+export function denyIfRestricted(
+  session: OrgSession,
+): { error: string } | null {
+  if (!session.gate.restrictWrites) return null
+  return {
+    error:
+      session.gate.message ??
+      'Editing is locked while billing is past due. Update payment in Billing.',
+  }
+}

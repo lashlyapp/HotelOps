@@ -1,13 +1,18 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Badge } from '@/components/ui/badge'
+import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requirePlatformAdmin } from '@/lib/auth/session'
 import { r2PublicUrl } from '@/lib/r2/client'
 import { listMediaForPrefix } from '@/lib/r2/list'
 import { computeLibraryStats, formatBytes, formatRelative } from '@/lib/r2/stats'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { AppRole, Organization, Property } from '@/lib/supabase/types'
+import type {
+  AppRole,
+  BillingSubscription,
+  Organization,
+  Property,
+} from '@/lib/supabase/types'
 import { AddMemberSection } from './_components/add-member-section'
 import { AddPropertySection } from './_components/add-property-section'
 import { DeleteTenantSection } from './_components/delete-tenant-section'
@@ -34,7 +39,7 @@ export default async function TenantDetailPage({
   const data = await loadTenant(id)
   if (!data) notFound()
 
-  const { organization, properties, members } = data
+  const { organization, properties, members, subscription } = data
 
   // Per-property R2 listing — small property counts in v1, fine to fan out.
   const propertyStats = await Promise.all(
@@ -69,6 +74,8 @@ export default async function TenantDetailPage({
       </div>
 
       <OrgNameSection orgId={organization.id} initialName={organization.name} />
+
+      <BillingSection subscription={subscription} />
 
       <Card>
         <CardHeader>
@@ -220,18 +227,24 @@ async function loadTenant(orgId: string) {
     .maybeSingle()
   if (!organization) return null
 
-  const [{ data: properties }, { data: profiles }] = await Promise.all([
-    admin
-      .from('properties')
-      .select('*')
-      .eq('org_id', orgId)
-      .order('name', { ascending: true }),
-    admin
-      .from('profiles')
-      .select('id, role, full_name, created_at')
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: true }),
-  ])
+  const [{ data: properties }, { data: profiles }, { data: subscription }] =
+    await Promise.all([
+      admin
+        .from('properties')
+        .select('*')
+        .eq('org_id', orgId)
+        .order('name', { ascending: true }),
+      admin
+        .from('profiles')
+        .select('id, role, full_name, created_at')
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: true }),
+      admin
+        .from('billing_subscriptions')
+        .select('*')
+        .eq('org_id', orgId)
+        .maybeSingle(),
+    ])
 
   // Resolve emails via auth admin API.
   const emailById = new Map<string, string>()
@@ -258,5 +271,118 @@ async function loadTenant(orgId: string) {
     organization: organization as Organization,
     properties: (properties ?? []) as Property[],
     members,
+    subscription: (subscription as BillingSubscription | null) ?? null,
   }
+}
+
+function BillingSection({
+  subscription,
+}: {
+  subscription: BillingSubscription | null
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Billing</CardTitle>
+      </CardHeader>
+      <CardBody className="space-y-3 text-sm">
+        {!subscription ? (
+          <p className="text-muted">
+            No subscription on file. Run{' '}
+            <code className="font-mono text-xs bg-surface-muted px-1 py-0.5 rounded">
+              npm run start:subscription -- --org-slug=…
+            </code>{' '}
+            to create one.
+          </p>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <BillingStatusBadge status={subscription.status} />
+              {subscription.cancel_at_period_end ? (
+                <Badge tone="warning">Cancels at period end</Badge>
+              ) : null}
+              {subscription.past_due_since ? (
+                <Badge tone="danger">
+                  Past due since{' '}
+                  {new Date(subscription.past_due_since).toLocaleDateString()}
+                </Badge>
+              ) : null}
+            </div>
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              <Field label="Plan">{formatPlan(subscription)}</Field>
+              <Field label="Payment method">
+                {subscription.default_payment_method_id
+                  ? `${subscription.default_payment_brand ?? 'Card'} ···· ${subscription.default_payment_last4 ?? '••••'}`
+                  : 'None on file'}
+              </Field>
+              <Field label="Renews">
+                {subscription.current_period_end
+                  ? new Date(subscription.current_period_end).toLocaleDateString()
+                  : '—'}
+              </Field>
+              <Field label="Cooling deadline">
+                {subscription.payment_method_due_at
+                  ? new Date(subscription.payment_method_due_at).toLocaleDateString()
+                  : '—'}
+              </Field>
+              <Field label="Stripe Customer">
+                <code className="font-mono text-xs">
+                  {subscription.stripe_customer_id}
+                </code>
+              </Field>
+              <Field label="Stripe Subscription">
+                <code className="font-mono text-xs">
+                  {subscription.stripe_subscription_id ?? '—'}
+                </code>
+              </Field>
+            </dl>
+          </>
+        )}
+      </CardBody>
+    </Card>
+  )
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <dt className="text-xs uppercase tracking-wider text-subtle">{label}</dt>
+      <dd className="mt-0.5 text-fg">{children}</dd>
+    </div>
+  )
+}
+
+function BillingStatusBadge({
+  status,
+}: {
+  status: BillingSubscription['status']
+}) {
+  const tone: BadgeProps['tone'] =
+    status === 'active'
+      ? 'success'
+      : status === 'trialing'
+        ? 'info'
+        : status === 'past_due' || status === 'unpaid' || status === 'paused'
+          ? 'warning'
+          : status === 'canceled' || status === 'incomplete_expired'
+            ? 'danger'
+            : 'neutral'
+  return <Badge tone={tone}>{status.replace(/_/g, ' ')}</Badge>
+}
+
+function formatPlan(s: BillingSubscription): string {
+  if (s.unit_amount_cents == null) return '—'
+  const cur = (s.currency || 'USD').toUpperCase()
+  const fmt = (cents: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: cur }).format(
+      cents / 100,
+    )
+  if (s.quantity <= 1) return `${fmt(s.unit_amount_cents)}/mo`
+  return `${fmt(s.unit_amount_cents)} × ${s.quantity} = ${fmt(s.unit_amount_cents * s.quantity)}/mo`
 }
