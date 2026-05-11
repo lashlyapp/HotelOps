@@ -237,8 +237,13 @@ the first invoice. The flow:
 
 1. Create a separate Stripe account for HotelOps (sole-prop is fine to start).
 2. Create the recurring per-property Price ($100/mo) in the Dashboard and
-   copy its id into `STRIPE_PRICE_ID`. Create a one-time Price for the $250
-   setup fee and copy it into `STRIPE_SETUP_FEE_PRICE_ID`.
+   assign it the lookup key `hotelops_per_property_monthly`. Optionally
+   create a one-time Price for the setup fee with lookup key
+   `hotelops_setup_fee`. The app resolves these to actual Price ids at
+   runtime, so updating pricing only requires creating a new Price and
+   transferring the lookup key onto it (`transfer_lookup_key=true`) — no
+   redeploy, no env changes, existing subscriptions stay on their
+   grandfathered Price.
 3. Configure the webhook endpoint at `https://app.myhotelops.com/api/stripe/webhook`
    with these events: `customer.subscription.created`,
    `customer.subscription.updated`, `customer.subscription.deleted`,
