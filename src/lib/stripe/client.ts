@@ -30,15 +30,3 @@ export function stripeWebhookSecret(): string {
   if (!v) throw new Error('STRIPE_WEBHOOK_SECRET is not set')
   return v
 }
-
-export function stripePriceId(): string {
-  const v = process.env.STRIPE_PRICE_ID
-  if (!v) throw new Error('STRIPE_PRICE_ID is not set')
-  return v
-}
-
-/** Optional one-time setup fee Price id — added to the first invoice when set. */
-export function stripeSetupFeePriceId(): string | undefined {
-  const v = process.env.STRIPE_SETUP_FEE_PRICE_ID
-  return v && v.length > 0 ? v : undefined
-}

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { requireOrgOwner } from '@/lib/auth/session'
+import { stripe } from '@/lib/stripe/client'
 import {
-  stripe,
-  stripePriceId,
-  stripeSetupFeePriceId,
-} from '@/lib/stripe/client'
+  HOTELOPS_PRICE_LOOKUP_KEYS,
+  requirePriceIdByLookupKey,
+  resolvePriceIdByLookupKey,
+} from '@/lib/stripe/prices'
 import {
   countPropertiesForOrg,
   ensureStripeCustomer,
@@ -72,13 +73,23 @@ export async function POST() {
     1,
     await countPropertiesForOrg(session.organization.id),
   )
-  const setupFeePriceId = stripeSetupFeePriceId()
+  const stripeClient = stripe()
+  const [recurringPriceId, setupFeePriceId] = await Promise.all([
+    requirePriceIdByLookupKey(
+      stripeClient,
+      HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
+    ),
+    resolvePriceIdByLookupKey(
+      stripeClient,
+      HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
+    ),
+  ])
 
-  const checkout = await stripe().checkout.sessions.create({
+  const checkout = await stripeClient.checkout.sessions.create({
     mode: 'subscription',
     customer: customerId,
     line_items: [
-      { price: stripePriceId(), quantity },
+      { price: recurringPriceId, quantity },
       ...(setupFeePriceId
         ? [{ price: setupFeePriceId, quantity: 1 }]
         : []),

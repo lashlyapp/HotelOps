@@ -2,15 +2,20 @@
  * Start a per-property Stripe subscription for an existing organization. The
  * subscription is active and billable from day one with a 14-day window for
  * the customer to attach a payment method (collection_method=send_invoice,
- * days_until_due=14). An optional one-time setup fee can be tacked onto the
- * first invoice via --setup-fee or STRIPE_SETUP_FEE_PRICE_ID.
+ * days_until_due=14). An optional one-time setup fee is tacked onto the
+ * first invoice when a Price with the `hotelops_setup_fee` lookup key
+ * exists; pass --setup-fee=price_XXXX to override.
+ *
+ * Prices are resolved from Stripe at runtime via lookup keys, NOT env vars,
+ * so updating pricing only requires creating a new Price in the Dashboard
+ * and transferring the lookup key onto it.
  *
  * Usage:
  *   npx tsx scripts/start-subscription.ts \
  *     --org-slug=cg-hotel-group \
- *     [--price=price_XXXX]              # defaults to STRIPE_PRICE_ID env
+ *     [--price=price_XXXX]              # override; defaults to lookup_key=hotelops_per_property_monthly
  *     [--quantity=N]                    # defaults to org's property count
- *     [--setup-fee=price_XXXX]          # defaults to STRIPE_SETUP_FEE_PRICE_ID env
+ *     [--setup-fee=price_XXXX]          # override; defaults to lookup_key=hotelops_setup_fee (or none)
  *     [--grace-days=14]
  *
  * Idempotent:
@@ -22,14 +27,17 @@
  *   NEXT_PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  *   STRIPE_SECRET_KEY
- *   STRIPE_PRICE_ID                   (or pass --price)
- *   STRIPE_SETUP_FEE_PRICE_ID         (optional; or pass --setup-fee)
  */
 
 import { resolve } from 'node:path'
 import { config as loadEnv } from 'dotenv'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
+import {
+  HOTELOPS_PRICE_LOOKUP_KEYS,
+  requirePriceIdByLookupKey,
+  resolvePriceIdByLookupKey,
+} from '../src/lib/stripe/prices'
 
 loadEnv({ path: resolve(process.cwd(), '.env.local') })
 
@@ -38,9 +46,6 @@ const args = parseArgs(process.argv.slice(2))
 const SUPABASE_URL = required('NEXT_PUBLIC_SUPABASE_URL')
 const SERVICE_ROLE = required('SUPABASE_SERVICE_ROLE_KEY')
 const STRIPE_SECRET = required('STRIPE_SECRET_KEY')
-const PRICE_ID = args.price ?? required('STRIPE_PRICE_ID')
-const SETUP_FEE_PRICE_ID =
-  args.setupFee ?? process.env.STRIPE_SETUP_FEE_PRICE_ID ?? undefined
 
 const admin: SupabaseClient = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -63,11 +68,25 @@ async function main() {
     process.exit(1)
   }
 
+  const priceId =
+    args.price ??
+    (await requirePriceIdByLookupKey(
+      stripe,
+      HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
+    ))
+  const setupFeePriceId =
+    args.setupFee ??
+    (await resolvePriceIdByLookupKey(
+      stripe,
+      HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
+    ))
+
   const propertyCount = await countProperties(org.id)
   const quantity = args.quantity ?? Math.max(1, propertyCount)
   console.log(
     `Org: ${org.name} (${org.id}) — ${propertyCount} propert${propertyCount === 1 ? 'y' : 'ies'} on file; subscribing quantity=${quantity}.`,
   )
+  console.log(`Recurring price: ${priceId}`)
 
   const ownerEmail = await findOwnerEmail(org.id)
   const customerId = await ensureCustomer(org.id, org.name, ownerEmail)
@@ -83,18 +102,18 @@ async function main() {
 
   const params: Stripe.SubscriptionCreateParams = {
     customer: customerId,
-    items: [{ price: PRICE_ID, quantity }],
+    items: [{ price: priceId, quantity }],
     collection_method: 'send_invoice',
     days_until_due: args.graceDays,
     metadata: { org_id: org.id, app: 'hotelops' },
   }
-  if (SETUP_FEE_PRICE_ID) {
-    params.add_invoice_items = [{ price: SETUP_FEE_PRICE_ID, quantity: 1 }]
-    console.log(`Setup fee: ${SETUP_FEE_PRICE_ID} on first invoice.`)
+  if (setupFeePriceId) {
+    params.add_invoice_items = [{ price: setupFeePriceId, quantity: 1 }]
+    console.log(`Setup fee: ${setupFeePriceId} on first invoice.`)
   }
 
   const subscription = await stripe.subscriptions.create(params, {
-    idempotencyKey: `subscription:${org.id}:${PRICE_ID}`,
+    idempotencyKey: `subscription:${org.id}:${priceId}`,
   })
   console.log(
     `Subscription created: ${subscription.id} (status: ${subscription.status})`,
