@@ -4,13 +4,19 @@ import { Footer } from '@/components/layout/footer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  MIN_PASSWORD_LENGTH,
+  PASSWORD_REQUIREMENTS_HINT,
+} from '@/lib/auth/password'
 import { createClient } from '@/lib/supabase/server'
 import { setPassword } from './actions'
 
 const ERROR_MESSAGES: Record<string, string> = {
-  too_short: 'Password must be at least 8 characters.',
+  too_short: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+  weak: PASSWORD_REQUIREMENTS_HINT,
   mismatch: "Passwords don't match.",
-  failed: 'Could not update password. Try again.',
+  failed:
+    "Couldn't save that password. Make sure it meets the requirements below and try again.",
 }
 
 type SearchParams = Promise<{ error?: string }>
@@ -49,9 +55,13 @@ export default async function SetPasswordPage({
                 name="password"
                 type="password"
                 autoComplete="new-password"
-                minLength={8}
+                minLength={MIN_PASSWORD_LENGTH}
                 required
+                aria-describedby="password-hint"
               />
+              <p id="password-hint" className="text-xs text-subtle">
+                {PASSWORD_REQUIREMENTS_HINT}
+              </p>
             </div>
 
             <div className="space-y-1.5">
@@ -61,7 +71,7 @@ export default async function SetPasswordPage({
                 name="confirm"
                 type="password"
                 autoComplete="new-password"
-                minLength={8}
+                minLength={MIN_PASSWORD_LENGTH}
                 required
               />
             </div>

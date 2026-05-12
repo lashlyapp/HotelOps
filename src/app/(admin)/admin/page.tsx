@@ -116,7 +116,7 @@ export default async function AdminDashboardPage() {
   )
 }
 
-function PendingSignupsCard({ signups }: { signups: TenantSignupRequest[] }) {
+function PendingSignupsCard({ signups }: { signups: PendingSignup[] }) {
   return (
     <Card className="overflow-hidden">
       <div className="flex items-center justify-between border-b border-border-subtle bg-warning-bg/40 px-5 py-3">
@@ -138,9 +138,14 @@ function PendingSignupsCard({ signups }: { signups: TenantSignupRequest[] }) {
             className="flex flex-wrap items-start justify-between gap-4 px-5 py-4"
           >
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-fg truncate">
-                {s.hotel_name}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-fg truncate">
+                  {s.hotel_name}
+                </p>
+                {s.emailCollision ? (
+                  <Badge tone="danger">email already in use</Badge>
+                ) : null}
+              </div>
               <p className="mt-0.5 text-xs text-muted truncate">
                 {s.full_name} ·{' '}
                 <a
@@ -172,7 +177,11 @@ function PendingSignupsCard({ signups }: { signups: TenantSignupRequest[] }) {
                 })}
               </p>
             </div>
-            <SignupRowActions signupId={s.id} hotelName={s.hotel_name} />
+            <SignupRowActions
+              signupId={s.id}
+              hotelName={s.hotel_name}
+              emailCollision={s.emailCollision}
+            />
           </li>
         ))}
       </ul>
@@ -180,14 +189,38 @@ function PendingSignupsCard({ signups }: { signups: TenantSignupRequest[] }) {
   )
 }
 
-async function loadPendingSignups(): Promise<TenantSignupRequest[]> {
+type PendingSignup = TenantSignupRequest & { emailCollision: boolean }
+
+async function loadPendingSignups(): Promise<PendingSignup[]> {
   const admin = createAdminClient()
   const { data } = await admin
     .from('tenant_signup_requests')
     .select('*')
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
-  return (data ?? []) as TenantSignupRequest[]
+  const signups = (data ?? []) as TenantSignupRequest[]
+  if (signups.length === 0) return []
+
+  // Compute email-collision flag for each pending signup so the UI can
+  // warn / disable Approve when the email already has an auth user. The
+  // server-side approve action enforces this guard too — this is just
+  // making the surprise visible before the admin clicks.
+  const existingEmails = await listAuthEmails()
+  return signups.map((s) => ({
+    ...s,
+    emailCollision: existingEmails.has(s.email.toLowerCase()),
+  }))
+}
+
+async function listAuthEmails(): Promise<Set<string>> {
+  const admin = createAdminClient()
+  const emails = new Set<string>()
+  // listUsers is paginated; v1 assumes <200 users which is plenty.
+  const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 })
+  for (const u of data?.users ?? []) {
+    if (u.email) emails.add(u.email.toLowerCase())
+  }
+  return emails
 }
 
 function BillingCell({

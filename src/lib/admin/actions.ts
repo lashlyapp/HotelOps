@@ -8,6 +8,11 @@ import {
   requirePlatformAdmin,
   requireUser,
 } from '@/lib/auth/session'
+import {
+  generatePassword,
+  validatePassword,
+} from '@/lib/auth/password'
+import { BRAND } from '@/lib/brand'
 import { getGateForOrg } from '@/lib/billing/gate'
 import { isEmailConfigured } from '@/lib/email/client'
 import { sendWelcomeEmail } from '@/lib/email/send'
@@ -50,7 +55,6 @@ async function generateSetupLink(email: string): Promise<string | null> {
 }
 
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
-const MIN_PASSWORD_LENGTH = 8
 
 export type ActionResult = { error?: string; success?: string }
 
@@ -85,11 +89,8 @@ export async function createTenantAction(
     if (!ownerPassword) {
       return { error: 'Set a temporary password or switch to self-set mode.' }
     }
-    if (ownerPassword.length < MIN_PASSWORD_LENGTH) {
-      return {
-        error: `Owner password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
-      }
-    }
+    const pwCheck = validatePassword(ownerPassword)
+    if (!pwCheck.ok) return { error: `Owner ${pwCheck.error.toLowerCase()}` }
   } else if (!isEmailConfigured()) {
     return {
       error:
@@ -143,7 +144,7 @@ export async function createTenantAction(
   //    recovery link the email contains is what they actually use).
   const existingUserId = await findUserId(ownerEmail)
   const effectivePassword =
-    passwordMode === 'admin' ? ownerPassword : randomPlaceholderPassword()
+    passwordMode === 'admin' ? ownerPassword : generatePassword()
   let ownerId: string
   if (existingUserId) {
     const { error } = await admin.auth.admin.updateUserById(existingUserId, {
@@ -189,14 +190,6 @@ export async function createTenantAction(
   redirect('/admin')
 }
 
-function randomPlaceholderPassword(): string {
-  // 32 random URL-safe chars; never disclosed to anyone — replaced when the
-  // recipient clicks the recovery link and sets their own password.
-  const bytes = new Uint8Array(24)
-  crypto.getRandomValues(bytes)
-  return Buffer.from(bytes).toString('base64url')
-}
-
 /**
  * Org-owner action: add a team member to the caller's org.
  */
@@ -215,11 +208,8 @@ export async function createTeamMemberAction(
   if (!email) return { error: 'Email is required.' }
   if (passwordMode === 'admin') {
     if (!password) return { error: 'Set a temporary password or switch to self-set mode.' }
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      return {
-        error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
-      }
-    }
+    const pwCheck = validatePassword(password)
+    if (!pwCheck.ok) return { error: pwCheck.error }
   } else if (!isEmailConfigured()) {
     return {
       error:
@@ -244,7 +234,7 @@ export async function createTeamMemberAction(
   }
 
   const effectivePassword =
-    passwordMode === 'admin' ? password : randomPlaceholderPassword()
+    passwordMode === 'admin' ? password : generatePassword()
   let userId: string
   if (existingId) {
     const { error } = await admin.auth.admin.updateUserById(existingId, {
@@ -410,9 +400,8 @@ export async function addOrgMemberAction(
   if (!email) return { error: 'Email is required.' }
   if (passwordMode === 'admin') {
     if (!password) return { error: 'Set a temporary password or switch to self-set mode.' }
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` }
-    }
+    const pwCheck = validatePassword(password)
+    if (!pwCheck.ok) return { error: pwCheck.error }
   } else if (!isEmailConfigured()) {
     return {
       error:
@@ -439,7 +428,7 @@ export async function addOrgMemberAction(
   }
 
   const effectivePassword =
-    passwordMode === 'admin' ? password : randomPlaceholderPassword()
+    passwordMode === 'admin' ? password : generatePassword()
   let userId: string
   if (existingId) {
     const { error } = await admin.auth.admin.updateUserById(existingId, {
@@ -804,13 +793,24 @@ export async function deleteTenantAction(formData: FormData) {
  * link. The signup row is marked approved + linked to the new org so the
  * audit trail survives.
  *
+ * Account-takeover guard: refuses to approve if the signup email already
+ * belongs to an existing auth user. The /signup form is publicly writable,
+ * so without this check an attacker could submit a victim's email; the
+ * approve flow would rewrite the victim's password and re-parent their
+ * profile into the attacker's org. The admin must resolve the collision
+ * manually (verify ownership of the email, then reject + create the tenant
+ * via /admin → "New tenant" with a clean email).
+ *
  * Idempotency: if `approved_org_id` is already set, returns success without
  * re-provisioning. If the signup was rejected, refuses.
  */
-export async function approveSignupAction(formData: FormData) {
+export async function approveSignupAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
   const inviter = await requirePlatformAdmin()
   const signupId = String(formData.get('signup_id') ?? '')
-  if (!signupId) return
+  if (!signupId) return { error: 'Missing signup id.' }
 
   const admin = createAdminClient()
 
@@ -819,14 +819,27 @@ export async function approveSignupAction(formData: FormData) {
     .select('*')
     .eq('id', signupId)
     .maybeSingle()
-  if (signupErr) throw signupErr
-  if (!signup) return
+  if (signupErr) return { error: signupErr.message }
+  if (!signup) return { error: 'Signup not found.' }
   if (signup.status === 'approved') {
     revalidatePath('/admin')
-    return
+    return { success: 'Already approved.' }
   }
   if (signup.status === 'rejected') {
-    return
+    return { error: 'This request was already rejected.' }
+  }
+
+  // Account-takeover guard. The /signup form accepts any email; without
+  // this we'd silently re-password an existing user and re-parent their
+  // profile when the admin approves.
+  const existingUserId = await findUserId(signup.email)
+  if (existingUserId) {
+    return {
+      error:
+        `${signup.email} already has an account on ${BRAND.name}. ` +
+        `Reject this request and contact the prospect to verify ownership ` +
+        `of the email — then onboard manually from "New tenant" if appropriate.`,
+    }
   }
 
   // 1. Org with auto-slug.
@@ -842,7 +855,7 @@ export async function approveSignupAction(formData: FormData) {
     .insert({ slug: orgSlug, name: signup.hotel_name })
     .select('id')
     .single()
-  if (orgErr) throw orgErr
+  if (orgErr) return { error: orgErr.message }
   const orgId = org.id
 
   // 2. Initial property — same name; admin can rename / add more after.
@@ -853,26 +866,16 @@ export async function approveSignupAction(formData: FormData) {
     r2_prefix: `${orgSlug}/${orgSlug}/`,
   })
 
-  // 3. Owner auth user (or update existing one) + profile.
-  const existingUserId = await findUserId(signup.email)
-  const placeholderPassword = randomPlaceholderPassword()
-  let ownerId: string
-  if (existingUserId) {
-    const { error } = await admin.auth.admin.updateUserById(existingUserId, {
-      password: placeholderPassword,
-      email_confirm: true,
-    })
-    if (error) throw new Error(error.message)
-    ownerId = existingUserId
-  } else {
-    const { data, error } = await admin.auth.admin.createUser({
-      email: signup.email,
-      password: placeholderPassword,
-      email_confirm: true,
-    })
-    if (error) throw new Error(error.message)
-    ownerId = data.user!.id
-  }
+  // 3. Owner auth user + profile. Email collision is impossible here —
+  //    we returned above if findUserId(signup.email) was non-null.
+  const placeholderPassword = generatePassword()
+  const { data: createdUser, error: createErr } = await admin.auth.admin.createUser({
+    email: signup.email,
+    password: placeholderPassword,
+    email_confirm: true,
+  })
+  if (createErr) return { error: createErr.message }
+  const ownerId = createdUser.user!.id
 
   await admin
     .from('profiles')
@@ -913,13 +916,17 @@ export async function approveSignupAction(formData: FormData) {
 
   revalidatePath('/admin')
   revalidatePath(`/admin/tenants/${orgId}`)
+  return { success: `Approved — provisioned ${signup.hotel_name}.` }
 }
 
-export async function rejectSignupAction(formData: FormData) {
+export async function rejectSignupAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
   const inviter = await requirePlatformAdmin()
   const signupId = String(formData.get('signup_id') ?? '')
   const reason = String(formData.get('reason') ?? '').trim() || null
-  if (!signupId) return
+  if (!signupId) return { error: 'Missing signup id.' }
 
   const admin = createAdminClient()
   await admin
@@ -934,4 +941,5 @@ export async function rejectSignupAction(formData: FormData) {
     .eq('status', 'pending')
 
   revalidatePath('/admin')
+  return { success: 'Rejected.' }
 }

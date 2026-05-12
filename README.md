@@ -176,7 +176,9 @@ See [`docs/design-system.md`](docs/design-system.md). TL;DR: every color in mark
 
 - **App CI:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs lint + `next build` on every push and PR. Uses placeholder env vars; no secrets required.
 
-- **Database migrations (auto):** [`.github/workflows/database.yml`](.github/workflows/database.yml) runs Supabase migrations on every push (feature branches and merges to `main`) plus manual dispatch. Idempotent — Supabase CLI tracks applied migrations in `supabase_migrations.schema_migrations`.
+- **Database migrations (manual):** [`.github/workflows/database.yml`](.github/workflows/database.yml) is `workflow_dispatch`-only by design — operators run it from Actions after reviewing the merged PR. This prevents a typo'd migration on a feature branch from accidentally hitting prod. Idempotent — Supabase CLI tracks applied migrations in `supabase_migrations.schema_migrations`, so re-runs are no-ops.
+
+- **R2 CORS (manual):** [`.github/workflows/r2-cors.yml`](.github/workflows/r2-cors.yml) is also `workflow_dispatch`-only. A bad CORS policy takes uploads offline for every tenant; operator confirmation gate is intentional.
 
 - **Tenant onboarding & subscription start:** done from the **admin portal**
   (`/admin` → "New tenant" form, then `/admin/tenants/<id>` → "Start
