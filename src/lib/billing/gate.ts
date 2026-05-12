@@ -41,13 +41,18 @@ export function computeGate(
   subscription: BillingSubscription | null,
 ): BillingGate {
   if (!subscription) {
-    // No subscription on file. v1 deliberately doesn't gate this — the org
-    // was admin-onboarded and just hasn't had its sub created yet.
+    // No subscription on file. Restrict writes + media as a safety net —
+    // every onboarding path (admin "New tenant", admin "Approve signup")
+    // is supposed to auto-start the subscription, so reaching this branch
+    // means something failed (e.g. Stripe was down, lookup key missing).
+    // Better to lock the org out of mutating until ops fixes it than to
+    // let a free user keep using paid features.
     return {
-      banner: false,
-      restrictWrites: false,
-      restrictMedia: false,
-      message: null,
+      banner: true,
+      restrictWrites: true,
+      restrictMedia: true,
+      message:
+        'Your subscription is not yet active. Please contact support so we can finish setting up billing.',
       status: 'no_subscription',
       daysPastDue: null,
     }

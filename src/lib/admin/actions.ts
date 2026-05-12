@@ -186,6 +186,19 @@ export async function createTenantAction(
     })
   }
 
+  // Auto-start the Stripe subscription so the new tenant doesn't sit
+  // in the "no subscription, full access" gap. Best-effort — if Stripe
+  // is unhealthy, computeGate(null) restricts writes until the admin
+  // retries from the tenant detail page's "Start subscription" button.
+  try {
+    await startSubscriptionForOrg(orgId)
+  } catch (err) {
+    console.error(
+      '[admin] failed to auto-start subscription on tenant create',
+      err,
+    )
+  }
+
   revalidatePath('/admin')
   redirect('/admin')
 }
@@ -903,7 +916,28 @@ export async function approveSignupAction(
     )
   }
 
-  // 5. Mark signup approved + link to the org.
+  // 5. Auto-start the Stripe subscription so the new tenant doesn't sit
+  //    in the "no subscription, full access" gap. Best-effort: if Stripe
+  //    is misconfigured or down, we still complete the approval — the
+  //    `computeGate(null)` path restricts writes until ops retries via
+  //    the tenant detail page's "Start subscription" button.
+  let billingNote = ''
+  try {
+    const subResult = await startSubscriptionForOrg(orgId)
+    billingNote =
+      subResult.kind === 'created'
+        ? ` Subscription started (quantity 1, 14-day grace period).`
+        : ` Subscription already on file.`
+  } catch (err) {
+    console.error(
+      '[signup] failed to auto-start subscription on approval; admin will need to retry from the tenant detail page',
+      err,
+    )
+    billingNote =
+      ' Note: subscription auto-start failed — open the tenant page and click "Start subscription".'
+  }
+
+  // 6. Mark signup approved + link to the org.
   await admin
     .from('tenant_signup_requests')
     .update({
@@ -916,7 +950,9 @@ export async function approveSignupAction(
 
   revalidatePath('/admin')
   revalidatePath(`/admin/tenants/${orgId}`)
-  return { success: `Approved — provisioned ${signup.hotel_name}.` }
+  return {
+    success: `Approved — provisioned ${signup.hotel_name}.${billingNote}`,
+  }
 }
 
 export async function rejectSignupAction(
