@@ -193,7 +193,7 @@ See [`docs/design-system.md`](docs/design-system.md). TL;DR: every color in mark
 
 - **CD (Vercel):**
   1. In Vercel, **Import Project** → select the GitHub repo `lashlyapp/HotelOps`.
-  2. Set Environment Variables (Production + Preview) to match `.env.example`. Set `NEXT_PUBLIC_SITE_URL` to the deployed URL (e.g. `https://app.myhotelops.com`).
+  2. Set Environment Variables (Production + Preview) to match `.env.example`. Set `NEXT_PUBLIC_SITE_URL` to the deployed URL (e.g. `https://www.myhotelops.com`).
   3. In Supabase → Authentication → URL Configuration, add the production URL + `/auth/callback` to the allowed redirect URLs.
   4. Pushes to `main` deploy to Production; PRs get Preview deployments automatically.
 
@@ -244,7 +244,7 @@ the first invoice. The flow:
    transferring the lookup key onto it (`transfer_lookup_key=true`) — no
    redeploy, no env changes, existing subscriptions stay on their
    grandfathered Price.
-3. Configure the webhook endpoint at `https://app.myhotelops.com/api/stripe/webhook`
+3. Configure the webhook endpoint at `https://www.myhotelops.com/api/stripe/webhook`
    with these events: `customer.subscription.created`,
    `customer.subscription.updated`, `customer.subscription.deleted`,
    `customer.subscription.paused`, `customer.subscription.resumed`,
