@@ -36,7 +36,7 @@ export async function sendWelcomeEmail(args: WelcomeArgs): Promise<boolean> {
   }
 
   const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.myhotelops.com'
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.myhotelops.com'
   ).replace(/\/+$/, '')
 
   const greeting = args.recipientName ? `Hi ${args.recipientName},` : 'Hi there,'

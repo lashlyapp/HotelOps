@@ -20,7 +20,7 @@ export function stripe(): Stripe {
     // rolls a new default.
     apiVersion: '2026-04-22.dahlia',
     typescript: true,
-    appInfo: { name: 'HotelOps', url: 'https://app.myhotelops.com' },
+    appInfo: { name: 'HotelOps', url: 'https://www.myhotelops.com' },
   })
   return cached
 }
