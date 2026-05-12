@@ -19,22 +19,28 @@
  *
  * Keep these constants in sync with the Supabase Dashboard:
  *   Min length:           8
- *   Required characters:  Lowercase, Uppercase, Digits
- *   (Symbols not required — modern NIST guidance discourages forced
- *    composition beyond a reasonable floor.)
+ *   Required characters:  Lowercase, Uppercase, Digits, Symbols
+ *   (Pro plan: also enable "Prevent use of leaked passwords" — checks
+ *    every new password against haveibeenpwned.)
  */
 
 export const MIN_PASSWORD_LENGTH = 8
+
+// What counts as a symbol = everything Supabase's "symbols" set covers.
+// Supabase uses the OWASP-recommended ASCII special character set —
+// any printable non-alphanumeric character.
+const SYMBOL_RE = /[^A-Za-z0-9]/
 
 const RULES = [
   { test: /[a-z]/, label: 'one lowercase letter' },
   { test: /[A-Z]/, label: 'one uppercase letter' },
   { test: /[0-9]/, label: 'one number' },
+  { test: SYMBOL_RE, label: 'one symbol (e.g. !@#$%)' },
 ] as const
 
 export const PASSWORD_REQUIREMENTS_HINT =
   `At least ${MIN_PASSWORD_LENGTH} characters, with at least one ` +
-  `lowercase letter, one uppercase letter, and one number.`
+  `lowercase letter, one uppercase letter, one number, and one symbol.`
 
 export type PasswordValidationResult =
   | { ok: true }
@@ -77,17 +83,22 @@ export function generatePassword(length = 16): string {
   const lowers = 'abcdefghijkmnopqrstuvwxyz' // no l (confusable with 1)
   const uppers = 'ABCDEFGHJKLMNPQRSTUVWXYZ' // no I, O
   const digits = '23456789' // no 0, 1
-  const all = lowers + uppers + digits
+  // Conservative symbol set: keep to characters that are safe in URLs,
+  // shells, and most clipboard pastes — no quotes, backticks, backslashes,
+  // angle brackets, ampersands, or whitespace.
+  const symbols = '!@#$%^*()-_=+[]{}.,?'
+  const all = lowers + uppers + digits + symbols
 
   const bytes = new Uint8Array(length)
   crypto.getRandomValues(bytes)
   const out = Array.from(bytes, (b) => all[b % all.length])
 
   // Guarantee each rule is satisfied even on unlucky draws.
-  const seedBytes = new Uint8Array(3)
+  const seedBytes = new Uint8Array(4)
   crypto.getRandomValues(seedBytes)
   out[seedBytes[0] % length] = lowers[seedBytes[0] % lowers.length]
   out[seedBytes[1] % length] = uppers[seedBytes[1] % uppers.length]
   out[seedBytes[2] % length] = digits[seedBytes[2] % digits.length]
+  out[seedBytes[3] % length] = symbols[seedBytes[3] % symbols.length]
   return out.join('')
 }
