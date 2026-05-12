@@ -12,6 +12,10 @@ import { getGateForOrg } from '@/lib/billing/gate'
 import { isEmailConfigured } from '@/lib/email/client'
 import { sendWelcomeEmail } from '@/lib/email/send'
 import { r2DeleteObject, r2PutObject } from '@/lib/r2/upload'
+import {
+  startSubscriptionForOrg,
+  type StartSubscriptionResult,
+} from '@/lib/stripe/start-subscription'
 import { syncSubscriptionQuantity } from '@/lib/stripe/subscriptions'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { AppRole, Property } from '@/lib/supabase/types'
@@ -735,6 +739,44 @@ export async function removePropertyLogoAction(formData: FormData) {
 
   revalidatePath(`/properties/${propertyId}`)
   revalidatePath('/properties')
+}
+
+/**
+ * Platform-admin action: start a Stripe subscription for a tenant. Same code
+ * path as `npm run start:subscription` — see `lib/stripe/start-subscription.ts`
+ * for the idempotency contract (no duplicate subs, customer reused if one
+ * already exists for the org).
+ */
+export async function startSubscriptionAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requirePlatformAdmin()
+  const orgId = String(formData.get('org_id') ?? '')
+  if (!orgId) return { error: 'Missing org.' }
+
+  let result: StartSubscriptionResult
+  try {
+    result = await startSubscriptionForOrg(orgId)
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) }
+  }
+
+  revalidatePath(`/admin/tenants/${orgId}`)
+  revalidatePath('/admin')
+
+  if (result.kind === 'existing') {
+    return {
+      success: `Already subscribed — ${result.stripeSubscriptionId}. No change.`,
+    }
+  }
+  const due = result.paymentMethodDueAt.toLocaleDateString()
+  return {
+    success:
+      `Subscription created: ${result.stripeSubscriptionId} ` +
+      `(status: ${result.status}, qty ${result.quantity}). ` +
+      `Cooling period ends ${due}.`,
+  }
 }
 
 export async function deleteTenantAction(formData: FormData) {

@@ -19,6 +19,7 @@ import { DeleteTenantSection } from './_components/delete-tenant-section'
 import { OrgNameSection } from './_components/org-name-section'
 import { RemovePropertyButton } from './_components/remove-property-button'
 import { RemoveMemberButton } from './_components/remove-member-button'
+import { StartSubscriptionButton } from './_components/start-subscription-button'
 
 type Member = {
   id: string
@@ -75,7 +76,12 @@ export default async function TenantDetailPage({
 
       <OrgNameSection orgId={organization.id} initialName={organization.name} />
 
-      <BillingSection subscription={subscription} />
+      <BillingSection
+        orgId={organization.id}
+        orgName={organization.name}
+        propertyCount={properties.length}
+        subscription={subscription}
+      />
 
       <Card>
         <CardHeader>
@@ -276,8 +282,14 @@ async function loadTenant(orgId: string) {
 }
 
 function BillingSection({
+  orgId,
+  orgName,
+  propertyCount,
   subscription,
 }: {
+  orgId: string
+  orgName: string
+  propertyCount: number
   subscription: BillingSubscription | null
 }) {
   return (
@@ -287,13 +299,14 @@ function BillingSection({
       </CardHeader>
       <CardBody className="space-y-3 text-sm">
         {!subscription ? (
-          <p className="text-muted">
-            No subscription on file. Run{' '}
-            <code className="font-mono text-xs bg-surface-muted px-1 py-0.5 rounded">
-              npm run start:subscription -- --org-slug=…
-            </code>{' '}
-            to create one.
-          </p>
+          <div className="space-y-3">
+            <p className="text-muted">No subscription on file.</p>
+            <StartSubscriptionButton
+              orgId={orgId}
+              orgName={orgName}
+              propertyCount={propertyCount}
+            />
+          </div>
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2">
