@@ -1,0 +1,43 @@
+name: Verify billing readiness
+
+# Manual-only. Runs scripts/verify-billing-readiness.ts to sanity-check an
+# organization before starting its Stripe subscription. Reads Supabase only —
+# safe to run repeatedly.
+#
+# Trigger: GitHub → Actions → "Verify billing readiness" → Run workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      org_slug:
+        description: "Org slug (kebab-case, e.g. cg-hotel-group)"
+        required: true
+        type: string
+
+concurrency:
+  group: verify-billing-readiness-${{ github.event.inputs.org_slug }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify ${{ github.event.inputs.org_slug }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ORG_SLUG: ${{ github.event.inputs.org_slug }}
+        run: npx tsx scripts/verify-billing-readiness.ts --org-slug="$ORG_SLUG"
