@@ -1,4 +1,5 @@
 import 'server-only'
+import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { isInternalEmail } from '@/lib/admin/policy'
 import { computeGate, type BillingGate } from '@/lib/billing/gate'
@@ -10,6 +11,10 @@ import type {
   Profile,
   Property,
 } from '@/lib/supabase/types'
+
+// React `cache()` dedupes per-render: layout calls require* once, the page
+// then calls it again, and only one set of Supabase round-trips actually
+// fires. Resets between requests (it's request-scoped, not process-scoped).
 
 /**
  * Three callers with different access requirements.
@@ -35,7 +40,7 @@ export type OrgSession = UserSession & {
   gate: BillingGate
 }
 
-export async function requireUser(): Promise<UserSession> {
+export const requireUser = cache(async (): Promise<UserSession> => {
   const supabase = await createClient()
   const {
     data: { user },
@@ -55,7 +60,7 @@ export async function requireUser(): Promise<UserSession> {
     email: user.email ?? '',
     profile: profile as Profile,
   }
-}
+})
 
 export type RequireOrgUserOptions = {
   /**
@@ -66,9 +71,11 @@ export type RequireOrgUserOptions = {
   write?: boolean
 }
 
-export async function requireOrgUser(
-  opts: RequireOrgUserOptions = {},
-): Promise<OrgSession> {
+// Underlying cached loader. Split from requireOrgUser so the `opts.write`
+// check (which can redirect) lives outside the cache wrapper — that way
+// every call from a single render hits the same OrgSession regardless of
+// whether the caller passed `{ write: true }` or no opts.
+const loadOrgSession = cache(async (): Promise<OrgSession> => {
   const base = await requireUser()
   if (!base.profile.org_id) {
     if (base.profile.role === 'platform_admin') redirect('/admin')
@@ -100,16 +107,22 @@ export async function requireOrgUser(
   if (!organization) redirect('/login?error=no_org')
 
   const gate = computeGate((subscription as BillingSubscription | null) ?? null)
-  if (opts.write && gate.restrictWrites) {
-    redirect('/billing?gated=1')
-  }
-
   return {
     ...base,
     organization: organization as Organization,
     properties: (properties ?? []) as Property[],
     gate,
   }
+})
+
+export async function requireOrgUser(
+  opts: RequireOrgUserOptions = {},
+): Promise<OrgSession> {
+  const session = await loadOrgSession()
+  if (opts.write && session.gate.restrictWrites) {
+    redirect('/billing?gated=1')
+  }
+  return session
 }
 
 export async function requirePlatformAdmin(): Promise<UserSession> {

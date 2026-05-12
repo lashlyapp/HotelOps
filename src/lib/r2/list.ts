@@ -24,6 +24,31 @@ export type MediaFile = {
   tags: string[]
 }
 
+/**
+ * Cached wrapper for stats-only consumers (dashboard, properties summary,
+ * admin tenant detail). Tagged with the property's `mediaCacheTag`, so
+ * uploads / deletes that already call `revalidateTag(mediaCacheTag(...))`
+ * also bust this cache. The 60s TTL is a safety floor — bust calls hit
+ * first under normal use.
+ *
+ * Use this everywhere you only need file counts / sizes / last-modified
+ * for an at-a-glance summary; use `listMediaWithTags` when you also
+ * need display names / tags / poster overrides.
+ */
+export async function listMediaForPropertyCached(
+  propertyId: string,
+  prefix: string,
+): Promise<MediaFile[]> {
+  return unstable_cache(
+    () => listMediaForPrefix(prefix),
+    ['media-for-prefix', propertyId, prefix],
+    {
+      revalidate: 60,
+      tags: [mediaCacheTag(propertyId)],
+    },
+  )()
+}
+
 export async function listMediaForPrefix(prefix: string): Promise<MediaFile[]> {
   const client = r2Client()
   const bucket = r2Bucket()

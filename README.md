@@ -201,6 +201,7 @@ See [`docs/design-system.md`](docs/design-system.md). TL;DR: every color in mark
   2. Set Environment Variables (Production + Preview) to match `.env.example`. Set `NEXT_PUBLIC_SITE_URL` to the deployed URL (e.g. `https://www.myhotelops.com`).
   3. In Supabase → Authentication → URL Configuration, add the production URL + `/auth/callback` to the allowed redirect URLs.
   4. Pushes to `main` deploy to Production; PRs get Preview deployments automatically.
+  5. **Region:** the Supabase project is in `us-west-1`. Set the Vercel project's primary region to `sfo1` (San Francisco, us-west) to match. Cross-region Vercel↔Supabase adds ~70ms per round-trip; same-region is 5–10ms. With 4 queries per render (auth + profile + org + sub), that's ~250ms saved per navigation. Vercel → Project → Settings → Functions → Function Region.
 
 ## Scripts
 

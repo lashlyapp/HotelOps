@@ -4,7 +4,7 @@ import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requirePlatformAdmin } from '@/lib/auth/session'
 import { r2PublicUrl } from '@/lib/r2/client'
-import { listMediaForPrefix } from '@/lib/r2/list'
+import { listMediaForPropertyCached } from '@/lib/r2/list'
 import { computeLibraryStats, formatBytes, formatRelative } from '@/lib/r2/stats'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type {
@@ -42,11 +42,14 @@ export default async function TenantDetailPage({
 
   const { organization, properties, members, subscription } = data
 
-  // Per-property R2 listing — small property counts in v1, fine to fan out.
+  // Per-property R2 listing — cached per-property (60s + mediaCacheTag) so
+  // repeat admin navigations don't fan out to R2 every time.
   const propertyStats = await Promise.all(
     properties.map(async (property) => ({
       property,
-      stats: computeLibraryStats(await listMediaForPrefix(property.r2_prefix)),
+      stats: computeLibraryStats(
+        await listMediaForPropertyCached(property.id, property.r2_prefix),
+      ),
     })),
   )
 

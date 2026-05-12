@@ -1,18 +1,19 @@
 import Link from 'next/link'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requireOrgUser } from '@/lib/auth/session'
-import { listMediaForPrefix } from '@/lib/r2/list'
+import { listMediaForPropertyCached } from '@/lib/r2/list'
 import { computeLibraryStats, formatBytes, formatRelative } from '@/lib/r2/stats'
 
 export default async function DashboardPage() {
   const session = await requireOrgUser()
 
-  // Aggregate library stats across all of the org's properties (one R2 list
-  // per property; small property counts in v1, fine to do in parallel).
+  // Aggregate library stats across all of the org's properties. Each list
+  // is cached per-property (60s + mediaCacheTag) so repeat dashboard
+  // renders don't fan out to R2 on every navigation.
   const perProperty = await Promise.all(
     session.properties.map(async (p) => ({
       property: p,
-      files: await listMediaForPrefix(p.r2_prefix),
+      files: await listMediaForPropertyCached(p.id, p.r2_prefix),
     })),
   )
   const allFiles = perProperty.flatMap((x) => x.files)
