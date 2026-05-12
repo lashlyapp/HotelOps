@@ -1,0 +1,78 @@
+name: Start subscription
+
+# Manual-only. Runs scripts/start-subscription.ts to create a per-property
+# Stripe subscription for an existing organization with a 14-day cooling
+# period for the customer to attach a payment method.
+#
+# Idempotent: reuses an existing Stripe Customer and refuses to create a
+# second active subscription for the same org.
+#
+# Prices are resolved from Stripe at runtime via lookup keys
+# (hotelops_per_property_monthly, hotelops_setup_fee). Use the --price and
+# --setup-fee inputs only for one-off overrides.
+#
+# Trigger: GitHub → Actions → "Start subscription" → Run workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      org_slug:
+        description: "Org slug (kebab-case, e.g. cg-hotel-group)"
+        required: true
+        type: string
+      grace_days:
+        description: "Days the customer has to attach a card (default 14)"
+        required: false
+        type: string
+        default: "14"
+      price:
+        description: "Override recurring Price id (rare — defaults to lookup key)"
+        required: false
+        type: string
+      setup_fee:
+        description: "Override setup fee Price id (rare — defaults to lookup key)"
+        required: false
+        type: string
+
+concurrency:
+  group: start-subscription-${{ github.event.inputs.org_slug }}
+  cancel-in-progress: false
+
+jobs:
+  start:
+    name: Start ${{ github.event.inputs.org_slug }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start subscription
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          ORG_SLUG: ${{ github.event.inputs.org_slug }}
+          GRACE_DAYS: ${{ github.event.inputs.grace_days }}
+          PRICE: ${{ github.event.inputs.price }}
+          SETUP_FEE: ${{ github.event.inputs.setup_fee }}
+        run: |
+          args=(
+            --org-slug="$ORG_SLUG"
+            --grace-days="$GRACE_DAYS"
+          )
+          if [ -n "$PRICE" ]; then
+            args+=(--price="$PRICE")
+          fi
+          if [ -n "$SETUP_FEE" ]; then
+            args+=(--setup-fee="$SETUP_FEE")
+          fi
+          npx tsx scripts/start-subscription.ts "${args[@]}"
