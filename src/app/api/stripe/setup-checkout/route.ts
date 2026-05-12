@@ -32,11 +32,15 @@ export const dynamic = 'force-dynamic'
  * to /billing where the webhook will have updated state by the time the user
  * lands (or shortly after).
  */
-export async function POST() {
+export async function POST(request: Request) {
   const session = await requireOrgOwner()
-  const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
-  ).replace(/\/+$/, '')
+  // Use the request's own origin for the Stripe return URLs so the user
+  // bounces back to the deployment they came from (preview or prod), not
+  // to whatever NEXT_PUBLIC_SITE_URL happened to be baked in at build time.
+  // That env var is still right for things like email recovery links — but
+  // for in-flight Stripe checkout, "same origin you started on" is what we
+  // want.
+  const siteUrl = new URL(request.url).origin
 
   const customerId = await ensureStripeCustomer({
     orgId: session.organization.id,
