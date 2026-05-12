@@ -31,7 +31,7 @@ export default async function SignupPage() {
               href="/login"
               className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-fg hover:bg-surface-muted"
             >
-              Sign in
+              Log in
             </Link>
           </div>
         </div>
@@ -63,7 +63,7 @@ export default async function SignupPage() {
           <p className="mt-6 text-center text-xs text-subtle">
             Already have an account?{' '}
             <Link href="/login" className="font-medium text-fg hover:underline">
-              Sign in
+              Log in
             </Link>
             .
           </p>

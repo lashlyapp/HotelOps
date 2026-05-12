@@ -28,12 +28,20 @@ export default async function LoginPage({
       <header className="border-b border-border-subtle">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Wordmark size="md" href="/" />
-          <Link
-            href="/"
-            className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-muted hover:text-fg"
-          >
-            ← Back to home
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/"
+              className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
+            >
+              ← Back to home
+            </Link>
+            <Link
+              href="/signup"
+              className="focus-ring inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-fg hover:bg-primary-hover transition-colors"
+            >
+              Sign up
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -41,7 +49,7 @@ export default async function LoginPage({
         <div className="w-full max-w-sm space-y-8">
           <div className="space-y-3 text-center">
             <Wordmark size="lg" href="/" />
-            <p className="text-sm text-muted">Sign in to your account</p>
+            <p className="text-sm text-muted">Log in to your account</p>
           </div>
 
           <form action={signIn} className="space-y-4">
@@ -72,13 +80,19 @@ export default async function LoginPage({
             ) : null}
 
             <Button type="submit" className="w-full">
-              Sign in
+              Log in
             </Button>
           </form>
 
           <p className="text-center text-xs text-subtle leading-relaxed">
-            Accounts are created by invitation. Contact your administrator if
-            you don&apos;t have access.
+            Don&apos;t have an account yet?{' '}
+            <Link
+              href="/signup"
+              className="font-medium text-fg hover:underline"
+            >
+              Sign up
+            </Link>
+            .
           </p>
         </div>
       </main>

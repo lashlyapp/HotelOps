@@ -33,18 +33,18 @@ export default async function HomePage() {
       <header className="border-b border-border-subtle">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Wordmark size="md" href="/" />
-          <div className="flex items-center gap-1">
-            <Link
-              href="/signup"
-              className="focus-ring hidden sm:inline-flex rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
-            >
-              Sign up
-            </Link>
+          <div className="flex items-center gap-2">
             <Link
               href="/login"
-              className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-fg hover:bg-surface-muted"
+              className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
             >
-              Sign in
+              Log in
+            </Link>
+            <Link
+              href="/signup"
+              className="focus-ring inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-fg hover:bg-primary-hover transition-colors"
+            >
+              Sign up
             </Link>
           </div>
         </div>
@@ -79,7 +79,7 @@ export default async function HomePage() {
                   href="/login"
                   className="focus-ring inline-flex h-11 items-center rounded-md px-5 text-base font-medium text-fg hover:bg-surface-muted transition-colors"
                 >
-                  I already have an account →
+                  Log in →
                 </Link>
               </div>
               <p className="mt-6 text-xs text-subtle">
@@ -211,7 +211,7 @@ export default async function HomePage() {
                   href="/login"
                   className="focus-ring inline-flex h-11 items-center rounded-md px-5 text-base font-medium text-fg hover:bg-surface-muted transition-colors"
                 >
-                  Sign in
+                  Log in
                 </Link>
               </div>
             </div>

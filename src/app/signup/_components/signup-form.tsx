@@ -102,7 +102,7 @@ export function SignupForm() {
       ) : null}
 
       <Button type="submit" className="w-full" size="lg" disabled={pending}>
-        {pending ? 'Sending…' : 'Sign up'}
+        {pending ? 'Sending…' : 'Create account'}
       </Button>
 
       <p className="text-xs text-subtle leading-relaxed">
