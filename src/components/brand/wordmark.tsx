@@ -49,7 +49,7 @@ export function Wordmark({
         height={px}
         priority
         aria-hidden
-        className="shrink-0 rounded-[5px]"
+        className="shrink-0 rounded-[5px] dark:invert"
       />
       <span className="text-fg">
         <span className="text-muted font-normal">My</span>
