@@ -363,5 +363,8 @@ export type TenantSignupRequest = {
   rejection_reason: string | null
   rejected_at: string | null
   rejected_by: string | null
+  agreed_at: string | null
+  agreed_terms_version: string | null
+  agreed_privacy_version: string | null
   created_at: string
 }

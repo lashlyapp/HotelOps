@@ -1,6 +1,8 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { PRIVACY_POLICY_LAST_UPDATED } from '@/app/privacy/page'
+import { TERMS_OF_SERVICE_LAST_UPDATED } from '@/app/terms/page'
 import { BRAND } from '@/lib/brand'
 import { sendSignupNotification } from '@/lib/email/send'
 import { createClient } from '@/lib/supabase/server'
@@ -26,6 +28,7 @@ export async function submitSignupRequest(
   const hotelName = String(formData.get('hotel_name') ?? '').trim()
   const phone = String(formData.get('phone') ?? '').trim() || null
   const message = String(formData.get('message') ?? '').trim() || null
+  const consent = formData.get('consent') === 'yes'
 
   if (!email || !fullName || !hotelName) {
     return { error: 'Email, your name, and hotel name are required.' }
@@ -39,9 +42,17 @@ export async function submitSignupRequest(
   if (message && message.length > 2000) {
     return { error: 'Please keep your message under 2,000 characters.' }
   }
+  if (!consent) {
+    return {
+      error: 'Please agree to the Terms of Service and Privacy Policy to continue.',
+    }
+  }
 
   // Anon client respects the RLS policy that allows public inserts only
   // when status='pending' (which is the default). No auth user is created.
+  // Consent metadata (timestamp + the version of each document at the
+  // moment they agreed) is stored alongside the row as a defensible
+  // audit trail.
   const supabase = await createClient()
   const { error } = await supabase.from('tenant_signup_requests').insert({
     email,
@@ -49,6 +60,9 @@ export async function submitSignupRequest(
     hotel_name: hotelName,
     phone,
     message,
+    agreed_at: new Date().toISOString(),
+    agreed_terms_version: TERMS_OF_SERVICE_LAST_UPDATED,
+    agreed_privacy_version: PRIVACY_POLICY_LAST_UPDATED,
   })
   if (error) {
     console.error('[signup] insert failed', error)

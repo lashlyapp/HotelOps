@@ -97,6 +97,37 @@ export function SignupForm() {
         />
       </div>
 
+      <label className="flex items-start gap-3 text-xs text-muted leading-relaxed">
+        <input
+          type="checkbox"
+          name="consent"
+          value="yes"
+          required
+          className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-border-default text-fg focus-ring"
+        />
+        <span>
+          I agree to the{' '}
+          <a
+            href="/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-fg hover:underline"
+          >
+            Terms of Service
+          </a>
+          {' '}and{' '}
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-fg hover:underline"
+          >
+            Privacy Policy
+          </a>
+          , and consent to be contacted by the team about my account.
+        </span>
+      </label>
+
       {state.error ? (
         <p className="text-sm text-danger-fg">{state.error}</p>
       ) : null}
@@ -104,11 +135,6 @@ export function SignupForm() {
       <Button type="submit" className="w-full" size="lg" disabled={pending}>
         {pending ? 'Sending…' : 'Create account'}
       </Button>
-
-      <p className="text-xs text-subtle leading-relaxed">
-        By signing up you agree to be contacted by our team. We never share
-        your information. You can ask us to delete your data at any time.
-      </p>
     </form>
   )
 }
