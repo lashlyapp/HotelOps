@@ -3,7 +3,11 @@ import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requirePlatformAdmin } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { BillingSubscriptionStatus } from '@/lib/supabase/types'
+import type {
+  BillingSubscriptionStatus,
+  TenantSignupRequest,
+} from '@/lib/supabase/types'
+import { SignupRowActions } from './_components/signup-row-actions'
 
 type TenantRow = {
   id: string
@@ -19,10 +23,17 @@ type TenantRow = {
 
 export default async function AdminDashboardPage() {
   await requirePlatformAdmin()
-  const tenants = await loadTenants()
+  const [tenants, pendingSignups] = await Promise.all([
+    loadTenants(),
+    loadPendingSignups(),
+  ])
 
   return (
     <div className="p-8 space-y-6">
+      {pendingSignups.length > 0 ? (
+        <PendingSignupsCard signups={pendingSignups} />
+      ) : null}
+
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-fg">
@@ -103,6 +114,80 @@ export default async function AdminDashboardPage() {
       </Card>
     </div>
   )
+}
+
+function PendingSignupsCard({ signups }: { signups: TenantSignupRequest[] }) {
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex items-center justify-between border-b border-border-subtle bg-warning-bg/40 px-5 py-3">
+        <div>
+          <h2 className="text-sm font-semibold text-fg">
+            Pending signups
+          </h2>
+          <p className="text-xs text-muted">
+            {signups.length} request{signups.length === 1 ? '' : 's'} waiting
+            for review. Approve to provision the tenant; reject to dismiss.
+          </p>
+        </div>
+        <Badge tone="warning">{signups.length}</Badge>
+      </div>
+      <ul className="divide-y divide-border-subtle">
+        {signups.map((s) => (
+          <li
+            key={s.id}
+            className="flex flex-wrap items-start justify-between gap-4 px-5 py-4"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-fg truncate">
+                {s.hotel_name}
+              </p>
+              <p className="mt-0.5 text-xs text-muted truncate">
+                {s.full_name} ·{' '}
+                <a
+                  href={`mailto:${s.email}`}
+                  className="hover:underline"
+                >
+                  {s.email}
+                </a>
+                {s.phone ? (
+                  <>
+                    {' '}
+                    · <span>{s.phone}</span>
+                  </>
+                ) : null}
+              </p>
+              {s.message ? (
+                <p className="mt-2 text-xs text-muted whitespace-pre-wrap border-l-2 border-border-subtle pl-3">
+                  {s.message}
+                </p>
+              ) : null}
+              <p className="mt-2 text-xs text-subtle">
+                Submitted{' '}
+                {new Date(s.created_at).toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+              </p>
+            </div>
+            <SignupRowActions signupId={s.id} hotelName={s.hotel_name} />
+          </li>
+        ))}
+      </ul>
+    </Card>
+  )
+}
+
+async function loadPendingSignups(): Promise<TenantSignupRequest[]> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('tenant_signup_requests')
+    .select('*')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+  return (data ?? []) as TenantSignupRequest[]
 }
 
 function BillingCell({

@@ -34,12 +34,12 @@ export default async function HomePage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Wordmark size="md" href="/" />
           <div className="flex items-center gap-1">
-            <a
-              href={`mailto:${BRAND.supportEmail}?subject=Interested%20in%20${BRAND.name}`}
+            <Link
+              href="/signup"
               className="focus-ring hidden sm:inline-flex rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
             >
-              Request access
-            </a>
+              Sign up
+            </Link>
             <Link
               href="/login"
               className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-fg hover:bg-surface-muted"
@@ -69,12 +69,12 @@ export default async function HomePage() {
                 shared by everyone from the front desk to ownership.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
-                <a
-                  href={`mailto:${BRAND.supportEmail}?subject=Interested%20in%20${BRAND.name}`}
+                <Link
+                  href="/signup"
                   className="focus-ring inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-base font-medium text-primary-fg hover:bg-primary-hover transition-colors"
                 >
-                  Request access
-                </a>
+                  Sign up
+                </Link>
                 <Link
                   href="/login"
                   className="focus-ring inline-flex h-11 items-center rounded-md px-5 text-base font-medium text-fg hover:bg-surface-muted transition-colors"
@@ -201,12 +201,12 @@ export default async function HomePage() {
                 for you, your team, and whoever joins next year.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
-                <a
-                  href={`mailto:${BRAND.supportEmail}?subject=Interested%20in%20${BRAND.name}`}
+                <Link
+                  href="/signup"
                   className="focus-ring inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-base font-medium text-primary-fg hover:bg-primary-hover transition-colors"
                 >
-                  Request access
-                </a>
+                  Sign up
+                </Link>
                 <Link
                   href="/login"
                   className="focus-ring inline-flex h-11 items-center rounded-md px-5 text-base font-medium text-fg hover:bg-surface-muted transition-colors"

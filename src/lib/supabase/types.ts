@@ -343,3 +343,25 @@ export type EventActivity = {
   actor_label: string | null
   created_at: string
 }
+
+// ----------------------------------------------------------------------------
+// Public signup requests (the /signup form)
+// ----------------------------------------------------------------------------
+export type TenantSignupStatus = 'pending' | 'approved' | 'rejected'
+
+export type TenantSignupRequest = {
+  id: string
+  email: string
+  full_name: string
+  hotel_name: string
+  phone: string | null
+  message: string | null
+  status: TenantSignupStatus
+  approved_org_id: string | null
+  approved_at: string | null
+  approved_by: string | null
+  rejection_reason: string | null
+  rejected_at: string | null
+  rejected_by: string | null
+  created_at: string
+}

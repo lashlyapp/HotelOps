@@ -792,3 +792,146 @@ export async function deleteTenantAction(formData: FormData) {
   revalidatePath('/admin')
   redirect('/admin')
 }
+
+// ----------------------------------------------------------------------------
+// Public-signup review (platform admin only)
+// ----------------------------------------------------------------------------
+
+/**
+ * Approve a public signup request and provision the tenant in one click:
+ * create the org (slug auto-generated from hotel name), one initial property
+ * with the same name, the owner auth user, profile, and email them a setup
+ * link. The signup row is marked approved + linked to the new org so the
+ * audit trail survives.
+ *
+ * Idempotency: if `approved_org_id` is already set, returns success without
+ * re-provisioning. If the signup was rejected, refuses.
+ */
+export async function approveSignupAction(formData: FormData) {
+  const inviter = await requirePlatformAdmin()
+  const signupId = String(formData.get('signup_id') ?? '')
+  if (!signupId) return
+
+  const admin = createAdminClient()
+
+  const { data: signup, error: signupErr } = await admin
+    .from('tenant_signup_requests')
+    .select('*')
+    .eq('id', signupId)
+    .maybeSingle()
+  if (signupErr) throw signupErr
+  if (!signup) return
+  if (signup.status === 'approved') {
+    revalidatePath('/admin')
+    return
+  }
+  if (signup.status === 'rejected') {
+    return
+  }
+
+  // 1. Org with auto-slug.
+  const { data: existingOrgs } = await admin
+    .from('organizations')
+    .select('slug')
+  const taken = new Set((existingOrgs ?? []).map((o) => o.slug))
+  const baseSlug = slugify(signup.hotel_name) || 'hotel'
+  const orgSlug = uniqueSlug(baseSlug, (s) => taken.has(s))
+
+  const { data: org, error: orgErr } = await admin
+    .from('organizations')
+    .insert({ slug: orgSlug, name: signup.hotel_name })
+    .select('id')
+    .single()
+  if (orgErr) throw orgErr
+  const orgId = org.id
+
+  // 2. Initial property — same name; admin can rename / add more after.
+  await admin.from('properties').insert({
+    org_id: orgId,
+    slug: orgSlug,
+    name: signup.hotel_name,
+    r2_prefix: `${orgSlug}/${orgSlug}/`,
+  })
+
+  // 3. Owner auth user (or update existing one) + profile.
+  const existingUserId = await findUserId(signup.email)
+  const placeholderPassword = randomPlaceholderPassword()
+  let ownerId: string
+  if (existingUserId) {
+    const { error } = await admin.auth.admin.updateUserById(existingUserId, {
+      password: placeholderPassword,
+      email_confirm: true,
+    })
+    if (error) throw new Error(error.message)
+    ownerId = existingUserId
+  } else {
+    const { data, error } = await admin.auth.admin.createUser({
+      email: signup.email,
+      password: placeholderPassword,
+      email_confirm: true,
+    })
+    if (error) throw new Error(error.message)
+    ownerId = data.user!.id
+  }
+
+  await admin
+    .from('profiles')
+    .upsert({
+      id: ownerId,
+      org_id: orgId,
+      role: 'org_owner',
+      full_name: signup.full_name,
+    })
+
+  // 4. Welcome email with one-time setup link. Best-effort.
+  if (isEmailConfigured()) {
+    const setupLink = (await generateSetupLink(signup.email)) ?? undefined
+    await sendWelcomeEmail({
+      to: signup.email,
+      recipientName: signup.full_name,
+      orgName: signup.hotel_name,
+      roleLabel: roleLabel('org_owner'),
+      inviterName: inviter.email,
+      setupLink,
+    })
+  } else {
+    console.warn(
+      '[signup] approved without sending welcome email — RESEND_API_KEY not set',
+    )
+  }
+
+  // 5. Mark signup approved + link to the org.
+  await admin
+    .from('tenant_signup_requests')
+    .update({
+      status: 'approved',
+      approved_org_id: orgId,
+      approved_at: new Date().toISOString(),
+      approved_by: inviter.userId,
+    })
+    .eq('id', signupId)
+
+  revalidatePath('/admin')
+  revalidatePath(`/admin/tenants/${orgId}`)
+}
+
+export async function rejectSignupAction(formData: FormData) {
+  const inviter = await requirePlatformAdmin()
+  const signupId = String(formData.get('signup_id') ?? '')
+  const reason = String(formData.get('reason') ?? '').trim() || null
+  if (!signupId) return
+
+  const admin = createAdminClient()
+  await admin
+    .from('tenant_signup_requests')
+    .update({
+      status: 'rejected',
+      rejection_reason: reason,
+      rejected_at: new Date().toISOString(),
+      rejected_by: inviter.userId,
+    })
+    .eq('id', signupId)
+    .eq('status', 'pending')
+
+  revalidatePath('/admin')
+}
