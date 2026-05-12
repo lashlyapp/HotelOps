@@ -133,7 +133,6 @@ jobs:
       - name: Substitute placeholders into wrangler.toml
         working-directory: workers/cdn-gate
         env:
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
           KV_ID: ${{ steps.kv.outputs.kv_id }}
           # `inputs.canary_slug` is empty on push triggers — fall back to the
           # workflow_dispatch default so the canary route stays syntactically
@@ -141,10 +140,8 @@ jobs:
           CANARY_SLUG: ${{ inputs.canary_slug || 'canary-tenant' }}
         run: |
           set -euo pipefail
-          : "${R2_BUCKET:?secret R2_BUCKET is not set}"
           : "${KV_ID:?KV namespace id was not resolved}"
           sed -i \
-            -e "s|REPLACE_WITH_R2_BUCKET_NAME|${R2_BUCKET}|g" \
             -e "s|REPLACE_WITH_KV_NAMESPACE_ID|${KV_ID}|g" \
             -e "s|CANARY_SLUG|${CANARY_SLUG}|g" \
             wrangler.toml

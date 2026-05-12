@@ -1,9 +1,13 @@
 # cdn-gate Worker config.
 #
-# Bucket name and KV namespace id are NOT in the repo — CI substitutes
-# them at deploy time from GitHub secrets so a wrong-account checkout can
-# never accidentally publish to production. See .github/workflows/
-# deploy-cdn-gate.yml and workers/README.md.
+# The KV namespace id and the canary slug are NOT in the repo — CI
+# substitutes them at deploy time. The KV id is discovered (or created)
+# per-account by the deploy workflow; the canary slug is a workflow
+# input. See .github/workflows/deploy-cdn-gate.yml and workers/README.md.
+#
+# The R2 bucket name (`app-hotelops`) is in the repo because it's not
+# the security boundary — `CLOUDFLARE_ACCOUNT_ID` is. The same name is
+# already public in .github/workflows/r2-cors.yml and src/lib/r2 env.
 #
 # Three environments, each picked via `wrangler deploy --env <name>`:
 #   (default — no --env): no routes; the worker exists in the account
@@ -27,7 +31,7 @@ compatibility_date = "2026-01-15"
 
 [[r2_buckets]]
 binding = "MEDIA"
-bucket_name = "REPLACE_WITH_R2_BUCKET_NAME"
+bucket_name = "app-hotelops"
 
 [[kv_namespaces]]
 binding = "GATE"
@@ -41,7 +45,7 @@ routes = [
 
 [[env.canary.r2_buckets]]
 binding = "MEDIA"
-bucket_name = "REPLACE_WITH_R2_BUCKET_NAME"
+bucket_name = "app-hotelops"
 
 [[env.canary.kv_namespaces]]
 binding = "GATE"
@@ -55,7 +59,7 @@ routes = [
 
 [[env.production.r2_buckets]]
 binding = "MEDIA"
-bucket_name = "REPLACE_WITH_R2_BUCKET_NAME"
+bucket_name = "app-hotelops"
 
 [[env.production.kv_namespaces]]
 binding = "GATE"
