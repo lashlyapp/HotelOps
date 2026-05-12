@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
 import { Button } from '@/components/ui/button'
@@ -24,10 +25,22 @@ export default async function LoginPage({
 
   return (
     <div className="flex flex-1 flex-col">
+      <header className="border-b border-border-subtle">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+          <Wordmark size="md" href="/" />
+          <Link
+            href="/"
+            className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-muted hover:text-fg"
+          >
+            ← Back to home
+          </Link>
+        </div>
+      </header>
+
       <main className="flex flex-1 items-center justify-center px-6 py-16">
         <div className="w-full max-w-sm space-y-8">
           <div className="space-y-3 text-center">
-            <Wordmark size="lg" />
+            <Wordmark size="lg" href="/" />
             <p className="text-sm text-muted">Sign in to your account</p>
           </div>
 
