@@ -186,18 +186,12 @@ export async function createTenantAction(
     })
   }
 
-  // Auto-start the Stripe subscription so the new tenant doesn't sit
-  // in the "no subscription, full access" gap. Best-effort — if Stripe
-  // is unhealthy, computeGate(null) restricts writes until the admin
-  // retries from the tenant detail page's "Start subscription" button.
-  try {
-    await startSubscriptionForOrg(orgId)
-  } catch (err) {
-    console.error(
-      '[admin] failed to auto-start subscription on tenant create',
-      err,
-    )
-  }
+  // Note: we deliberately do NOT auto-start the Stripe subscription
+  // here. Pricing is per-property, so the trigger to start billing
+  // belongs to the owner's first paid action (adding a property /
+  // hitting /billing → "Start subscription"). The gate restricts
+  // writes until the sub is active, so the owner can sign in and
+  // explore but can't accumulate billable activity for free.
 
   revalidatePath('/admin')
   redirect('/admin')
@@ -871,16 +865,16 @@ export async function approveSignupAction(
   if (orgErr) return { error: orgErr.message }
   const orgId = org.id
 
-  // 2. Initial property — same name; admin can rename / add more after.
-  await admin.from('properties').insert({
-    org_id: orgId,
-    slug: orgSlug,
-    name: signup.hotel_name,
-    r2_prefix: `${orgSlug}/${orgSlug}/`,
-  })
-
-  // 3. Owner auth user + profile. Email collision is impossible here —
+  // 2. Owner auth user + profile. Email collision is impossible here —
   //    we returned above if findUserId(signup.email) was non-null.
+  //
+  //    We deliberately do NOT pre-create a property or auto-start the
+  //    Stripe subscription. Pricing is per-property, so the owner
+  //    triggers billing when they add their first property — see the
+  //    self-serve flow on /billing → "Start subscription". The gate
+  //    restricts writes until then, so the owner can sign in and
+  //    explore the empty workspace but can't accumulate billable
+  //    activity for free.
   const placeholderPassword = generatePassword()
   const { data: createdUser, error: createErr } = await admin.auth.admin.createUser({
     email: signup.email,
@@ -899,7 +893,7 @@ export async function approveSignupAction(
       full_name: signup.full_name,
     })
 
-  // 4. Welcome email with one-time setup link. Best-effort.
+  // 3. Welcome email with one-time setup link. Best-effort.
   if (isEmailConfigured()) {
     const setupLink = (await generateSetupLink(signup.email)) ?? undefined
     await sendWelcomeEmail({
@@ -916,28 +910,7 @@ export async function approveSignupAction(
     )
   }
 
-  // 5. Auto-start the Stripe subscription so the new tenant doesn't sit
-  //    in the "no subscription, full access" gap. Best-effort: if Stripe
-  //    is misconfigured or down, we still complete the approval — the
-  //    `computeGate(null)` path restricts writes until ops retries via
-  //    the tenant detail page's "Start subscription" button.
-  let billingNote = ''
-  try {
-    const subResult = await startSubscriptionForOrg(orgId)
-    billingNote =
-      subResult.kind === 'created'
-        ? ` Subscription started (quantity 1, 14-day grace period).`
-        : ` Subscription already on file.`
-  } catch (err) {
-    console.error(
-      '[signup] failed to auto-start subscription on approval; admin will need to retry from the tenant detail page',
-      err,
-    )
-    billingNote =
-      ' Note: subscription auto-start failed — open the tenant page and click "Start subscription".'
-  }
-
-  // 6. Mark signup approved + link to the org.
+  // 4. Mark signup approved + link to the org.
   await admin
     .from('tenant_signup_requests')
     .update({
@@ -951,7 +924,9 @@ export async function approveSignupAction(
   revalidatePath('/admin')
   revalidatePath(`/admin/tenants/${orgId}`)
   return {
-    success: `Approved — provisioned ${signup.hotel_name}.${billingNote}`,
+    success:
+      `Approved — provisioned ${signup.hotel_name}. ` +
+      `The owner will be billed when they add their first property.`,
   }
 }
 

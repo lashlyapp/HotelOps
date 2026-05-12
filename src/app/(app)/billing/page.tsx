@@ -49,21 +49,34 @@ function SubscriptionCard({
   if (!subscription) {
     return (
       <Card>
-        <div className="p-5 space-y-3">
+        <div className="p-5 space-y-4">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold text-fg">Subscription</h2>
             <Badge tone="neutral">Not started</Badge>
           </div>
-          <p className="text-sm text-muted">
-            Your subscription hasn&apos;t been activated yet. Reach out to{' '}
-            <a
-              className="text-primary hover:underline"
-              href={`mailto:${BRAND.supportEmail}`}
-            >
-              {BRAND.supportEmail}
-            </a>{' '}
-            and we&apos;ll get you set up.
+          <p className="text-sm text-muted leading-relaxed">
+            You haven&apos;t started a subscription yet. {BRAND.name} is{' '}
+            <strong className="text-fg">$100 / month per property</strong>{' '}
+            plus a one-time{' '}
+            <strong className="text-fg">$250 setup fee</strong> on the first
+            invoice. Cancel anytime from this page.
           </p>
+          <p className="text-sm text-muted leading-relaxed">
+            Click below to enter a card and add your first property. Your
+            subscription quantity automatically adjusts whenever you add or
+            remove a property.
+          </p>
+          {canManage ? (
+            <div className="pt-1">
+              <StripeRedirectButton endpoint="/api/stripe/setup-checkout">
+                Start subscription &amp; add card
+              </StripeRedirectButton>
+            </div>
+          ) : (
+            <p className="text-sm text-subtle">
+              Ask the account owner to start the subscription from this page.
+            </p>
+          )}
         </div>
       </Card>
     )

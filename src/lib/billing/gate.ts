@@ -41,18 +41,18 @@ export function computeGate(
   subscription: BillingSubscription | null,
 ): BillingGate {
   if (!subscription) {
-    // No subscription on file. Restrict writes + media as a safety net —
-    // every onboarding path (admin "New tenant", admin "Approve signup")
-    // is supposed to auto-start the subscription, so reaching this branch
-    // means something failed (e.g. Stripe was down, lookup key missing).
-    // Better to lock the org out of mutating until ops fixes it than to
-    // let a free user keep using paid features.
+    // No subscription on file. Pricing is per-property, so the trigger
+    // to start billing is the owner adding their first property — which
+    // they kick off from /billing. Until then, writes + media access
+    // are restricted so a free account can't accumulate billable
+    // activity. The banner copy + the empty state on /properties both
+    // point to /billing for the self-serve "Start subscription" flow.
     return {
       banner: true,
       restrictWrites: true,
       restrictMedia: true,
       message:
-        'Your subscription is not yet active. Please contact support so we can finish setting up billing.',
+        'You haven’t started a subscription yet. Go to Billing to add a payment method and your first property.',
       status: 'no_subscription',
       daysPastDue: null,
     }
