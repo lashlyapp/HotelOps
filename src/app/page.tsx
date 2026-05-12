@@ -64,26 +64,27 @@ export default async function HomePage() {
                 from one place.
               </h1>
               <p className="mt-6 text-lg text-muted max-w-xl leading-relaxed">
-                {BRAND.name} brings your property&apos;s media library, catering
-                &amp; events, IT documentation, team, and billing into a single
-                workspace — built for the way hotels actually work.
+                {BRAND.name} puts your property photos, event proposals,
+                vendor records, team, and billing in one workspace —
+                shared by everyone from the front desk to ownership.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Link
-                  href="/login"
-                  className="focus-ring inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-base font-medium text-primary-fg hover:bg-primary-hover transition-colors"
-                >
-                  Sign in
-                </Link>
                 <a
                   href={`mailto:${BRAND.supportEmail}?subject=Interested%20in%20${BRAND.name}`}
+                  className="focus-ring inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-base font-medium text-primary-fg hover:bg-primary-hover transition-colors"
+                >
+                  Request access
+                </a>
+                <Link
+                  href="/login"
                   className="focus-ring inline-flex h-11 items-center rounded-md px-5 text-base font-medium text-fg hover:bg-surface-muted transition-colors"
                 >
-                  Request access →
-                </a>
+                  I already have an account →
+                </Link>
               </div>
               <p className="mt-6 text-xs text-subtle">
-                Accounts are invite-only. We onboard you and your team manually.
+                We onboard you and your team personally so you’re running on
+                day one — no setup wizard, no months of implementation.
               </p>
             </div>
 
@@ -105,42 +106,42 @@ export default async function HomePage() {
           <div className="mx-auto max-w-6xl px-6 py-20">
             <div className="max-w-2xl">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                What ships today
+                What you can do today
               </p>
               <h2 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-                Every module already in your hands.
+                Everything you need to run your hotel.
               </h2>
               <p className="mt-4 text-base text-muted leading-relaxed">
-                We ship one module at a time and only list what&apos;s actually
-                in the product — no roadmap-as-marketing. Here&apos;s what
-                you&apos;ll find on day one.
+                Replace the patchwork of spreadsheets, shared drives, and
+                email threads. {BRAND.name} brings the day-to-day of running
+                a hotel into one workspace your whole team shares.
               </p>
             </div>
 
             <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               <Feature
-                title="Media catalog"
-                body="Every photo and video for every property in one place. Permanent CDN URLs — paste straight into your hotel website and it just works."
+                title="Your photos in one place"
+                body="Every photo and video for every property in one organized library. Share them on your hotel website with a permanent link — no more broken images when a file gets renamed or moved."
               />
               <Feature
-                title="Catering & events"
-                body="Track inquiries through tentative, proposal sent, definite, and completed. Email the customer a proposal with line items, deposit, and balance due."
+                title="Win more events"
+                body="Move catering and event inquiries from first call to signed contract without leaving your inbox. Send a polished proposal with line items, deposit, and balance — branded as your hotel."
               />
               <Feature
-                title="IT Hub"
-                body="House contracts, runbooks, and vendor login credentials in one auditable place. Encrypted at rest, scoped to staff."
+                title="Stop losing the vendor password"
+                body="Keep contracts, runbooks, and vendor logins in one place your whole team can find — even when the person who set it up isn’t around. Wi-Fi codes, PMS credentials, supplier accounts."
               />
               <Feature
-                title="Per-property workspace"
-                body="Each hotel gets its own catalog, events pipeline, document store, and storefront. Switch properties with one click."
+                title="One account, every property"
+                body="Run a single boutique hotel or a portfolio of properties from one login. Each property keeps its own photos, events, and documents — switch between them with one click."
               />
               <Feature
-                title="Stripe billing built in"
-                body="Monthly per-property pricing. Save a card once and renewals charge automatically; full invoice history in your account."
+                title="Set-and-forget billing"
+                body="Save a card once and your monthly subscription renews on its own. Every invoice is right there in your account whenever you need it for the books."
               />
               <Feature
-                title="Cloudflare-fast"
-                body="Files served from Cloudflare R2 and the global CDN. Fast page loads for your guests, wherever they are."
+                title="Photos that load anywhere"
+                body="Your images are delivered through a worldwide content network, so they appear instantly — whether your guest is browsing from across town or across an ocean."
               />
             </div>
           </div>
@@ -163,14 +164,14 @@ export default async function HomePage() {
                 Built for hospitality
               </p>
               <h2 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-white leading-tight">
-                Designed around how hotels actually work — not generic SaaS.
+                Built around your day, not a one-size-fits-all template.
               </h2>
               <p className="mt-4 text-base text-white/85 leading-relaxed">
-                Each module starts from a real workflow our customers walked us
-                through: a media request from a travel writer, a wedding inquiry
-                that came in over the weekend, the PMS contract everyone keeps
-                losing the renewal date for. No bloat, no abstractions —
-                features that match the binders behind your front desk.
+                Every part of {BRAND.name} comes from real workflows hotel
+                owners walked us through — the media request from a travel
+                writer, the weekend wedding inquiry, the renewal date nobody
+                can find. No bloat, no learning curve. Just the pieces of
+                your day, in one place.
               </p>
             </div>
           </div>
@@ -193,10 +194,11 @@ export default async function HomePage() {
                 Your property, finally organized.
               </h2>
               <p className="mt-4 text-base text-muted leading-relaxed">
-                Stop chasing photos in Dropbox, proposals in email threads, and
-                the Wi-Fi password in a Slack DM. {BRAND.name} puts the day-to-day
-                of running a property in one shared workspace — for you, your
-                team, and the next person who replaces them.
+                Stop digging through shared drives for the right photo,
+                forwarding old emails to find a proposal, or texting the
+                manager for the Wi-Fi password. {BRAND.name} keeps the
+                day-to-day of running your hotel in one shared workspace —
+                for you, your team, and whoever joins next year.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <a
