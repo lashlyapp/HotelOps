@@ -94,7 +94,7 @@ function SubscriptionCard({
         </div>
 
         {!hasCard ? (
-          <div className="rounded-md border border-warning-bg/40 bg-warning-bg/40 px-4 py-3 text-sm text-warning-fg">
+          <div className="rounded-md border border-warning-bg bg-warning-bg px-4 py-3 text-sm text-warning-fg">
             <p className="font-medium">
               Save a payment method for auto-renewal
             </p>
