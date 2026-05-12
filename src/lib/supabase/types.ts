@@ -366,5 +366,9 @@ export type TenantSignupRequest = {
   agreed_at: string | null
   agreed_terms_version: string | null
   agreed_privacy_version: string | null
+  ip_address: string | null
+  email_verified_at: string | null
+  email_verification_token: string | null
+  email_verification_sent_at: string | null
   created_at: string
 }

@@ -181,3 +181,77 @@ export async function sendSignupNotification(
     return false
   }
 }
+
+type SignupVerificationArgs = {
+  to: string
+  recipientName: string
+  hotelName: string
+  verifyUrl: string
+}
+
+/**
+ * Send the email-verification link a /signup submitter clicks to confirm
+ * ownership of the address. We don't show the row on /admin until they
+ * verify — closes the "attacker submits a victim's email and the admin
+ * sees a real-looking request" gap.
+ *
+ * Returns whether the email was actually dispatched. Caller decides
+ * how to react if RESEND_API_KEY isn't set (in dev / before email is
+ * wired up, the signup still completes and the row is auto-verified).
+ */
+export async function sendSignupVerificationEmail(
+  args: SignupVerificationArgs,
+): Promise<boolean> {
+  const resend = getResend()
+  if (!resend) {
+    console.warn(
+      '[email] RESEND_API_KEY not set; skipping signup verification email',
+    )
+    return false
+  }
+
+  const subject = `Confirm your email to finish signing up for ${BRAND.name}`
+  const greeting = `Hi ${args.recipientName},`
+  const text = [
+    greeting,
+    '',
+    `Thanks for signing up ${args.hotelName} for ${BRAND.name}.`,
+    `Click the link below to confirm this email address so our team can review your request:`,
+    '',
+    args.verifyUrl,
+    '',
+    'The link expires in 24 hours. If you didn’t request this, you can ignore the email.',
+    '',
+    `— ${BRAND.name}`,
+  ].join('\n')
+
+  const html = `
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#1c1917;font-size:14px;line-height:1.6">
+      <p>${escapeHtml(greeting)}</p>
+      <p>Thanks for signing up <strong>${escapeHtml(args.hotelName)}</strong> for ${escapeHtml(BRAND.name)}. Confirm this email address so our team can review your request:</p>
+      <p>
+        <a href="${args.verifyUrl}" style="display:inline-block;background:#18181b;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:500">Confirm email</a>
+      </p>
+      <p style="color:#57534e;font-size:12px">The link expires in 24 hours. If you didn’t request this, you can ignore the email.</p>
+      <p style="color:#a8a29e;font-size:12px;margin-top:32px">— ${escapeHtml(BRAND.name)}</p>
+    </div>
+  `.trim()
+
+  try {
+    const { error } = await resend.emails.send({
+      from: getEmailFrom(),
+      to: args.to,
+      subject,
+      text,
+      html,
+    })
+    if (error) {
+      console.error('[email] resend error (signup verification)', error)
+      return false
+    }
+    return true
+  } catch (err) {
+    console.error('[email] resend threw (signup verification)', err)
+    return false
+  }
+}

@@ -193,10 +193,14 @@ type PendingSignup = TenantSignupRequest & { emailCollision: boolean }
 
 async function loadPendingSignups(): Promise<PendingSignup[]> {
   const admin = createAdminClient()
+  // Only show signups whose email has been verified — otherwise an
+  // attacker could submit a victim's email and have it show up here
+  // before they ever consented. The verification step closes that gap.
   const { data } = await admin
     .from('tenant_signup_requests')
     .select('*')
     .eq('status', 'pending')
+    .not('email_verified_at', 'is', null)
     .order('created_at', { ascending: false })
   const signups = (data ?? []) as TenantSignupRequest[]
   if (signups.length === 0) return []

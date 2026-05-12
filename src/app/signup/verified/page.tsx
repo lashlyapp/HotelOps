@@ -4,7 +4,7 @@ import { Footer } from '@/components/layout/footer'
 import { Card, CardBody } from '@/components/ui/card'
 import { BRAND } from '@/lib/brand'
 
-export default function SignupThanksPage() {
+export default function SignupVerifiedPage() {
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-border-subtle">
@@ -41,24 +41,22 @@ export default function SignupThanksPage() {
             </div>
 
             <h1 className="text-2xl font-semibold tracking-tight text-fg">
-              Check your inbox.
+              Email confirmed.
             </h1>
             <p className="text-sm text-muted leading-relaxed">
-              We just sent a confirmation link to the email you entered.
-              Click it to confirm your address — that’s the last step
-              before our team can review your request. You’ll hear back
-              within one business day with a setup link to start using {BRAND.name}.
+              Thanks — we’ve passed your request to our team for review.
+              You’ll hear back within one business day with a setup link
+              to start using {BRAND.name}.
             </p>
-
             <p className="pt-2 text-xs text-subtle">
-              Didn’t get the email? Check your spam folder, or email{' '}
+              Questions in the meantime? Email{' '}
               <a
                 href={`mailto:${BRAND.supportEmail}`}
                 className="font-medium text-fg hover:underline"
               >
                 {BRAND.supportEmail}
-              </a>{' '}
-              and we’ll resend it.
+              </a>
+              .
             </p>
           </CardBody>
         </Card>

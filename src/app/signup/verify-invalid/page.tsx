@@ -4,7 +4,7 @@ import { Footer } from '@/components/layout/footer'
 import { Card, CardBody } from '@/components/ui/card'
 import { BRAND } from '@/lib/brand'
 
-export default function SignupThanksPage() {
+export default function SignupVerifyInvalidPage() {
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-border-subtle">
@@ -24,7 +24,7 @@ export default function SignupThanksPage() {
           <CardBody className="space-y-4 p-8 text-center">
             <div
               aria-hidden
-              className="mx-auto flex size-12 items-center justify-center rounded-full bg-success-bg text-success-fg"
+              className="mx-auto flex size-12 items-center justify-center rounded-full bg-danger-bg text-danger-fg"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -36,30 +36,37 @@ export default function SignupThanksPage() {
                 strokeLinejoin="round"
                 className="size-6"
               >
-                <path d="M20 6 9 17l-5-5" />
+                <circle cx="12" cy="12" r="10" />
+                <path d="m15 9-6 6" />
+                <path d="m9 9 6 6" />
               </svg>
             </div>
 
             <h1 className="text-2xl font-semibold tracking-tight text-fg">
-              Check your inbox.
+              That link doesn’t look right.
             </h1>
             <p className="text-sm text-muted leading-relaxed">
-              We just sent a confirmation link to the email you entered.
-              Click it to confirm your address — that’s the last step
-              before our team can review your request. You’ll hear back
-              within one business day with a setup link to start using {BRAND.name}.
+              The confirmation link may have expired, already been used, or
+              been copied incorrectly.
             </p>
-
-            <p className="pt-2 text-xs text-subtle">
-              Didn’t get the email? Check your spam folder, or email{' '}
-              <a
-                href={`mailto:${BRAND.supportEmail}`}
-                className="font-medium text-fg hover:underline"
+            <div className="pt-2 flex flex-col gap-2">
+              <Link
+                href="/signup"
+                className="focus-ring inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-fg hover:bg-primary-hover transition-colors"
               >
-                {BRAND.supportEmail}
-              </a>{' '}
-              and we’ll resend it.
-            </p>
+                Start over
+              </Link>
+              <p className="text-xs text-subtle">
+                Or email{' '}
+                <a
+                  href={`mailto:${BRAND.supportEmail}`}
+                  className="font-medium text-fg hover:underline"
+                >
+                  {BRAND.supportEmail}
+                </a>{' '}
+                and we’ll help.
+              </p>
+            </div>
           </CardBody>
         </Card>
       </main>
