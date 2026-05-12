@@ -1,15 +1,19 @@
 # Deploy the cdn-gate Worker.
 #
 # Triggers:
-#   - push to main touching the Worker, its deploy workflow, the KV-sync
-#     script, or the app-side gate helpers → auto-deploys target=production
+#   - pull_request touching the Worker, its deploy workflow, the KV-sync
+#     script, or the app-side gate helpers → uploads the Worker to the
+#     account using the default (no-routes) env. Real deploy against real
+#     credentials, but zero traffic flips. Same files trigger again on
+#     merge below, which is when the catch-all route gets updated.
+#   - push to main touching the same files → auto-deploys target=production
 #     and then runs the KV backfill. Pair with a required reviewer on the
 #     `cdn-gate-production` GitHub Environment if you want an approval gate.
 #   - workflow_dispatch → choose any target (canary, upload-only, sync-only,
 #     rollback-*).
 #
 # Targets:
-#   1. upload-only            → validates build + bindings, no traffic
+#   1. upload-only            → uploads Worker with no routes, no traffic
 #   2. canary  + canary_slug  → one tenant only, watch for ~24hr
 #   3. production             → catch-all route, all tenants (default on push)
 #   4. sync-only              → re-run KV backfill without touching the Worker
@@ -22,6 +26,12 @@
 name: Deploy cdn-gate Worker
 
 on:
+  pull_request:
+    paths:
+      - 'workers/cdn-gate/**'
+      - '.github/workflows/deploy-cdn-gate.yml'
+      - 'scripts/sync-cdn-gate.ts'
+      - 'src/lib/billing/cdn-gate.ts'
   push:
     branches: [main]
     paths:
@@ -61,20 +71,20 @@ concurrency:
 
 jobs:
   deploy:
-    name: ${{ inputs.target || 'production' }}
+    name: ${{ github.event_name == 'pull_request' && 'upload-only' || inputs.target || 'production' }}
     runs-on: ubuntu-latest
-    # Configure this environment in GitHub repo settings with required
-    # reviewers — that turns every dispatch into an approval gate, which
-    # is the cheapest way to enforce two-person sign-off on changes that
-    # touch every tenant.
-    environment: cdn-gate-production
+    # The cdn-gate-production environment is the approval gate for
+    # traffic-affecting deploys (canary / production / rollbacks). PR-push
+    # uploads stay route-less so they intentionally bypass the gate —
+    # otherwise every PR would block on a reviewer click.
+    environment: ${{ github.event_name == 'pull_request' && '' || 'cdn-gate-production' }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      # On push to main: production. On workflow_dispatch: whatever the
-      # operator picked. Refactored to a single source of truth so step
-      # gates and the job name can share it.
-      TARGET: ${{ inputs.target || 'production' }}
+      # PR push → upload-only (no routes). Push to main → production.
+      # workflow_dispatch → whatever the operator picked. Single source of
+      # truth so step gates and the job name can share it.
+      TARGET: ${{ github.event_name == 'pull_request' && 'upload-only' || inputs.target || 'production' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -148,13 +158,17 @@ jobs:
           echo '── effective wrangler.toml ──' >&2
           cat wrangler.toml >&2
 
-      # ─── upload-only: validate build + bindings, no traffic ────────────
-      - name: Upload-only (dry run)
+      # ─── upload-only: real deploy to the default (no-routes) env ──────
+      # Worker lands in the CF account so we validate end-to-end against
+      # real credentials, but no traffic flips — the production catch-all
+      # route is only updated by `target=production` on merge to main.
+      - name: Upload-only (no routes)
         if: env.TARGET == 'upload-only'
         working-directory: workers/cdn-gate
         run: |
-          npx wrangler deploy --dry-run --outdir dist
-          echo '✅ dry-run OK — no Worker pushed, no traffic affected'
+          npx wrangler deploy --env="" \
+            --message "upload-only · ${{ github.actor }} · ${{ github.event_name }}"
+          echo '✅ uploaded to default env — no routes attached, no traffic affected'
 
       # ─── canary: deploy to single-tenant route ─────────────────────────
       - name: Deploy canary

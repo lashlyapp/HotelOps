@@ -1,5 +1,4 @@
 export type AppRole = 'platform_admin' | 'org_owner' | 'org_staff'
-export type InvoiceStatus = 'pending' | 'paid' | 'void'
 
 export type Organization = {
   id: string
@@ -170,21 +169,6 @@ export type ItDocument = {
   uploaded_by_email: string | null
   created_at: string
   updated_at: string
-}
-
-export type Invoice = {
-  id: string
-  org_id: string
-  amount_cents: number
-  currency: string
-  status: InvoiceStatus
-  period_start: string
-  period_end: string
-  due_date: string | null
-  paid_at: string | null
-  payment_method: string | null
-  notes: string | null
-  created_at: string
 }
 
 // ----------------------------------------------------------------------------

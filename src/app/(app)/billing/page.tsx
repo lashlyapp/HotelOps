@@ -1,31 +1,20 @@
 import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requireSession } from '@/lib/auth/session'
-import { BRAND, BRAND_ADDRESS_LINES } from '@/lib/brand'
+import { BRAND } from '@/lib/brand'
 import {
   getSubscriptionForOrg,
   listStripeInvoices,
   type StripeInvoiceSummary,
 } from '@/lib/stripe/subscriptions'
-import { createClient } from '@/lib/supabase/server'
 import type {
   BillingSubscription,
   BillingSubscriptionStatus,
-  Invoice,
 } from '@/lib/supabase/types'
 import { StripeRedirectButton } from './_components/billing-actions'
 
 export default async function BillingPage() {
   const session = await requireSession()
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('invoices')
-    .select('*')
-    .eq('org_id', session.organization.id)
-    .order('period_end', { ascending: false })
-
-  if (error) throw error
-  const checkInvoices = (data ?? []) as Invoice[]
   const subscription = await getSubscriptionForOrg(session.organization.id)
   const stripeInvoices = subscription?.stripe_customer_id
     ? await listStripeInvoices(subscription.stripe_customer_id)
@@ -46,27 +35,6 @@ export default async function BillingPage() {
       <SubscriptionCard subscription={subscription} canManage={isOwner} />
 
       <StripeInvoicesCard invoices={stripeInvoices} />
-
-      {checkInvoices.length > 0 ? (
-        <CheckInvoicesCard invoices={checkInvoices} />
-      ) : null}
-
-      <Card>
-        <div className="p-5 space-y-2">
-          <h2 className="text-sm font-semibold text-fg">
-            Pay by check (alternate method)
-          </h2>
-          <p className="text-sm text-muted">
-            Make checks payable to{' '}
-            <span className="text-fg font-medium">{BRAND.legalName}</span>. Mail to:
-          </p>
-          <address className="not-italic text-sm text-muted leading-6">
-            {BRAND_ADDRESS_LINES.map((line) => (
-              <div key={line}>{line}</div>
-            ))}
-          </address>
-        </div>
-      </Card>
     </div>
   )
 }
@@ -253,48 +221,6 @@ function StripeInvoicesCard({ invoices }: { invoices: StripeInvoiceSummary[] }) 
   )
 }
 
-function CheckInvoicesCard({ invoices }: { invoices: Invoice[] }) {
-  return (
-    <Card className="overflow-hidden">
-      <div className="px-5 py-4 border-b border-border-subtle">
-        <h2 className="text-sm font-semibold text-fg">Check payment history</h2>
-        <p className="text-xs text-muted mt-0.5">
-          Legacy invoices billed by check.
-        </p>
-      </div>
-      <table className="w-full text-sm">
-        <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
-          <tr>
-            <th className="px-4 py-3 font-medium">Period</th>
-            <th className="px-4 py-3 font-medium">Amount</th>
-            <th className="px-4 py-3 font-medium">Due</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border-subtle">
-          {invoices.map((invoice) => (
-            <tr key={invoice.id}>
-              <td className="px-4 py-3 text-fg">
-                {formatDate(invoice.period_start)} —{' '}
-                {formatDate(invoice.period_end)}
-              </td>
-              <td className="px-4 py-3 font-medium text-fg tabular-nums">
-                {formatMoney(invoice.amount_cents, invoice.currency)}
-              </td>
-              <td className="px-4 py-3 text-muted">
-                {invoice.due_date ? formatDate(invoice.due_date) : '—'}
-              </td>
-              <td className="px-4 py-3">
-                <CheckInvoiceStatusBadge status={invoice.status} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </Card>
-  )
-}
-
 function SubscriptionStatusBadge({
   status,
 }: {
@@ -328,12 +254,6 @@ function StripeInvoiceStatusBadge({
           ? 'danger'
           : 'neutral'
   return <Badge tone={tone}>{status ?? 'unknown'}</Badge>
-}
-
-function CheckInvoiceStatusBadge({ status }: { status: Invoice['status'] }) {
-  const tone: BadgeProps['tone'] =
-    status === 'paid' ? 'success' : status === 'pending' ? 'warning' : 'neutral'
-  return <Badge tone={tone}>{status}</Badge>
 }
 
 function formatPlan(s: BillingSubscription): string {

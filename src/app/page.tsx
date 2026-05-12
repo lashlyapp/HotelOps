@@ -84,7 +84,7 @@ export default async function HomePage() {
           />
           <Feature
             title="Simple billing"
-            body="Pay by check. Invoice history and statements available in your account."
+            body="Monthly per-property pricing on Stripe. Save a card once and renewals charge automatically; full invoice history in your account."
           />
           <Feature
             title="More coming soon"
