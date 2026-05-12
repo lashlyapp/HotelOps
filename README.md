@@ -178,7 +178,12 @@ See [`docs/design-system.md`](docs/design-system.md). TL;DR: every color in mark
 
 - **Database migrations (auto):** [`.github/workflows/database.yml`](.github/workflows/database.yml) runs Supabase migrations on every push (feature branches and merges to `main`) plus manual dispatch. Idempotent — Supabase CLI tracks applied migrations in `supabase_migrations.schema_migrations`.
 
-- **Tenant onboarding (manual):** [`.github/workflows/onboard-tenant.yml`](.github/workflows/onboard-tenant.yml) runs only via **Run workflow** with form inputs (org slug, name, owner email, properties). Use this every time you onboard a new customer; not tied to any particular tenant.
+- **Tenant onboarding & subscription start:** done from the **admin portal**
+  (`/admin` → "New tenant" form, then `/admin/tenants/<id>` → "Start
+  subscription"). No GitHub workflow needed — both actions are platform-admin
+  server actions guarded by `requirePlatformAdmin()`. The first platform
+  admin is bootstrapped via [`.github/workflows/bootstrap-admin.yml`](.github/workflows/bootstrap-admin.yml)
+  (chicken-and-egg: no admin exists yet to use the UI).
 
   Required GitHub repo secrets (Settings → Secrets and variables → Actions):
 
@@ -187,9 +192,9 @@ See [`docs/design-system.md`](docs/design-system.md). TL;DR: every color in mark
   | `SUPABASE_ACCESS_TOKEN`      | migrations             | https://supabase.com/dashboard/account/tokens                                  |
   | `SUPABASE_PROJECT_REF`       | migrations             | `ebhrldafznxsepqcpcjx`                                                         |
   | `SUPABASE_DB_PASSWORD`       | migrations             | Supabase Dashboard → Settings → Database                                       |
-  | `SUPABASE_URL`               | onboarding             | `https://ebhrldafznxsepqcpcjx.supabase.co`                                     |
-  | `SUPABASE_SERVICE_ROLE_KEY`  | onboarding             | Supabase Dashboard → Settings → API → `service_role`                           |
-  | `SITE_URL`                   | onboarding             | Production / preview URL for invite-email redirects                            |
+  | `SUPABASE_URL`               | bootstrap-admin        | `https://ebhrldafznxsepqcpcjx.supabase.co`                                     |
+  | `SUPABASE_SERVICE_ROLE_KEY`  | bootstrap-admin        | Supabase Dashboard → Settings → API → `service_role`                           |
+  | `SITE_URL`                   | bootstrap-admin        | Production / preview URL for invite-email redirects                            |
 
 - **CD (Vercel):**
   1. In Vercel, **Import Project** → select the GitHub repo `lashlyapp/HotelOps`.
@@ -203,9 +208,7 @@ See [`docs/design-system.md`](docs/design-system.md). TL;DR: every color in mark
 - `npm run build` — production build
 - `npm run start` — run the production build
 - `npm run lint` — lint
-- `npm run onboard:tenant -- --slug=... --name=... --owner=... --property=...` — onboard a tenant from the CLI (manual fallback when the UI isn't an option)
-- `npm run bootstrap:admin -- --email=... --password=...` — create the first platform admin (one-time)
-- `npm run start:subscription -- --org-slug=... [--price=price_XXXX] [--trial-days=14]` — start a Stripe subscription for an existing org with a 14-day trial
+- `npm run bootstrap:admin -- --email=... --password=...` — create the first platform admin (one-time; after that, everything tenant-side is on `/admin`)
 - `npx tsx scripts/smoke-r2.ts` — R2 connectivity smoke test
 
 ## Stripe billing
@@ -215,12 +218,12 @@ maps 1:1 to a Stripe Customer + Subscription. Pricing is **$100/property/month**
 (subscription quantity = property count) plus a one-time **$250 setup fee** on
 the first invoice. The flow:
 
-1. **Admin starts the subscription** (`npm run start:subscription -- --org-slug=...`).
-   This creates the Stripe Customer and a per-property Subscription billed via
-   `collection_method=send_invoice` with a 14-day grace window
-   (`days_until_due=14`). The first invoice — including the setup fee — is
-   issued immediately and listed under `/billing`. No payment method is
-   required up front.
+1. **Admin starts the subscription** from `/admin/tenants/<id>` → "Start
+   subscription". This creates the Stripe Customer and a per-property
+   Subscription billed via `collection_method=send_invoice` with a 14-day
+   grace window (`days_until_due=14`). The first invoice — including the
+   setup fee — is issued immediately and listed under `/billing`. No
+   payment method is required up front.
 2. **Customer saves a card for auto-renewal** during the 14-day window via
    `/billing` → "Save card for auto-renewal". The CTA opens Stripe Checkout in
    `setup` mode; the webhook attaches the card to the customer + subscription
@@ -255,17 +258,14 @@ the first invoice. The flow:
 5. For local dev, run `stripe listen --forward-to localhost:3000/api/stripe/webhook`
    and use the printed `whsec_...` as `STRIPE_WEBHOOK_SECRET`.
 
-### Starting CG Hotel Group
+### Starting a tenant's subscription
 
 Once the Stripe account, Prices, and webhook are configured and the migration
-has been applied:
-
-```bash
-npm run start:subscription -- --org-slug=cg-hotel-group
-```
-
-This auto-detects the property count, creates the Stripe Customer + Subscription
-with the 14-day grace window, and adds the setup fee to the first invoice.
+has been applied: from the admin portal, open `/admin/tenants/<org-id>` and
+click **Start subscription**. The action auto-detects the property count,
+creates the Stripe Customer + Subscription with the 14-day grace window, and
+adds the setup fee to the first invoice. Idempotent — clicking again on an
+org that already has a non-terminal subscription is a no-op.
 
 ## Roadmap
 

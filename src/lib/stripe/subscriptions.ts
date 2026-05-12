@@ -223,7 +223,7 @@ export async function syncSubscriptionToDb(
  * After a property is added or removed, push the new quantity to Stripe so
  * billing tracks property count. Best-effort: logs and returns false on
  * failure rather than rolling back the property change. No-op when the org
- * has no subscription yet (admin hasn't run start-subscription) or the sub
+ * has no subscription yet (admin hasn't clicked Start subscription) or the sub
  * is in a terminal state.
  *
  * proration_behavior='create_prorations' is the default and produces a

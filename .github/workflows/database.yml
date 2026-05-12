@@ -6,8 +6,8 @@ name: Database
 # supabase_migrations.schema_migrations.
 #
 # Tenant onboarding (creating an org, its properties, and inviting the owner)
-# is intentionally NOT part of this workflow — that's a manual,
-# per-customer operation. See .github/workflows/onboard-tenant.yml.
+# is intentionally NOT part of this workflow — that's a per-customer
+# operation, done from the admin portal at /admin → "New tenant".
 
 on:
   push:

@@ -40,8 +40,8 @@ export type StartSubscriptionResult =
  * Mirrors the Stripe state into `billing_subscriptions` and stamps a 14-day
  * (configurable) payment-method-due deadline.
  *
- * Inputs and behaviour intentionally mirror `scripts/start-subscription.ts`
- * so the CLI and admin UI are guaranteed to produce identical results.
+ * Called from the "Start subscription" button on /admin/tenants/[id] via
+ * `startSubscriptionAction` in `lib/admin/actions.ts`.
  */
 export async function startSubscriptionForOrg(
   orgId: string,

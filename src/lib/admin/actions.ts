@@ -742,10 +742,9 @@ export async function removePropertyLogoAction(formData: FormData) {
 }
 
 /**
- * Platform-admin action: start a Stripe subscription for a tenant. Same code
- * path as `npm run start:subscription` — see `lib/stripe/start-subscription.ts`
- * for the idempotency contract (no duplicate subs, customer reused if one
- * already exists for the org).
+ * Platform-admin action: start a Stripe subscription for a tenant. See
+ * `lib/stripe/start-subscription.ts` for the idempotency contract (no
+ * duplicate subs, customer reused if one already exists for the org).
  */
 export async function startSubscriptionAction(
   _prev: ActionResult,

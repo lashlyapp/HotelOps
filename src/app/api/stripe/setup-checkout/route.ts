@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic'
  * Owner-only: create a Stripe Checkout session that the customer uses to save
  * a card. We pick the mode based on whether a subscription already exists:
  *
- *  - Subscription exists (admin-created via start-subscription script) →
+ *  - Subscription exists (admin-created from /admin/tenants/[id]) →
  *    mode=setup. The saved card is attached to the customer, then promoted
  *    to the subscription's default_payment_method via the webhook and the
  *    subscription is flipped from send_invoice to charge_automatically.
