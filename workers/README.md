@@ -82,15 +82,28 @@ Required repo secrets (Settings → Secrets and variables → Actions):
 
 | secret                        | what                                                                                                |
 |-------------------------------|-----------------------------------------------------------------------------------------------------|
-| `CLOUDFLARE_API_TOKEN`        | scoped: Workers Scripts:Edit, Workers KV Storage:Edit, Workers Routes:Edit, Cache Purge             |
+| `CLOUDFLARE_API_TOKEN`        | see scopes below                                                                                    |
 | `CLOUDFLARE_ACCOUNT_ID`       | the account that owns the R2 bucket                                                                 |
-| `R2_BUCKET`                   | the bucket name (same value as the app's `R2_BUCKET` env)                                           |
 | `NEXT_PUBLIC_SUPABASE_URL`    | for backfill: lets the workflow read `billing_subscriptions` + `organizations` to compute KV state  |
 | `SUPABASE_SERVICE_ROLE_KEY`   | same — service-role read on the billing tables                                                      |
 
-The repo's `wrangler.toml` keeps these out of source — CI substitutes
-them at deploy time so a wrong-account checkout can't accidentally
-publish to production.
+**API token scopes.** The Cloudflare token UI groups permissions under
+categories. One policy row is enough — scope **Entire Account**, expand
+**Developer Platform**, add:
+
+- Workers Scripts — Edit (deploy the Worker and attach it to routes)
+- Workers KV Storage — Edit (list/create the `hotelops-gate` namespace + writes)
+- Workers R2 Storage — Edit (required because the Worker binds the
+  `app-hotelops` R2 bucket; without this, deploy fails validating the binding)
+
+(Older Cloudflare docs reference a separate zone-scope "Workers Routes
+Edit" permission. That's been folded into account-scope Workers Scripts
+Edit in the current UI — no zone-scoped row is needed.)
+
+The R2 bucket name (`app-hotelops`) is checked in to `wrangler.toml`
+because it's not the access boundary — the `CLOUDFLARE_ACCOUNT_ID`
+secret is. The KV namespace id is the only deploy-time substitution
+left, and CI discovers (or creates) it per-account on every run.
 
 Recommended GitHub Environment protection: configure the
 `cdn-gate-production` environment with required reviewers. That turns
@@ -132,7 +145,7 @@ These are the bootstrap steps that have to happen once. After this,
 every deploy is just a workflow_dispatch button press.
 
 1.  **Set repo secrets** (Settings → Secrets and variables → Actions):
-    `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `R2_BUCKET`,
+    `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
     `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. See the
     table above for token scopes.
 

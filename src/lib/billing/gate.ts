@@ -41,13 +41,18 @@ export function computeGate(
   subscription: BillingSubscription | null,
 ): BillingGate {
   if (!subscription) {
-    // No subscription on file. v1 deliberately doesn't gate this — the org
-    // was admin-onboarded and just hasn't had its sub created yet.
+    // No subscription on file. Pricing is per-property, so the trigger
+    // to start billing is the owner adding their first property — which
+    // they kick off from /billing. Until then, writes + media access
+    // are restricted so a free account can't accumulate billable
+    // activity. The banner copy + the empty state on /properties both
+    // point to /billing for the self-serve "Start subscription" flow.
     return {
-      banner: false,
-      restrictWrites: false,
-      restrictMedia: false,
-      message: null,
+      banner: true,
+      restrictWrites: true,
+      restrictMedia: true,
+      message:
+        'You haven’t started a subscription yet. Go to Billing to add a payment method and your first property.',
       status: 'no_subscription',
       daysPastDue: null,
     }

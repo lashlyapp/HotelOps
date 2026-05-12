@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
+import { BRAND } from '@/lib/brand'
 import './globals.css'
 
 const inter = Inter({
@@ -15,8 +16,11 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'HotelOps',
-  description: 'Operations platform for hotel property owners',
+  title: {
+    default: BRAND.name,
+    template: `%s — ${BRAND.name}`,
+  },
+  description: BRAND.productTagline,
 }
 
 export default function RootLayout({

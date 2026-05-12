@@ -1,5 +1,4 @@
 export type AppRole = 'platform_admin' | 'org_owner' | 'org_staff'
-export type InvoiceStatus = 'pending' | 'paid' | 'void'
 
 export type Organization = {
   id: string
@@ -172,21 +171,6 @@ export type ItDocument = {
   updated_at: string
 }
 
-export type Invoice = {
-  id: string
-  org_id: string
-  amount_cents: number
-  currency: string
-  status: InvoiceStatus
-  period_start: string
-  period_end: string
-  due_date: string | null
-  paid_at: string | null
-  payment_method: string | null
-  notes: string | null
-  created_at: string
-}
-
 // ----------------------------------------------------------------------------
 // Stripe-backed billing
 // ----------------------------------------------------------------------------
@@ -357,5 +341,34 @@ export type EventActivity = {
   message: string
   actor_id: string | null
   actor_label: string | null
+  created_at: string
+}
+
+// ----------------------------------------------------------------------------
+// Public signup requests (the /signup form)
+// ----------------------------------------------------------------------------
+export type TenantSignupStatus = 'pending' | 'approved' | 'rejected'
+
+export type TenantSignupRequest = {
+  id: string
+  email: string
+  full_name: string
+  hotel_name: string
+  phone: string | null
+  message: string | null
+  status: TenantSignupStatus
+  approved_org_id: string | null
+  approved_at: string | null
+  approved_by: string | null
+  rejection_reason: string | null
+  rejected_at: string | null
+  rejected_by: string | null
+  agreed_at: string | null
+  agreed_terms_version: string | null
+  agreed_privacy_version: string | null
+  ip_address: string | null
+  email_verified_at: string | null
+  email_verification_token: string | null
+  email_verification_sent_at: string | null
   created_at: string
 }

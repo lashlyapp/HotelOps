@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requireOrgOwner } from '@/lib/auth/session'
-import { listMediaForPrefix } from '@/lib/r2/list'
+import { listMediaForPropertyCached } from '@/lib/r2/list'
 import { computeLibraryStats, formatBytes } from '@/lib/r2/stats'
 import { r2PublicUrl } from '@/lib/r2/client'
 import { AddPropertyForm } from './_components/add-property-form'
@@ -9,10 +9,14 @@ import { RemovePropertyButton } from './_components/remove-property-button'
 
 export default async function PropertiesPage() {
   const session = await requireOrgOwner()
+  // Pricing is per-property, so adding a property is the trigger for
+  // starting the Stripe subscription. We swap the Add Property form
+  // for a billing CTA when no sub is on file.
+  const subscriptionRequired = session.gate.status === 'no_subscription'
 
   const rows = await Promise.all(
     session.properties.map(async (p) => {
-      const files = await listMediaForPrefix(p.r2_prefix)
+      const files = await listMediaForPropertyCached(p.id, p.r2_prefix)
       return { property: p, stats: computeLibraryStats(files) }
     }),
   )
@@ -33,7 +37,10 @@ export default async function PropertiesPage() {
         <ul className="divide-y divide-border-subtle">
           {rows.length === 0 ? (
             <li className="p-8 text-center text-sm text-muted">
-              No properties yet. Add the first one below.
+              No properties yet.{' '}
+              {subscriptionRequired
+                ? 'Start your subscription below to add the first one.'
+                : 'Add the first one below.'}
             </li>
           ) : (
             rows.map(({ property, stats }) => (
@@ -77,10 +84,32 @@ export default async function PropertiesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Add property</CardTitle>
+          <CardTitle>
+            {subscriptionRequired
+              ? 'Start subscription to add your first property'
+              : 'Add property'}
+          </CardTitle>
         </CardHeader>
         <CardBody>
-          <AddPropertyForm />
+          {subscriptionRequired ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted leading-relaxed">
+                Pricing is per property: <strong className="text-fg">$100 / month</strong>{' '}
+                per property plus a one-time{' '}
+                <strong className="text-fg">$250 setup fee</strong> on the first
+                invoice. We&apos;ll add your card and your first property in one
+                step.
+              </p>
+              <Link
+                href="/billing"
+                className="focus-ring inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-fg hover:bg-primary-hover transition-colors"
+              >
+                Go to billing →
+              </Link>
+            </div>
+          ) : (
+            <AddPropertyForm />
+          )}
         </CardBody>
       </Card>
     </div>

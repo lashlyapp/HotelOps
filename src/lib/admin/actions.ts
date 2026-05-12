@@ -8,10 +8,19 @@ import {
   requirePlatformAdmin,
   requireUser,
 } from '@/lib/auth/session'
+import {
+  generatePassword,
+  validatePassword,
+} from '@/lib/auth/password'
+import { BRAND } from '@/lib/brand'
 import { getGateForOrg } from '@/lib/billing/gate'
 import { isEmailConfigured } from '@/lib/email/client'
 import { sendWelcomeEmail } from '@/lib/email/send'
 import { r2DeleteObject, r2PutObject } from '@/lib/r2/upload'
+import {
+  startSubscriptionForOrg,
+  type StartSubscriptionResult,
+} from '@/lib/stripe/start-subscription'
 import { syncSubscriptionQuantity } from '@/lib/stripe/subscriptions'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { AppRole, Property } from '@/lib/supabase/types'
@@ -46,7 +55,6 @@ async function generateSetupLink(email: string): Promise<string | null> {
 }
 
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
-const MIN_PASSWORD_LENGTH = 8
 
 export type ActionResult = { error?: string; success?: string }
 
@@ -81,11 +89,8 @@ export async function createTenantAction(
     if (!ownerPassword) {
       return { error: 'Set a temporary password or switch to self-set mode.' }
     }
-    if (ownerPassword.length < MIN_PASSWORD_LENGTH) {
-      return {
-        error: `Owner password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
-      }
-    }
+    const pwCheck = validatePassword(ownerPassword)
+    if (!pwCheck.ok) return { error: `Owner ${pwCheck.error.toLowerCase()}` }
   } else if (!isEmailConfigured()) {
     return {
       error:
@@ -139,7 +144,7 @@ export async function createTenantAction(
   //    recovery link the email contains is what they actually use).
   const existingUserId = await findUserId(ownerEmail)
   const effectivePassword =
-    passwordMode === 'admin' ? ownerPassword : randomPlaceholderPassword()
+    passwordMode === 'admin' ? ownerPassword : generatePassword()
   let ownerId: string
   if (existingUserId) {
     const { error } = await admin.auth.admin.updateUserById(existingUserId, {
@@ -181,16 +186,15 @@ export async function createTenantAction(
     })
   }
 
+  // Note: we deliberately do NOT auto-start the Stripe subscription
+  // here. Pricing is per-property, so the trigger to start billing
+  // belongs to the owner's first paid action (adding a property /
+  // hitting /billing → "Start subscription"). The gate restricts
+  // writes until the sub is active, so the owner can sign in and
+  // explore but can't accumulate billable activity for free.
+
   revalidatePath('/admin')
   redirect('/admin')
-}
-
-function randomPlaceholderPassword(): string {
-  // 32 random URL-safe chars; never disclosed to anyone — replaced when the
-  // recipient clicks the recovery link and sets their own password.
-  const bytes = new Uint8Array(24)
-  crypto.getRandomValues(bytes)
-  return Buffer.from(bytes).toString('base64url')
 }
 
 /**
@@ -211,11 +215,8 @@ export async function createTeamMemberAction(
   if (!email) return { error: 'Email is required.' }
   if (passwordMode === 'admin') {
     if (!password) return { error: 'Set a temporary password or switch to self-set mode.' }
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      return {
-        error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
-      }
-    }
+    const pwCheck = validatePassword(password)
+    if (!pwCheck.ok) return { error: pwCheck.error }
   } else if (!isEmailConfigured()) {
     return {
       error:
@@ -240,7 +241,7 @@ export async function createTeamMemberAction(
   }
 
   const effectivePassword =
-    passwordMode === 'admin' ? password : randomPlaceholderPassword()
+    passwordMode === 'admin' ? password : generatePassword()
   let userId: string
   if (existingId) {
     const { error } = await admin.auth.admin.updateUserById(existingId, {
@@ -406,9 +407,8 @@ export async function addOrgMemberAction(
   if (!email) return { error: 'Email is required.' }
   if (passwordMode === 'admin') {
     if (!password) return { error: 'Set a temporary password or switch to self-set mode.' }
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` }
-    }
+    const pwCheck = validatePassword(password)
+    if (!pwCheck.ok) return { error: pwCheck.error }
   } else if (!isEmailConfigured()) {
     return {
       error:
@@ -435,7 +435,7 @@ export async function addOrgMemberAction(
   }
 
   const effectivePassword =
-    passwordMode === 'admin' ? password : randomPlaceholderPassword()
+    passwordMode === 'admin' ? password : generatePassword()
   let userId: string
   if (existingId) {
     const { error } = await admin.auth.admin.updateUserById(existingId, {
@@ -737,6 +737,43 @@ export async function removePropertyLogoAction(formData: FormData) {
   revalidatePath('/properties')
 }
 
+/**
+ * Platform-admin action: start a Stripe subscription for a tenant. See
+ * `lib/stripe/start-subscription.ts` for the idempotency contract (no
+ * duplicate subs, customer reused if one already exists for the org).
+ */
+export async function startSubscriptionAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requirePlatformAdmin()
+  const orgId = String(formData.get('org_id') ?? '')
+  if (!orgId) return { error: 'Missing org.' }
+
+  let result: StartSubscriptionResult
+  try {
+    result = await startSubscriptionForOrg(orgId)
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) }
+  }
+
+  revalidatePath(`/admin/tenants/${orgId}`)
+  revalidatePath('/admin')
+
+  if (result.kind === 'existing') {
+    return {
+      success: `Already subscribed — ${result.stripeSubscriptionId}. No change.`,
+    }
+  }
+  const due = result.paymentMethodDueAt.toLocaleDateString()
+  return {
+    success:
+      `Subscription created: ${result.stripeSubscriptionId} ` +
+      `(status: ${result.status}, qty ${result.quantity}). ` +
+      `Cooling period ends ${due}.`,
+  }
+}
+
 export async function deleteTenantAction(formData: FormData) {
   await requirePlatformAdmin()
   const orgId = String(formData.get('org_id') ?? '')
@@ -750,4 +787,170 @@ export async function deleteTenantAction(formData: FormData) {
 
   revalidatePath('/admin')
   redirect('/admin')
+}
+
+// ----------------------------------------------------------------------------
+// Public-signup review (platform admin only)
+// ----------------------------------------------------------------------------
+
+/**
+ * Approve a public signup request and provision the tenant in one click:
+ * create the org (slug auto-generated from hotel name), one initial property
+ * with the same name, the owner auth user, profile, and email them a setup
+ * link. The signup row is marked approved + linked to the new org so the
+ * audit trail survives.
+ *
+ * Account-takeover guard: refuses to approve if the signup email already
+ * belongs to an existing auth user. The /signup form is publicly writable,
+ * so without this check an attacker could submit a victim's email; the
+ * approve flow would rewrite the victim's password and re-parent their
+ * profile into the attacker's org. The admin must resolve the collision
+ * manually (verify ownership of the email, then reject + create the tenant
+ * via /admin → "New tenant" with a clean email).
+ *
+ * Idempotency: if `approved_org_id` is already set, returns success without
+ * re-provisioning. If the signup was rejected, refuses.
+ */
+export async function approveSignupAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const inviter = await requirePlatformAdmin()
+  const signupId = String(formData.get('signup_id') ?? '')
+  if (!signupId) return { error: 'Missing signup id.' }
+
+  const admin = createAdminClient()
+
+  const { data: signup, error: signupErr } = await admin
+    .from('tenant_signup_requests')
+    .select('*')
+    .eq('id', signupId)
+    .maybeSingle()
+  if (signupErr) return { error: signupErr.message }
+  if (!signup) return { error: 'Signup not found.' }
+  if (signup.status === 'approved') {
+    revalidatePath('/admin')
+    return { success: 'Already approved.' }
+  }
+  if (signup.status === 'rejected') {
+    return { error: 'This request was already rejected.' }
+  }
+
+  // Account-takeover guard. The /signup form accepts any email; without
+  // this we'd silently re-password an existing user and re-parent their
+  // profile when the admin approves.
+  const existingUserId = await findUserId(signup.email)
+  if (existingUserId) {
+    return {
+      error:
+        `${signup.email} already has an account on ${BRAND.name}. ` +
+        `Reject this request and contact the prospect to verify ownership ` +
+        `of the email — then onboard manually from "New tenant" if appropriate.`,
+    }
+  }
+
+  // 1. Org with auto-slug.
+  const { data: existingOrgs } = await admin
+    .from('organizations')
+    .select('slug')
+  const taken = new Set((existingOrgs ?? []).map((o) => o.slug))
+  const baseSlug = slugify(signup.hotel_name) || 'hotel'
+  const orgSlug = uniqueSlug(baseSlug, (s) => taken.has(s))
+
+  const { data: org, error: orgErr } = await admin
+    .from('organizations')
+    .insert({ slug: orgSlug, name: signup.hotel_name })
+    .select('id')
+    .single()
+  if (orgErr) return { error: orgErr.message }
+  const orgId = org.id
+
+  // 2. Owner auth user + profile. Email collision is impossible here —
+  //    we returned above if findUserId(signup.email) was non-null.
+  //
+  //    We deliberately do NOT pre-create a property or auto-start the
+  //    Stripe subscription. Pricing is per-property, so the owner
+  //    triggers billing when they add their first property — see the
+  //    self-serve flow on /billing → "Start subscription". The gate
+  //    restricts writes until then, so the owner can sign in and
+  //    explore the empty workspace but can't accumulate billable
+  //    activity for free.
+  const placeholderPassword = generatePassword()
+  const { data: createdUser, error: createErr } = await admin.auth.admin.createUser({
+    email: signup.email,
+    password: placeholderPassword,
+    email_confirm: true,
+  })
+  if (createErr) return { error: createErr.message }
+  const ownerId = createdUser.user!.id
+
+  await admin
+    .from('profiles')
+    .upsert({
+      id: ownerId,
+      org_id: orgId,
+      role: 'org_owner',
+      full_name: signup.full_name,
+    })
+
+  // 3. Welcome email with one-time setup link. Best-effort.
+  if (isEmailConfigured()) {
+    const setupLink = (await generateSetupLink(signup.email)) ?? undefined
+    await sendWelcomeEmail({
+      to: signup.email,
+      recipientName: signup.full_name,
+      orgName: signup.hotel_name,
+      roleLabel: roleLabel('org_owner'),
+      inviterName: inviter.email,
+      setupLink,
+    })
+  } else {
+    console.warn(
+      '[signup] approved without sending welcome email — RESEND_API_KEY not set',
+    )
+  }
+
+  // 4. Mark signup approved + link to the org.
+  await admin
+    .from('tenant_signup_requests')
+    .update({
+      status: 'approved',
+      approved_org_id: orgId,
+      approved_at: new Date().toISOString(),
+      approved_by: inviter.userId,
+    })
+    .eq('id', signupId)
+
+  revalidatePath('/admin')
+  revalidatePath(`/admin/tenants/${orgId}`)
+  return {
+    success:
+      `Approved — provisioned ${signup.hotel_name}. ` +
+      `The owner will be billed when they add their first property.`,
+  }
+}
+
+export async function rejectSignupAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const inviter = await requirePlatformAdmin()
+  const signupId = String(formData.get('signup_id') ?? '')
+  const reason = String(formData.get('reason') ?? '').trim() || null
+  if (!signupId) return { error: 'Missing signup id.' }
+
+  const admin = createAdminClient()
+  await admin
+    .from('tenant_signup_requests')
+    .update({
+      status: 'rejected',
+      rejection_reason: reason,
+      rejected_at: new Date().toISOString(),
+      rejected_by: inviter.userId,
+    })
+    .eq('id', signupId)
+    .eq('status', 'pending')
+
+  revalidatePath('/admin')
+  return { success: 'Rejected.' }
 }

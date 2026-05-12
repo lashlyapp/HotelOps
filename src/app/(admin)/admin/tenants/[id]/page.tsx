@@ -4,7 +4,7 @@ import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requirePlatformAdmin } from '@/lib/auth/session'
 import { r2PublicUrl } from '@/lib/r2/client'
-import { listMediaForPrefix } from '@/lib/r2/list'
+import { listMediaForPropertyCached } from '@/lib/r2/list'
 import { computeLibraryStats, formatBytes, formatRelative } from '@/lib/r2/stats'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type {
@@ -19,6 +19,7 @@ import { DeleteTenantSection } from './_components/delete-tenant-section'
 import { OrgNameSection } from './_components/org-name-section'
 import { RemovePropertyButton } from './_components/remove-property-button'
 import { RemoveMemberButton } from './_components/remove-member-button'
+import { StartSubscriptionButton } from './_components/start-subscription-button'
 
 type Member = {
   id: string
@@ -41,11 +42,14 @@ export default async function TenantDetailPage({
 
   const { organization, properties, members, subscription } = data
 
-  // Per-property R2 listing — small property counts in v1, fine to fan out.
+  // Per-property R2 listing — cached per-property (60s + mediaCacheTag) so
+  // repeat admin navigations don't fan out to R2 every time.
   const propertyStats = await Promise.all(
     properties.map(async (property) => ({
       property,
-      stats: computeLibraryStats(await listMediaForPrefix(property.r2_prefix)),
+      stats: computeLibraryStats(
+        await listMediaForPropertyCached(property.id, property.r2_prefix),
+      ),
     })),
   )
 
@@ -75,7 +79,12 @@ export default async function TenantDetailPage({
 
       <OrgNameSection orgId={organization.id} initialName={organization.name} />
 
-      <BillingSection subscription={subscription} />
+      <BillingSection
+        orgId={organization.id}
+        orgName={organization.name}
+        propertyCount={properties.length}
+        subscription={subscription}
+      />
 
       <Card>
         <CardHeader>
@@ -276,8 +285,14 @@ async function loadTenant(orgId: string) {
 }
 
 function BillingSection({
+  orgId,
+  orgName,
+  propertyCount,
   subscription,
 }: {
+  orgId: string
+  orgName: string
+  propertyCount: number
   subscription: BillingSubscription | null
 }) {
   return (
@@ -287,13 +302,14 @@ function BillingSection({
       </CardHeader>
       <CardBody className="space-y-3 text-sm">
         {!subscription ? (
-          <p className="text-muted">
-            No subscription on file. Run{' '}
-            <code className="font-mono text-xs bg-surface-muted px-1 py-0.5 rounded">
-              npm run start:subscription -- --org-slug=…
-            </code>{' '}
-            to create one.
-          </p>
+          <div className="space-y-3">
+            <p className="text-muted">No subscription on file.</p>
+            <StartSubscriptionButton
+              orgId={orgId}
+              orgName={orgName}
+              propertyCount={propertyCount}
+            />
+          </div>
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2">

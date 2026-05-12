@@ -2,9 +2,16 @@ import Link from 'next/link'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { signOut } from '@/app/login/actions'
 import { requireSession } from '@/lib/auth/session'
+import { DeleteAccountSection } from './_components/delete-account-section'
 
 export default async function AccountPage() {
   const session = await requireSession()
+  const deletableRole: 'org_owner' | 'org_staff' | null =
+    session.profile.role === 'org_owner'
+      ? 'org_owner'
+      : session.profile.role === 'org_staff'
+        ? 'org_staff'
+        : null
 
   return (
     <div className="p-8 space-y-6 max-w-2xl">
@@ -67,9 +74,30 @@ export default async function AccountPage() {
           </form>
         </CardBody>
       </Card>
+
+      {deletableRole ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Danger zone</CardTitle>
+          </CardHeader>
+          <CardBody className="space-y-3">
+            <p className="text-sm text-muted leading-relaxed">
+              {deletableRole === 'org_owner'
+                ? 'Permanently delete your organization and your account. Cancels any active subscription and removes every team member, property, and uploaded file.'
+                : 'Permanently delete your account. Your organization is unaffected.'}
+            </p>
+            <DeleteAccountSection
+              role={deletableRole}
+              orgName={session.organization.name}
+              orgSlug={session.organization.slug}
+            />
+          </CardBody>
+        </Card>
+      ) : null}
     </div>
   )
 }
+
 
 function Field({
   label,

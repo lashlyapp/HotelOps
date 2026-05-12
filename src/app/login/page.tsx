@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
 import { Button } from '@/components/ui/button'
@@ -24,11 +25,31 @@ export default async function LoginPage({
 
   return (
     <div className="flex flex-1 flex-col">
+      <header className="border-b border-border-subtle">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+          <Wordmark size="md" href="/" />
+          <div className="flex items-center gap-2">
+            <Link
+              href="/"
+              className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
+            >
+              ← Back to home
+            </Link>
+            <Link
+              href="/signup"
+              className="focus-ring inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-fg hover:bg-primary-hover transition-colors"
+            >
+              Sign up
+            </Link>
+          </div>
+        </div>
+      </header>
+
       <main className="flex flex-1 items-center justify-center px-6 py-16">
         <div className="w-full max-w-sm space-y-8">
           <div className="space-y-3 text-center">
-            <Wordmark size="lg" />
-            <p className="text-sm text-muted">Sign in to your account</p>
+            <Wordmark size="lg" href="/" />
+            <p className="text-sm text-muted">Log in to your account</p>
           </div>
 
           <form action={signIn} className="space-y-4">
@@ -44,7 +65,15 @@ export default async function LoginPage({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-baseline justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  href="/forgot-password"
+                  className="focus-ring rounded-sm text-xs font-medium text-muted hover:text-fg"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <Input
                 id="password"
                 name="password"
@@ -59,13 +88,19 @@ export default async function LoginPage({
             ) : null}
 
             <Button type="submit" className="w-full">
-              Sign in
+              Log in
             </Button>
           </form>
 
           <p className="text-center text-xs text-subtle leading-relaxed">
-            Accounts are created by invitation. Contact your administrator if
-            you don&apos;t have access.
+            Don&apos;t have an account yet?{' '}
+            <Link
+              href="/signup"
+              className="font-medium text-fg hover:underline"
+            >
+              Sign up
+            </Link>
+            .
           </p>
         </div>
       </main>

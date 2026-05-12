@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
 
@@ -9,9 +10,19 @@ const sizeStyles: Record<Size, string> = {
   lg: 'text-xl',
 }
 
+const markPixelSize: Record<Size, number> = {
+  sm: 20,
+  md: 24,
+  lg: 32,
+}
+
 /**
  * Wordmark for MyHotelOps. Two-tone: "My" in muted, "HotelOps" in primary fg.
- * Uses a tiny square mark to give it visual weight at small sizes.
+ * Mark is a square concierge-bell icon — the hospitality service-dome glyph.
+ *
+ * Icon asset lives at /public/HotelOps.png. Replace it with a vector SVG
+ * at the same path (any time, no code change) for sharper rendering and
+ * better OG / favicon use; PNG is the interim while a true vector is sourced.
  */
 export function Wordmark({
   size = 'md',
@@ -22,6 +33,7 @@ export function Wordmark({
   href?: string
   className?: string
 }) {
+  const px = markPixelSize[size]
   const content = (
     <span
       className={cn(
@@ -30,10 +42,14 @@ export function Wordmark({
         className,
       )}
     >
-      <span
+      <Image
+        src="/HotelOps.png"
+        alt=""
+        width={px}
+        height={px}
+        priority
         aria-hidden
-        className="inline-block h-4 w-4 rounded-xs bg-fg"
-        style={{ borderRadius: 4 }}
+        className="shrink-0 rounded-[5px] dark:invert"
       />
       <span className="text-fg">
         <span className="text-muted font-normal">My</span>
