@@ -88,20 +88,17 @@ Required repo secrets (Settings → Secrets and variables → Actions):
 | `SUPABASE_SERVICE_ROLE_KEY`   | same — service-role read on the billing tables                                                      |
 
 **API token scopes.** The Cloudflare token UI groups permissions under
-categories. Create a Custom Token with two policy rows:
+categories. One policy row is enough — scope **Entire Account**, expand
+**Developer Platform**, add:
 
-Row 1 — scope **Entire Account**, expand **Developer Platform**, add:
-
-- Workers Scripts — Edit (deploy the Worker)
+- Workers Scripts — Edit (deploy the Worker and attach it to routes)
 - Workers KV Storage — Edit (list/create the `hotelops-gate` namespace + writes)
 - Workers R2 Storage — Edit (required because the Worker binds the
   `app-hotelops` R2 bucket; without this, deploy fails validating the binding)
 
-Row 2 — scope **Specific zone → myhotelops.com**, expand **Developer
-Platform**, add:
-
-- Workers Routes — Edit (only needed by the `canary` and `production`
-  targets, which attach routes to the zone; `upload-only` does not need this)
+(Older Cloudflare docs reference a separate zone-scope "Workers Routes
+Edit" permission. That's been folded into account-scope Workers Scripts
+Edit in the current UI — no zone-scoped row is needed.)
 
 The R2 bucket name (`app-hotelops`) is checked in to `wrangler.toml`
 because it's not the access boundary — the `CLOUDFLARE_ACCOUNT_ID`
