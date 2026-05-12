@@ -160,17 +160,21 @@ jobs:
           echo '── effective wrangler.toml ──' >&2
           cat wrangler.toml >&2
 
-      # ─── upload-only: real deploy to the default (no-routes) env ──────
-      # Worker lands in the CF account so we validate end-to-end against
-      # real credentials, but no traffic flips — the production catch-all
-      # route is only updated by `target=production` on merge to main.
-      - name: Upload-only (no routes)
+      # ─── upload-only: upload a new Worker version, no traffic ─────────
+      # `wrangler versions upload` validates end-to-end against real
+      # credentials (auth, bindings, build) and stores the version in
+      # the account, but does NOT route any traffic to it — the active
+      # production version is only updated by `target=production` on
+      # merge to main. This is the right primitive for "real deploy,
+      # zero blast radius"; `wrangler deploy` would refuse without
+      # routes or a workers.dev subdomain.
+      - name: Upload-only (new version, no traffic)
         if: env.TARGET == 'upload-only'
         working-directory: workers/cdn-gate
         run: |
-          npx wrangler deploy --env="" \
+          npx wrangler versions upload --env production \
             --message "upload-only · ${{ github.actor }} · ${{ github.event_name }}"
-          echo '✅ uploaded to default env — no routes attached, no traffic affected'
+          echo '✅ version uploaded — not active, no traffic affected'
 
       # ─── canary: deploy to single-tenant route ─────────────────────────
       - name: Deploy canary
