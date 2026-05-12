@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
 
@@ -9,16 +10,19 @@ const sizeStyles: Record<Size, string> = {
   lg: 'text-xl',
 }
 
-const markSizeStyles: Record<Size, string> = {
-  sm: 'h-5 w-5',
-  md: 'h-6 w-6',
-  lg: 'h-8 w-8',
+const markPixelSize: Record<Size, number> = {
+  sm: 20,
+  md: 24,
+  lg: 32,
 }
 
 /**
  * Wordmark for MyHotelOps. Two-tone: "My" in muted, "HotelOps" in primary fg.
- * Mark is a rounded black square with a white concierge-bell glyph — the
- * service-dome silhouette common to hospitality branding.
+ * Mark is a square concierge-bell icon — the hospitality service-dome glyph.
+ *
+ * Icon asset lives at /public/hotelops-icon.png. Replace it with a vector SVG
+ * at the same path (any time, no code change) for sharper rendering and
+ * better OG / favicon use; PNG is the interim while a true vector is sourced.
  */
 export function Wordmark({
   size = 'md',
@@ -29,6 +33,7 @@ export function Wordmark({
   href?: string
   className?: string
 }) {
+  const px = markPixelSize[size]
   const content = (
     <span
       className={cn(
@@ -37,16 +42,15 @@ export function Wordmark({
         className,
       )}
     >
-      <span
+      <Image
+        src="/hotelops-icon.png"
+        alt=""
+        width={px}
+        height={px}
+        priority
         aria-hidden
-        className={cn(
-          'inline-flex items-center justify-center rounded-md bg-fg text-bg',
-          markSizeStyles[size],
-        )}
-        style={{ borderRadius: 6 }}
-      >
-        <ConciergeBellGlyph />
-      </span>
+        className="shrink-0 rounded-[5px]"
+      />
       <span className="text-fg">
         <span className="text-muted font-normal">My</span>
         HotelOps
@@ -62,27 +66,4 @@ export function Wordmark({
     )
   }
   return content
-}
-
-function ConciergeBellGlyph() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-[68%] w-[68%]"
-      aria-hidden
-    >
-      {/* handle on top of the dome */}
-      <path d="M10 5h4" />
-      <path d="M12 5v3" />
-      {/* domed cover */}
-      <path d="M4 17a8 8 0 0 1 16 0" />
-      {/* serving plate / base */}
-      <path d="M2 19a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2H2v2Z" />
-    </svg>
-  )
 }
