@@ -9,9 +9,16 @@ const sizeStyles: Record<Size, string> = {
   lg: 'text-xl',
 }
 
+const markSizeStyles: Record<Size, string> = {
+  sm: 'h-5 w-5',
+  md: 'h-6 w-6',
+  lg: 'h-8 w-8',
+}
+
 /**
  * Wordmark for MyHotelOps. Two-tone: "My" in muted, "HotelOps" in primary fg.
- * Uses a tiny square mark to give it visual weight at small sizes.
+ * Mark is a rounded black square with a white concierge-bell glyph — the
+ * service-dome silhouette common to hospitality branding.
  */
 export function Wordmark({
   size = 'md',
@@ -32,9 +39,14 @@ export function Wordmark({
     >
       <span
         aria-hidden
-        className="inline-block h-4 w-4 rounded-xs bg-fg"
-        style={{ borderRadius: 4 }}
-      />
+        className={cn(
+          'inline-flex items-center justify-center rounded-md bg-fg text-bg',
+          markSizeStyles[size],
+        )}
+        style={{ borderRadius: 6 }}
+      >
+        <ConciergeBellGlyph />
+      </span>
       <span className="text-fg">
         <span className="text-muted font-normal">My</span>
         HotelOps
@@ -50,4 +62,27 @@ export function Wordmark({
     )
   }
   return content
+}
+
+function ConciergeBellGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-[68%] w-[68%]"
+      aria-hidden
+    >
+      {/* handle on top of the dome */}
+      <path d="M10 5h4" />
+      <path d="M12 5v3" />
+      {/* domed cover */}
+      <path d="M4 17a8 8 0 0 1 16 0" />
+      {/* serving plate / base */}
+      <path d="M2 19a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2H2v2Z" />
+    </svg>
+  )
 }
