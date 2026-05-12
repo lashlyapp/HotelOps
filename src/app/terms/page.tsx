@@ -36,15 +36,6 @@ export default function TermsOfServicePage() {
             Last updated {TERMS_OF_SERVICE_LAST_UPDATED}
           </p>
 
-          <div className="mt-4 rounded-md border border-warning-default bg-warning-bg/40 p-4 text-sm text-warning-fg">
-            <strong className="font-semibold">For founders:</strong> this is a
-            template covering the basics for a per-property SaaS subscription.
-            Have it reviewed by counsel before launch — limitations of
-            liability, governing law, and arbitration clauses in particular
-            should match your jurisdiction and risk tolerance. Delete this
-            notice once reviewed.
-          </div>
-
           <Section title="1. Acceptance">
             <p>
               These Terms of Service (&quot;<strong>Terms</strong>&quot;) form a

@@ -36,15 +36,6 @@ export default function PrivacyPolicyPage() {
             Last updated {PRIVACY_POLICY_LAST_UPDATED}
           </p>
 
-          <div className="mt-4 rounded-md border border-warning-default bg-warning-bg/40 p-4 text-sm text-warning-fg">
-            <strong className="font-semibold">For founders:</strong> this is a
-            launch-ready template that covers the typical data flows for a
-            multi-tenant SaaS using Supabase, Stripe, Cloudflare, and Resend.
-            Have it reviewed by counsel before relying on it in production,
-            especially if you market to EU/UK (GDPR), California (CCPA/CPRA),
-            or Brazil (LGPD) customers. Delete this notice once reviewed.
-          </div>
-
           <Section title="Summary">
             <p>
               {BRAND.name} (&quot;<strong>{BRAND.name}</strong>&quot;, &quot;we&quot;,
