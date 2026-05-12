@@ -73,11 +73,13 @@ jobs:
   deploy:
     name: ${{ github.event_name == 'pull_request' && 'upload-only' || inputs.target || 'production' }}
     runs-on: ubuntu-latest
-    # The cdn-gate-production environment is the approval gate for
-    # traffic-affecting deploys (canary / production / rollbacks). PR-push
-    # uploads stay route-less so they intentionally bypass the gate —
-    # otherwise every PR would block on a reviewer click.
-    environment: ${{ github.event_name == 'pull_request' && '' || 'cdn-gate-production' }}
+    # All deploys (PR push, merge, dispatch) go through the same GitHub
+    # Environment so secrets resolve from one place. If you set required
+    # reviewers on `cdn-gate-production`, PR pushes will block on the
+    # gate too — split out a separate `cdn-gate-preview` env (same
+    # secrets, no reviewers) and select it conditionally if you want
+    # frictionless PR uploads.
+    environment: cdn-gate-production
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
