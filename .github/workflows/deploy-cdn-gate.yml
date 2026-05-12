@@ -168,11 +168,18 @@ jobs:
       # merge to main. This is the right primitive for "real deploy,
       # zero blast radius"; `wrangler deploy` would refuse without
       # routes or a workers.dev subdomain.
+      #
+      # No `--env` flag: uses the top-level config block, which has
+      # the same R2 + KV bindings as production but no `routes = [...]`.
+      # That keeps the token permission surface to account-scope only
+      # (Workers Scripts / KV Storage / R2 Storage — all Edit) — the
+      # zone-scope `Workers Routes Edit` policy is only needed by the
+      # canary / production targets that actually attach routes.
       - name: Upload-only (new version, no traffic)
         if: env.TARGET == 'upload-only'
         working-directory: workers/cdn-gate
         run: |
-          npx wrangler versions upload --env production \
+          npx wrangler versions upload \
             --message "upload-only · ${{ github.actor }} · ${{ github.event_name }}"
           echo '✅ version uploaded — not active, no traffic affected'
 
