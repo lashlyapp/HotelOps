@@ -20,7 +20,7 @@ const markPixelSize: Record<Size, number> = {
  * Wordmark for MyHotelOps. Two-tone: "My" in muted, "HotelOps" in primary fg.
  * Mark is a square concierge-bell icon — the hospitality service-dome glyph.
  *
- * Icon asset lives at /public/hotelops-icon.png. Replace it with a vector SVG
+ * Icon asset lives at /public/HotelOps.png. Replace it with a vector SVG
  * at the same path (any time, no code change) for sharper rendering and
  * better OG / favicon use; PNG is the interim while a true vector is sourced.
  */
@@ -43,7 +43,7 @@ export function Wordmark({
       )}
     >
       <Image
-        src="/hotelops-icon.png"
+        src="/HotelOps.png"
         alt=""
         width={px}
         height={px}
