@@ -1,26 +1,34 @@
-# Manual-trigger deploy for the cdn-gate Worker. Never auto-deploys —
-# this Worker enters the request path of every tenant the moment its
-# route is live, so each phase requires a human pressing the button.
+# Deploy the cdn-gate Worker.
 #
-# Roll-out sequence (separate workflow runs, with observation windows
-# between them — see workers/README.md):
-#   1. target=upload-only            → validates build + bindings, no traffic
-#   2. target=canary  + canary_slug  → one tenant only, watch for ~24hr
-#   3. target=production             → catch-all route, all tenants
+# Triggers:
+#   - push to main touching the Worker, its deploy workflow, the KV-sync
+#     script, or the app-side gate helpers → auto-deploys target=production
+#     and then runs the KV backfill. Pair with a required reviewer on the
+#     `cdn-gate-production` GitHub Environment if you want an approval gate.
+#   - workflow_dispatch → choose any target (canary, upload-only, sync-only,
+#     rollback-*).
 #
-# Backfill (`sync:cdn-gate --apply`) runs automatically after both
-# canary and production deploys so KV reflects current sub state the
-# moment the new route is live. `target=sync-only` re-runs it without
-# touching the Worker (handy if KV ever drifts from the DB).
+# Targets:
+#   1. upload-only            → validates build + bindings, no traffic
+#   2. canary  + canary_slug  → one tenant only, watch for ~24hr
+#   3. production             → catch-all route, all tenants (default on push)
+#   4. sync-only              → re-run KV backfill without touching the Worker
+#   5. rollback-canary        → revert canary to previous Worker version
+#   6. rollback-production    → revert production to previous Worker version
 #
-# Emergency rollback (reverts to previous Worker version on the same env,
-# bindings + routes unchanged — fastest way to undo a bad code deploy):
-#   target=rollback-canary
-#   target=rollback-production
+# Backfill (`sync:cdn-gate --apply`) runs automatically after canary,
+# production, and sync-only targets so KV reflects current sub state.
 
 name: Deploy cdn-gate Worker
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'workers/cdn-gate/**'
+      - '.github/workflows/deploy-cdn-gate.yml'
+      - 'scripts/sync-cdn-gate.ts'
+      - 'src/lib/billing/cdn-gate.ts'
   workflow_dispatch:
     inputs:
       target:
@@ -53,7 +61,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: ${{ inputs.target }}
+    name: ${{ inputs.target || 'production' }}
     runs-on: ubuntu-latest
     # Configure this environment in GitHub repo settings with required
     # reviewers — that turns every dispatch into an approval gate, which
@@ -63,6 +71,10 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # On push to main: production. On workflow_dispatch: whatever the
+      # operator picked. Refactored to a single source of truth so step
+      # gates and the job name can share it.
+      TARGET: ${{ inputs.target || 'production' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -123,7 +135,10 @@ jobs:
         env:
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           KV_ID: ${{ steps.kv.outputs.kv_id }}
-          CANARY_SLUG: ${{ inputs.canary_slug }}
+          # `inputs.canary_slug` is empty on push triggers — fall back to the
+          # workflow_dispatch default so the canary route stays syntactically
+          # valid (it's only consumed when --env canary is deployed).
+          CANARY_SLUG: ${{ inputs.canary_slug || 'canary-tenant' }}
         run: |
           set -euo pipefail
           : "${R2_BUCKET:?secret R2_BUCKET is not set}"
@@ -138,7 +153,7 @@ jobs:
 
       # ─── upload-only: validate build + bindings, no traffic ────────────
       - name: Upload-only (dry run)
-        if: inputs.target == 'upload-only'
+        if: env.TARGET == 'upload-only'
         working-directory: workers/cdn-gate
         run: |
           npx wrangler deploy --dry-run --outdir dist
@@ -146,7 +161,7 @@ jobs:
 
       # ─── canary: deploy to single-tenant route ─────────────────────────
       - name: Deploy canary
-        if: inputs.target == 'canary'
+        if: env.TARGET == 'canary'
         working-directory: workers/cdn-gate
         env:
           CANARY_SLUG: ${{ inputs.canary_slug }}
@@ -158,7 +173,7 @@ jobs:
 
       # ─── production: catch-all route, all tenants ──────────────────────
       - name: Deploy production
-        if: inputs.target == 'production'
+        if: env.TARGET == 'production'
         working-directory: workers/cdn-gate
         run: |
           npx wrangler deploy \
@@ -167,14 +182,14 @@ jobs:
 
       # ─── rollback: revert to previous Worker version on the env ────────
       - name: Rollback canary
-        if: inputs.target == 'rollback-canary'
+        if: env.TARGET == 'rollback-canary'
         working-directory: workers/cdn-gate
         run: |
           npx wrangler rollback --env canary \
             --message "rollback · ${{ github.actor }} · ${{ inputs.reason }}"
 
       - name: Rollback production
-        if: inputs.target == 'rollback-production'
+        if: env.TARGET == 'rollback-production'
         working-directory: workers/cdn-gate
         run: |
           npx wrangler rollback --env production \
@@ -185,11 +200,11 @@ jobs:
       # sub state the moment the new route is live. Also the entire job
       # for sync-only target. Re-running is idempotent.
       - name: Install app deps (for backfill script)
-        if: contains(fromJSON('["canary","production","sync-only"]'), inputs.target)
+        if: contains(fromJSON('["canary","production","sync-only"]'), env.TARGET)
         run: npm ci
 
       - name: Backfill KV from current subscription state
-        if: contains(fromJSON('["canary","production","sync-only"]'), inputs.target)
+        if: contains(fromJSON('["canary","production","sync-only"]'), env.TARGET)
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -201,7 +216,7 @@ jobs:
         run: |
           {
             echo ""
-            echo "## cdn-gate deploy: ${{ inputs.target }}"
+            echo "## cdn-gate deploy: ${{ env.TARGET }}"
             echo ""
             echo "- actor: ${{ github.actor }}"
             echo "- canary_slug: \`${{ inputs.canary_slug }}\`"
