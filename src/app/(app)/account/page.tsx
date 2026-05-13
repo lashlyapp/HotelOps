@@ -1,7 +1,6 @@
-import Link from 'next/link'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
-import { signOut } from '@/app/login/actions'
 import { requireSession } from '@/lib/auth/session'
+import { ChangePasswordForm } from './_components/change-password-form'
 import { DeleteAccountSection } from './_components/delete-account-section'
 
 export default async function AccountPage() {
@@ -48,30 +47,8 @@ export default async function AccountPage() {
         <CardHeader>
           <CardTitle>Security</CardTitle>
         </CardHeader>
-        <CardBody className="space-y-4">
-          <p className="text-sm text-muted">
-            Need to change your password?{' '}
-            <Link href="/set-password" className="text-fg underline">
-              Set a new one
-            </Link>
-            .
-          </p>
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Session</CardTitle>
-        </CardHeader>
         <CardBody>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="focus-ring rounded-md bg-danger-bg px-4 py-2 text-sm font-medium text-danger-fg hover:brightness-95 transition"
-            >
-              Sign out
-            </button>
-          </form>
+          <ChangePasswordForm />
         </CardBody>
       </Card>
 

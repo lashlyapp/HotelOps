@@ -1,9 +1,47 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { validatePassword } from '@/lib/auth/password'
 import { requireOrgUser, requireUser } from '@/lib/auth/session'
 import { stripe } from '@/lib/stripe/client'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
+
+export type ActionResult = { error?: string; success?: string }
+
+/**
+ * Change the signed-in user's password from the inline form on /account.
+ * Mirrors the validation in /set-password (length + character classes) and
+ * confirms the new password matches the confirmation field before calling
+ * Supabase. Supabase's own policy is the authoritative server-side floor;
+ * if it rejects we surface a generic failure.
+ */
+export async function changePasswordAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const password = String(formData.get('password') ?? '')
+  const confirm = String(formData.get('confirm') ?? '')
+
+  const check = validatePassword(password)
+  if (!check.ok) return { error: check.error }
+  if (password !== confirm) return { error: "Passwords don't match." }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Your session has expired. Sign in again.' }
+
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) {
+    return {
+      error:
+        "Couldn't save that password. Make sure it meets the requirements and try again.",
+    }
+  }
+  return { success: 'Password updated.' }
+}
 
 /**
  * Self-serve account deletion. GDPR / CCPA grant the user the right to
