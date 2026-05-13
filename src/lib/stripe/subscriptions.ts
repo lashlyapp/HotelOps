@@ -86,43 +86,28 @@ export async function ensureStripeCustomer({
 }
 
 /**
- * Atomically claim the one-time setup fee for an org. Returns true on the
- * single call that wins the claim; subsequent calls return false. Used to
- * gate add_invoice_items for the setup fee so two parallel property-
- * subscription creations can't both charge it.
+ * Has this property ever had a Stripe subscription? Used to decide
+ * whether to include the one-time setup fee in a new property
+ * subscription: charge it on a property's first-ever sub, but not on
+ * resubscribes (a canceled-and-then-resumed property already paid).
  *
- * Implemented as `UPDATE … WHERE setup_fee_charged_at IS NULL RETURNING`,
- * which is atomic without an explicit lock and survives connection
- * pooling (unlike pg_advisory_lock under PgBouncer transaction-pool).
+ * Looks for ANY billing_subscriptions row for the property with a
+ * stripe_subscription_id set. A canceled sub still satisfies this — the
+ * row is not deleted on cancel, only on property delete or via the
+ * platform-admin reset flow (both of which legitimately reset history).
  */
-export async function claimSetupFee(orgId: string): Promise<boolean> {
+export async function propertyHasBeenSubscribed(
+  propertyId: string,
+): Promise<boolean> {
   const admin = createAdminClient()
   const { data, error } = await admin
-    .from('organizations')
-    .update({ setup_fee_charged_at: new Date().toISOString() })
-    .eq('id', orgId)
-    .is('setup_fee_charged_at', null)
-    .select('id')
+    .from('billing_subscriptions')
+    .select('property_id')
+    .eq('property_id', propertyId)
+    .not('stripe_subscription_id', 'is', null)
     .maybeSingle()
-  if (error) {
-    // Surface DB errors — better to fail loudly than silently double-
-    // charge or silently skip the fee.
-    throw error
-  }
+  if (error) throw error
   return Boolean(data)
-}
-
-/**
- * Release the setup-fee claim. Used by the caller of {@link claimSetupFee}
- * when the downstream Stripe call fails so the next attempt can re-charge.
- * Safe to call even when nothing was claimed.
- */
-export async function releaseSetupFee(orgId: string): Promise<void> {
-  const admin = createAdminClient()
-  await admin
-    .from('organizations')
-    .update({ setup_fee_charged_at: null })
-    .eq('id', orgId)
 }
 
 type SyncOptions = {

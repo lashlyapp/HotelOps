@@ -6,7 +6,6 @@ export type Organization = {
   name: string
   created_at: string
   stripe_customer_id: string | null
-  setup_fee_charged_at: string | null
 }
 
 export type Profile = {

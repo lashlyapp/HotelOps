@@ -7,10 +7,9 @@ import {
   resolvePriceIdByLookupKey,
 } from '@/lib/stripe/prices'
 import {
-  claimSetupFee,
   ensureStripeCustomer,
   getSubscriptionForProperty,
-  releaseSetupFee,
+  propertyHasBeenSubscribed,
 } from '@/lib/stripe/subscriptions'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -107,9 +106,11 @@ export async function POST(request: Request) {
   }
 
   // Self-serve creation path. quantity is fixed at 1 because the billing
-  // unit is a property. The setup fee is added only on the org's first
-  // property — claimed atomically via claimSetupFee so two parallel
-  // checkouts can't both win the claim.
+  // unit is a property. The setup fee is included on this property's
+  // FIRST subscription only — a resubscribe after cancellation does
+  // not re-charge. To waive setup fees entirely (e.g. as a promotion),
+  // deactivate the hotelops_setup_fee Price in Stripe; the resolver
+  // returns null and the fee is silently omitted.
   const stripeClient = stripe()
   const recurringPriceId = await requirePriceIdByLookupKey(
     stripeClient,
@@ -117,51 +118,36 @@ export async function POST(request: Request) {
   )
 
   let setupFeePriceId: string | null = null
-  const setupFeeClaimed = await claimSetupFee(session.organization.id)
-  if (setupFeeClaimed) {
+  const alreadySubscribed = await propertyHasBeenSubscribed(property.id)
+  if (!alreadySubscribed) {
     setupFeePriceId = await resolvePriceIdByLookupKey(
       stripeClient,
       HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
     )
-    if (!setupFeePriceId) {
-      // No setup-fee Price configured. Release so a future call that
-      // does have one configured can still charge it.
-      await releaseSetupFee(session.organization.id)
-    }
   }
 
-  let checkout
-  try {
-    checkout = await stripeClient.checkout.sessions.create({
-      mode: 'subscription',
-      customer: customerId,
-      line_items: [
-        { price: recurringPriceId, quantity: 1 },
-        ...(setupFeePriceId ? [{ price: setupFeePriceId, quantity: 1 }] : []),
-      ],
-      subscription_data: {
-        description: `HotelOps subscription — ${property.name}`,
-        metadata: {
-          org_id: session.organization.id,
-          property_id: property.id,
-          property_slug: property.slug,
-          app: 'hotelops',
-        },
-      },
-      success_url: successUrl,
-      cancel_url: cancelUrl,
+  const checkout = await stripeClient.checkout.sessions.create({
+    mode: 'subscription',
+    customer: customerId,
+    line_items: [
+      { price: recurringPriceId, quantity: 1 },
+      ...(setupFeePriceId ? [{ price: setupFeePriceId, quantity: 1 }] : []),
+    ],
+    subscription_data: {
+      description: `HotelOps subscription — ${property.name}`,
       metadata: {
         org_id: session.organization.id,
         property_id: property.id,
+        property_slug: property.slug,
+        app: 'hotelops',
       },
-    })
-  } catch (err) {
-    // Stripe rejected the checkout session create — release the claim
-    // so the next attempt can include the fee. Note: the user may still
-    // complete a stale checkout URL we returned earlier; that's why we
-    // also defensively re-check on webhook completion.
-    if (setupFeePriceId) await releaseSetupFee(session.organization.id)
-    throw err
-  }
+    },
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    metadata: {
+      org_id: session.organization.id,
+      property_id: property.id,
+    },
+  })
   return NextResponse.json({ url: checkout.url })
 }

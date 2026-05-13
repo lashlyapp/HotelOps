@@ -7,17 +7,19 @@ import {
   requirePriceIdByLookupKey,
   resolvePriceIdByLookupKey,
 } from './prices'
-import { claimSetupFee, releaseSetupFee } from './subscriptions'
+import { propertyHasBeenSubscribed } from './subscriptions'
 
 export type StartSubscriptionOptions = {
   priceId?: string
-  /** One-time setup fee applied on the very first subscription for the org.
-   *  Subsequent properties don't get charged the setup fee again. */
+  /** Override the setup-fee Price id (otherwise resolved from the
+   *  hotelops_setup_fee lookup key). The fee is only charged when this
+   *  property has no prior subscription history — a resubscribe after
+   *  cancellation is NOT a new property. */
   setupFeePriceId?: string
   graceDays?: number
-  /** Suppress the setup fee even if a price is configured. The admin flow
-   *  uses this when subscribing additional properties for an org that has
-   *  already paid setup. */
+  /** Suppress the setup fee for this specific call even if a Price is
+   *  configured. Useful for ops/migration scripts that re-create a sub
+   *  for a property that's already paid setup historically. */
   skipSetupFee?: boolean
 }
 
@@ -104,28 +106,22 @@ export async function startSubscriptionForProperty(
       HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
     ))
 
-  // Charge the one-time setup fee only on the org's first property. We
-  // atomically claim the fee BEFORE the Stripe call so two parallel
-  // property-subscription creations can't both win the claim. If the
-  // Stripe create fails, the claim is released so the next attempt can
-  // re-charge.
+  // Charge the one-time setup fee on the property's FIRST subscription
+  // only. A resubscribe (after cancel) on a property that already has
+  // billing_subscriptions history doesn't re-charge. To waive setup
+  // fees entirely (e.g. as a promotion), deactivate the
+  // hotelops_setup_fee Price in Stripe — resolvePriceIdByLookupKey
+  // returns null and the fee is silently omitted.
   let setupFeePriceId: string | null = null
-  let setupFeeClaimed = false
   if (!opts.skipSetupFee) {
-    setupFeeClaimed = await claimSetupFee(org.id)
-    if (setupFeeClaimed) {
+    const alreadySubscribed = await propertyHasBeenSubscribed(property.id)
+    if (!alreadySubscribed) {
       setupFeePriceId =
         opts.setupFeePriceId ??
         (await resolvePriceIdByLookupKey(
           s,
           HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
         ))
-      if (!setupFeePriceId) {
-        // No setup-fee Price configured. Release the claim so a future
-        // call doesn't think the fee was charged when it wasn't.
-        await releaseSetupFee(org.id)
-        setupFeeClaimed = false
-      }
     }
   }
 
@@ -156,19 +152,12 @@ export async function startSubscriptionForProperty(
     params.add_invoice_items = [{ price: setupFeePriceId, quantity: 1 }]
   }
 
-  let subscription: Stripe.Subscription
-  try {
-    subscription = await s.subscriptions.create(params, {
-      idempotencyKey: `subscription:${property.id}:${priceId}`,
-    })
-  } catch (err) {
-    // Stripe rejected the create — release the setup-fee claim so the
-    // next attempt can include it. (Stripe's own idempotency key is
-    // scoped per property_id+price, so a retry of the same property
-    // will replay the same intent rather than double-billing.)
-    if (setupFeeClaimed) await releaseSetupFee(org.id)
-    throw err
-  }
+  // Stripe's idempotency key is scoped per property_id + price, so a
+  // retry replays the same intent rather than double-billing. The setup
+  // fee is part of the same call, so it inherits that protection.
+  const subscription = await s.subscriptions.create(params, {
+    idempotencyKey: `subscription:${property.id}:${priceId}`,
+  })
 
   const dueAt = new Date(Date.now() + graceDays * 24 * 60 * 60 * 1000)
   await syncToDb(admin, property.id, org.id, customerId, subscription, dueAt)

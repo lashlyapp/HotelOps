@@ -94,9 +94,6 @@ async function main() {
     )
   }
   console.log(`  delete  ${preview.dbRowsToDelete} billing_subscriptions row(s)`)
-  if (preview.setupFeeStamped) {
-    console.log(`  reset   organizations.setup_fee_charged_at = NULL`)
-  }
 
   if (!preview.hasWorkToDo) {
     console.log(`\nNothing to reset — this tenant is already clean.`)
@@ -115,9 +112,6 @@ async function main() {
   console.log(`  DB rows cleared:         ${summary.dbRowsDeleted}`)
   if (summary.customersDeleted > 0) {
     console.log(`  Stripe Customers deleted: ${summary.customersDeleted}`)
-  }
-  if (summary.setupFeeReset) {
-    console.log(`  Setup-fee claim reset`)
   }
   console.log(
     `\nDone. The org can now visit /billing and start subscriptions ` +

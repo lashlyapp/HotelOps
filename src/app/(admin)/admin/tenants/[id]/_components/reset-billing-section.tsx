@@ -192,9 +192,6 @@ export function ResetBillingSection({
               {summary.customersDeleted > 0 ? (
                 <li>Stripe Customers deleted: {summary.customersDeleted}</li>
               ) : null}
-              {summary.setupFeeReset ? (
-                <li>Setup-fee claim reset</li>
-              ) : null}
             </ul>
           </div>
         ) : null}
@@ -243,12 +240,6 @@ function PreviewBlock({ preview }: { preview: ResetPreview }) {
       ) : null}
 
       <Row label="Delete DB billing rows" count={preview.dbRowsToDelete} />
-
-      {preview.setupFeeStamped ? (
-        <p className="text-xs text-muted">
-          Setup-fee claim will be reset so the next subscription re-charges it.
-        </p>
-      ) : null}
 
       {preview.customerIds.length > 0 ? (
         <p className="text-xs text-muted">

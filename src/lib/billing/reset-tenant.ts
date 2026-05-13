@@ -21,9 +21,11 @@ import { syncGateToCdn } from './cdn-gate'
  *    Customers, so the tenant isn't dunned for stale balances. Paid /
  *    void / uncollectible invoices are immutable history and are left
  *    alone.
- *  - Delete the org's billing_subscriptions rows.
- *  - Null organizations.setup_fee_charged_at so the next subscription
- *    re-claims the one-time setup fee.
+ *  - Delete the org's billing_subscriptions rows. Because the
+ *    "first-time vs resubscribe" decision for the setup fee keys off
+ *    whether ANY billing_subscriptions row exists for the property,
+ *    wiping the rows means the next property subscription correctly
+ *    re-charges setup as if onboarding for the first time.
  *  - hard=true also deletes the Stripe Customer and clears
  *    organizations.stripe_customer_id. Default (hard=false) preserves
  *    the Customer so saved cards / billing address / tax id survive
@@ -54,9 +56,7 @@ export type ResetPreview = {
   }>
   /** Total billing_subscriptions rows that WOULD be deleted. */
   dbRowsToDelete: number
-  /** Whether setup_fee_charged_at is currently set on the org. */
-  setupFeeStamped: boolean
-  /** Whether the org has any non-canceled Stripe subscriptions to cancel. */
+  /** Whether the reset has any actual work to do. */
   hasWorkToDo: boolean
 }
 
@@ -65,7 +65,6 @@ export type ResetSummary = {
   invoicesVoided: number
   dbRowsDeleted: number
   customersDeleted: number
-  setupFeeReset: boolean
 }
 
 /**
@@ -123,12 +122,10 @@ export async function previewTenantBillingReset(
     subscriptionsToCancel,
     invoicesToVoid,
     dbRowsToDelete: subRows.length,
-    setupFeeStamped: Boolean(org.setup_fee_charged_at),
     hasWorkToDo:
       subscriptionsToCancel.length > 0 ||
       invoicesToVoid.length > 0 ||
-      subRows.length > 0 ||
-      Boolean(org.setup_fee_charged_at),
+      subRows.length > 0,
   }
 }
 
@@ -191,8 +188,6 @@ export async function executeTenantBillingReset(
   if (delErr) throw delErr
   const dbRowsDeleted = subRows.length
 
-  const updates: Record<string, unknown> = {}
-  if (org.setup_fee_charged_at) updates.setup_fee_charged_at = null
   if (hard) {
     for (const customerId of customerIds) {
       try {
@@ -205,14 +200,13 @@ export async function executeTenantBillingReset(
         if (!/no such customer/i.test(msg)) throw err
       }
     }
-    if (org.stripe_customer_id) updates.stripe_customer_id = null
-  }
-  if (Object.keys(updates).length > 0) {
-    const { error: updErr } = await admin
-      .from('organizations')
-      .update(updates)
-      .eq('id', orgId)
-    if (updErr) throw updErr
+    if (org.stripe_customer_id) {
+      const { error: updErr } = await admin
+        .from('organizations')
+        .update({ stripe_customer_id: null })
+        .eq('id', orgId)
+      if (updErr) throw updErr
+    }
   }
 
   // Re-sync the CDN edge gate to reflect the post-reset state. Without
@@ -234,7 +228,6 @@ export async function executeTenantBillingReset(
     invoicesVoided,
     dbRowsDeleted,
     customersDeleted,
-    setupFeeReset: Boolean(org.setup_fee_charged_at),
   }
 }
 
@@ -243,7 +236,7 @@ async function loadOrgState(orgId: string) {
 
   const { data: org, error: orgErr } = await admin
     .from('organizations')
-    .select('id, slug, name, stripe_customer_id, setup_fee_charged_at')
+    .select('id, slug, name, stripe_customer_id')
     .eq('id', orgId)
     .maybeSingle()
   if (orgErr) throw orgErr
