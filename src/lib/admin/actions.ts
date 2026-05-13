@@ -13,7 +13,7 @@ import {
   validatePassword,
 } from '@/lib/auth/password'
 import { BRAND } from '@/lib/brand'
-import { getGateForOrg } from '@/lib/billing/gate'
+import { getGateForProperty } from '@/lib/billing/gate'
 import { isEmailConfigured } from '@/lib/email/client'
 import { sendWelcomeEmail } from '@/lib/email/send'
 import { r2DeleteObject, r2PutObject } from '@/lib/r2/upload'
@@ -700,7 +700,7 @@ export async function updatePropertyAction(
   const propertyId = String(formData.get('property_id') ?? '')
   if (!propertyId) return { error: 'Missing property.' }
   const property = await authorizePropertyAccess(propertyId)
-  const gate = await getGateForOrg(property.org_id)
+  const gate = await getGateForProperty(property.id)
   if (gate.restrictWrites) {
     return { error: gate.message ?? 'Editing is locked while billing is past due.' }
   }
@@ -754,7 +754,7 @@ export async function uploadPropertyLogoAction(
   const propertyId = String(formData.get('property_id') ?? '')
   if (!propertyId) return { error: 'Missing property.' }
   const property = await authorizePropertyAccess(propertyId)
-  const gate = await getGateForOrg(property.org_id)
+  const gate = await getGateForProperty(property.id)
   if (gate.restrictWrites) {
     return { error: gate.message ?? 'Editing is locked while billing is past due.' }
   }
@@ -800,7 +800,7 @@ export async function removePropertyLogoAction(formData: FormData) {
   const propertyId = String(formData.get('property_id') ?? '')
   if (!propertyId) return
   const property = await authorizePropertyAccess(propertyId)
-  const gate = await getGateForOrg(property.org_id)
+  const gate = await getGateForProperty(property.id)
   if (gate.restrictWrites) return
 
   if (property.logo_key) {

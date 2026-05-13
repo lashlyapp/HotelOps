@@ -2,7 +2,11 @@ import 'server-only'
 import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { isInternalEmail } from '@/lib/admin/policy'
-import { computeOrgGate, type BillingGate } from '@/lib/billing/gate'
+import {
+  computeOrgGate,
+  computePropertyGate,
+  type BillingGate,
+} from '@/lib/billing/gate'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import type {
@@ -35,9 +39,16 @@ type UserSession = {
 export type OrgSession = UserSession & {
   organization: Organization
   properties: Property[]
-  /** Billing gate decision for this org. Always present so any server action
-   *  / page that uses the session can check `session.gate.restrictWrites`. */
+  /** Org-wide billing gate. Restricts only in the onboarding state
+   *  (org has properties but no subscriptions at all). Property-specific
+   *  issues do NOT restrict the org — use {@link propertyGates} for that.
+   *  This gate's `banner` still surfaces a soft notice on the app shell
+   *  when any property needs attention. */
   gate: BillingGate
+  /** Per-property gate decision, keyed by property id. Server actions
+   *  targeting a single property check this map (not the org-wide gate)
+   *  so a billing issue on one property doesn't lock the rest of the org. */
+  propertyGates: Record<string, BillingGate>
 }
 
 export const requireUser = cache(async (): Promise<UserSession> => {
@@ -108,11 +119,23 @@ const loadOrgSession = cache(async (): Promise<OrgSession> => {
   const propertyList = (properties ?? []) as Property[]
   const subs = (subscriptions as BillingSubscription[] | null) ?? []
   const gate = computeOrgGate(subs, propertyList.length > 0)
+
+  // Build the per-property gate map. A property with no matching
+  // subscription gets computePropertyGate(null), which restricts that
+  // property only — the org keeps operating on its other properties.
+  const subByProperty = new Map<string, BillingSubscription>()
+  for (const s of subs) subByProperty.set(s.property_id, s)
+  const propertyGates: Record<string, BillingGate> = {}
+  for (const p of propertyList) {
+    propertyGates[p.id] = computePropertyGate(subByProperty.get(p.id) ?? null)
+  }
+
   return {
     ...base,
     organization: organization as Organization,
     properties: propertyList,
     gate,
+    propertyGates,
   }
 })
 

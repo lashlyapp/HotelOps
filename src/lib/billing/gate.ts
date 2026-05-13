@@ -6,23 +6,25 @@ import type {
 } from '@/lib/supabase/types'
 
 /**
- * Number of days a subscription can sit in past_due before app access is
- * restricted. Until then, only a banner is shown.
+ * Number of days a property's subscription can sit in past_due before
+ * access to that property is restricted. Until then, only a banner is
+ * shown on the Billing page.
  */
 export const PAST_DUE_RESTRICT_DAYS = 15
 
 export type BillingGate = {
-  /** Whether to render the warning banner across the app shell. */
+  /** Whether to render the warning banner across the app shell (org-wide
+   *  gate) or for the property in question (property-wide gate). */
   banner: boolean
-  /** True → mutating server actions should reject. */
+  /** True → mutating server actions targeting this scope should reject. */
   restrictWrites: boolean
-  /** True → /media is locked behind a "service restricted" page. */
+  /** True → media for this scope is locked. */
   restrictMedia: boolean
   /** Short human-readable banner copy. */
   message: string | null
   /** Lifecycle status (passed through for the UI). */
   status: BillingSubscriptionStatus | 'no_subscription'
-  /** Days the org has been past_due. Null when not past_due. */
+  /** Days the subscription has been past_due. Null when not past_due. */
   daysPastDue: number | null
 }
 
@@ -33,13 +35,27 @@ const OK_STATUSES: BillingSubscriptionStatus[] = [
 ]
 
 /**
- * Map a single subscription row to its gating decision. Pure function — call
- * sites pass in the row (or null) so we don't fan out a query per request.
+ * Map a single subscription row to the gating decision for that one
+ * property. Pure function — call sites pass the row (or null) so we
+ * don't fan out a query per request.
  *
- * Org-wide gating is computed by aggregating these per-property decisions
- * via {@link computeOrgGate}.
+ * Per-property semantics:
+ *  - canceled / incomplete_expired / paused → locked. The customer can
+ *    resubscribe from Billing; the property's data is preserved.
+ *  - past_due / unpaid:
+ *      < {@link PAST_DUE_RESTRICT_DAYS} days → banner only, still usable.
+ *      ≥ {@link PAST_DUE_RESTRICT_DAYS} days → locked.
+ *  - No subscription on file → locked. The property exists but billing
+ *    was never started for it; admin/owner needs to subscribe from
+ *    Billing before the property can be used.
+ *  - active / trialing / incomplete → unrestricted, no banner.
+ *
+ * cancel_at_period_end is intentionally NOT a restriction trigger: a
+ * customer who scheduled cancellation keeps full access until the
+ * period actually ends (Stripe fires customer.subscription.deleted at
+ * that point and status flips to `canceled`, which IS a restriction).
  */
-export function computeGate(
+export function computePropertyGate(
   subscription: BillingSubscription | null,
 ): BillingGate {
   if (!subscription) {
@@ -48,7 +64,7 @@ export function computeGate(
       restrictWrites: true,
       restrictMedia: true,
       message:
-        'You haven’t started a subscription yet. Go to Billing to add a payment method and your first property.',
+        'This property has no subscription yet. Start one from Billing to enable it.',
       status: 'no_subscription',
       daysPastDue: null,
     }
@@ -81,8 +97,8 @@ export function computeGate(
       restrictWrites: restricted,
       restrictMedia: restricted,
       message: restricted
-        ? `One or more properties are ${daysPastDue} days past due. Editing and media access are locked until billing is restored.`
-        : `A property’s last invoice is past due. Update its payment method in Billing to keep editing and media access (locks after ${PAST_DUE_RESTRICT_DAYS} days).`,
+        ? `This property is ${daysPastDue} days past due. Editing and media are locked until billing is restored.`
+        : `This property's last invoice is past due. Update its card in Billing to keep editing access (locks after ${PAST_DUE_RESTRICT_DAYS} days).`,
       status: subscription.status,
       daysPastDue,
     }
@@ -97,7 +113,7 @@ export function computeGate(
       restrictWrites: true,
       restrictMedia: true,
       message:
-        'A property’s subscription has ended. Editing and media access are locked. Contact support to restore service.',
+        'This property’s subscription has ended. Resubscribe from Billing to restore access — your data is preserved.',
       status: subscription.status,
       daysPastDue: null,
     }
@@ -109,7 +125,7 @@ export function computeGate(
       restrictWrites: true,
       restrictMedia: true,
       message:
-        'A property’s subscription is paused. Add a payment method in Billing to resume.',
+        'This property’s subscription is paused. Add a payment method in Billing to resume.',
       status: subscription.status,
       daysPastDue: null,
     }
@@ -126,75 +142,114 @@ export function computeGate(
 }
 
 /**
- * Org-wide gating decision: pick the worst case across all of the org's
- * property subscriptions. Rule of thumb: if any property would lock the
- * user out, lock the whole org. That mirrors how the customer's books are
- * separated but operational personnel are shared, so a single past_due
- * property restricts the whole shared app surface.
+ * Backwards-compatible alias used by older call sites. Same semantics as
+ * {@link computePropertyGate}.
+ */
+export const computeGate = computePropertyGate
+
+/**
+ * Org-wide gating decision. Intentionally narrow now that we enforce
+ * per-property: the only org-wide restriction is "the org has properties
+ * but has never started billing on any of them" — that's the initial-
+ * onboarding nudge across the app shell. Once any property has a
+ * subscription, every other gating decision is per-property.
  *
- * `hasProperties` lets us distinguish "no subscriptions because no
- * properties yet" from "properties exist but billing was never started" —
- * both are restricted, but they use different onboarding copy.
+ * Past-due / canceled state on one property does NOT lock the rest of
+ * the org. That's by design — the customer requirement is each property
+ * runs on its own books, so one property's billing failure shouldn't
+ * make their other properties unusable.
  */
 export function computeOrgGate(
   subscriptions: BillingSubscription[],
   hasProperties = true,
 ): BillingGate {
-  if (subscriptions.length === 0) {
+  if (!hasProperties) {
+    // Brand-new org, no properties yet. Onboarding nudge but no
+    // restriction — adding a property is the gateway action and the
+    // /properties page must not be gated to allow that.
     return {
       banner: true,
-      restrictWrites: true,
-      restrictMedia: true,
-      message: hasProperties
-        ? 'You have properties but no active subscription. Go to Billing to add a payment method.'
-        : 'You haven’t started a subscription yet. Go to Billing to add a payment method and your first property.',
+      restrictWrites: false,
+      restrictMedia: false,
+      message:
+        'You haven’t added a property yet. Add one to get started.',
       status: 'no_subscription',
       daysPastDue: null,
     }
   }
-  return subscriptions
-    .map((s) => computeGate(s))
-    .reduce<BillingGate>((worst, g) => mergeGates(worst, g), {
-      banner: false,
+
+  const anySubscription = subscriptions.some(
+    (s) => s.stripe_subscription_id != null,
+  )
+  if (!anySubscription) {
+    return {
+      banner: true,
+      restrictWrites: true,
+      restrictMedia: true,
+      message:
+        'You have properties but no active subscription. Go to Billing to start one.',
+      status: 'no_subscription',
+      daysPastDue: null,
+    }
+  }
+
+  // At least one subscription is on file → org is operating. Surface a
+  // soft banner if ANY property has a non-OK gate, so the customer
+  // notices issues at the app shell, but don't restrict — per-property
+  // enforcement handles that.
+  const propertyGates = subscriptions.map((s) => computePropertyGate(s))
+  const anyAttention = propertyGates.some((g) => g.banner)
+  if (anyAttention) {
+    const restricted = propertyGates.filter(
+      (g) => g.restrictWrites || g.restrictMedia,
+    ).length
+    return {
+      banner: true,
       restrictWrites: false,
       restrictMedia: false,
-      message: null,
+      message:
+        restricted > 0
+          ? `${restricted} propert${restricted === 1 ? 'y is' : 'ies are'} locked due to billing issues. See Billing to resolve.`
+          : 'One or more properties have billing attention items. See Billing.',
       status: 'active',
       daysPastDue: null,
-    })
-}
+    }
+  }
 
-function severity(g: BillingGate): number {
-  if (g.restrictMedia || g.restrictWrites) return 3
-  if (g.banner) return 2
-  return 1
-}
-
-function mergeGates(a: BillingGate, b: BillingGate): BillingGate {
-  const restrictWrites = a.restrictWrites || b.restrictWrites
-  const restrictMedia = a.restrictMedia || b.restrictMedia
-  const banner = a.banner || b.banner
-  const pick = severity(b) > severity(a) ? b : a
-  const daysPastDue =
-    a.daysPastDue != null && b.daysPastDue != null
-      ? Math.max(a.daysPastDue, b.daysPastDue)
-      : (a.daysPastDue ?? b.daysPastDue)
   return {
-    banner,
-    restrictWrites,
-    restrictMedia,
-    message: pick.message,
-    status: pick.status,
-    daysPastDue,
+    banner: false,
+    restrictWrites: false,
+    restrictMedia: false,
+    message: null,
+    status: 'active',
+    daysPastDue: null,
   }
 }
 
 /**
- * Server-side helper for guards that don't already have the subscription
- * rows in scope (server actions, /media). Reads through the service-role
- * client because RLS on billing_subscriptions is select-only for org
- * members and we sometimes want to check before the user's session has
- * org context.
+ * Per-property gate fetched directly from the DB. For server actions
+ * that target a single property and need to gate-check it (e.g.
+ * updateProperty, mediaUpload). Reads through the service-role client
+ * because RLS on billing_subscriptions is select-only for org members.
+ */
+export async function getGateForProperty(
+  propertyId: string,
+): Promise<BillingGate> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('billing_subscriptions')
+    .select('*')
+    .eq('property_id', propertyId)
+    .maybeSingle()
+  if (error) throw error
+  return computePropertyGate((data as BillingSubscription | null) ?? null)
+}
+
+/**
+ * Org-wide gate fetched from the DB. Kept for app-shell banner logic
+ * and the onboarding-state check. Property-mutating callers should use
+ * {@link getGateForProperty} instead so a billing issue on property A
+ * doesn't block edits to property B.
  */
 export async function getGateForOrg(orgId: string): Promise<BillingGate> {
   const admin = createAdminClient()

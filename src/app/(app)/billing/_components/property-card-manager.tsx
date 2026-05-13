@@ -4,7 +4,9 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import type { SavedCard } from '@/lib/stripe/subscriptions'
 import {
+  cancelPropertySubscriptionAction,
   detachPaymentMethodAction,
+  resumeSubscriptionAction,
   setPropertyDefaultPaymentMethodAction,
   type ActionResult,
 } from '../actions'
@@ -32,12 +34,16 @@ export function PropertyCardManager({
   currentBrand,
   currentLast4,
   savedCards,
+  cancelAtPeriodEnd,
+  currentPeriodEnd,
 }: {
   propertyId: string
   currentPaymentMethodId: string | null
   currentBrand: string | null
   currentLast4: string | null
   savedCards: SavedCard[]
+  cancelAtPeriodEnd: boolean
+  currentPeriodEnd: string | null
 }) {
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState<{
@@ -86,6 +92,40 @@ export function PropertyCardManager({
         // re-renders the row with the new card on first paint.
         setTimeout(() => setOpen(false), 400)
       }
+    })
+  }
+
+  function runCancel() {
+    if (
+      !confirm(
+        'Schedule this subscription to end at the end of the current period?\n\n' +
+          'You will keep full access until then. No charge for the next period. ' +
+          'You can undo this any time before the period ends.',
+      )
+    ) {
+      return
+    }
+    setMessage(null)
+    const fd = new FormData()
+    fd.set('property_id', propertyId)
+    startTransition(async () => {
+      const res = await cancelPropertySubscriptionAction(
+        {} as ActionResult,
+        fd,
+      )
+      if (res.error) setMessage({ kind: 'error', text: res.error })
+      else if (res.success) setMessage({ kind: 'success', text: res.success })
+    })
+  }
+
+  function runResume() {
+    setMessage(null)
+    const fd = new FormData()
+    fd.set('property_id', propertyId)
+    startTransition(async () => {
+      const res = await resumeSubscriptionAction({} as ActionResult, fd)
+      if (res.error) setMessage({ kind: 'error', text: res.error })
+      else if (res.success) setMessage({ kind: 'success', text: res.success })
     })
   }
 
@@ -183,6 +223,50 @@ export function PropertyCardManager({
             >
               + Add new card
             </StripeRedirectButton>
+          </div>
+
+          <div className="px-3 py-3 border-t border-border-subtle space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
+              Subscription
+            </p>
+            {cancelAtPeriodEnd ? (
+              <>
+                <p className="text-xs text-muted leading-relaxed">
+                  Scheduled to end on{' '}
+                  <strong className="text-fg">
+                    {currentPeriodEnd
+                      ? new Date(currentPeriodEnd).toLocaleDateString()
+                      : 'period end'}
+                  </strong>
+                  . You can still use this property until then.
+                </p>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={runResume}
+                  disabled={pending}
+                >
+                  {pending ? 'Working…' : 'Resume subscription'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-muted leading-relaxed">
+                  Cancel this property’s subscription. You’ll keep access
+                  until the end of the current period; data is preserved
+                  and you can resubscribe any time.
+                </p>
+                <button
+                  type="button"
+                  className="text-xs text-danger-fg hover:underline disabled:opacity-50"
+                  onClick={runCancel}
+                  disabled={pending}
+                >
+                  Cancel subscription
+                </button>
+              </>
+            )}
           </div>
 
           {message ? (

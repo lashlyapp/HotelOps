@@ -27,59 +27,30 @@ function sub(partial: Partial<BillingSubscription>): BillingSubscription {
     ...partial,
   }
 }
-const daysAgo = (n: number) =>
-  new Date(Date.now() - n * 86400_000).toISOString()
 
 describe('shouldLockOrg', () => {
   it('does not lock onboarding orgs (no properties, no subs)', () => {
     assert.equal(shouldLockOrg([], false), false)
   })
 
-  it('locks orgs that have properties but no subscription on any of them', () => {
+  it('locks orgs that have properties but no subscription anywhere', () => {
     assert.equal(shouldLockOrg([], true), true)
   })
 
-  it('does not lock active / trialing / fresh-incomplete orgs', () => {
-    assert.equal(shouldLockOrg([sub({ status: 'active' })]), false)
-    assert.equal(shouldLockOrg([sub({ status: 'trialing' })]), false)
-    assert.equal(shouldLockOrg([sub({ status: 'incomplete' })]), false)
-  })
-
-  it('does not lock orgs in the first 15 days of past_due on any property', () => {
-    // Banner shows in-app but CDN keeps serving — leverage scales up over
-    // time so an expired card has room to be fixed before the public site
-    // breaks.
-    assert.equal(
-      shouldLockOrg([
-        sub({ status: 'past_due', past_due_since: daysAgo(7) }),
-      ]),
-      false,
-    )
-  })
-
-  it('locks the org when any property is 15+ days past_due', () => {
-    assert.equal(
-      shouldLockOrg([
-        sub({ property_id: 'p1', status: 'active' }),
-        sub({
-          property_id: 'p2',
-          status: 'past_due',
-          past_due_since: daysAgo(16),
-        }),
-      ]),
-      true,
-    )
-  })
-
-  it('locks the org when any property is canceled / paused / incomplete_expired', () => {
+  it('does not lock orgs where at least one property has an active subscription', () => {
+    // Under per-property gating, single-property issues do NOT lock at
+    // the CDN edge — the in-app per-property gate handles them. The
+    // org-level CDN lock only fires for "org has no subs anywhere."
     assert.equal(
       shouldLockOrg([
         sub({ property_id: 'p1', status: 'active' }),
         sub({ property_id: 'p2', status: 'canceled' }),
       ]),
-      true,
+      false,
     )
-    assert.equal(shouldLockOrg([sub({ status: 'paused' })]), true)
-    assert.equal(shouldLockOrg([sub({ status: 'incomplete_expired' })]), true)
+  })
+
+  it('does not lock when subscriptions exist but no property has been added (edge case)', () => {
+    assert.equal(shouldLockOrg([sub({ status: 'active' })], false), false)
   })
 })

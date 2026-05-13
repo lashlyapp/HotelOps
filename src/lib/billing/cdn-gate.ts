@@ -9,11 +9,17 @@ import { computeOrgGate, type BillingGate } from './gate'
 /**
  * Decide whether an org's media should be locked at the CDN edge.
  *
- * Pure function so it's testable. Delegates to computeOrgGate so the 15-day
- * threshold (and "canceled" / "paused" terminal states) stay in one place —
- * if you change the in-app gate threshold, the CDN follows. Input is every
- * subscription in the org so a single past-due property (after the
- * threshold) locks the org's media, matching the in-app gate.
+ * Pure function so it's testable. Delegates to computeOrgGate, which under
+ * the per-property model only locks org-wide when the org has properties
+ * but no subscriptions at all (onboarding state). Single-property issues
+ * — canceled / paused / 15+ past-due on one property in a multi-property
+ * org — do NOT lock at the edge; the in-app gate (computePropertyGate)
+ * still blocks the property's pages and write actions.
+ *
+ * TODO: per-property CDN gating. The current KV namespace is keyed on
+ * org_slug only; extending to `gate:{org_slug}:{property_slug}` plus a
+ * worker update would close the under-lock gap for a single property in
+ * a multi-property org. Not in scope here.
  */
 export function shouldLockOrg(
   subscriptions: BillingSubscription[],

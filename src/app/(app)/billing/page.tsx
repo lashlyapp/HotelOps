@@ -17,6 +17,7 @@ import type {
 } from '@/lib/supabase/types'
 import { StripeRedirectButton } from './_components/billing-actions'
 import { PropertyCardManager } from './_components/property-card-manager'
+import { ResubscribeButton } from './_components/resubscribe-button'
 
 export default async function BillingPage() {
   const session = await requireSession()
@@ -167,13 +168,25 @@ function PropertyRow({
     subscription &&
     !hasCard &&
     !['canceled', 'incomplete_expired'].includes(subscription.status)
+  const isEnded =
+    subscription?.status === 'canceled' ||
+    subscription?.status === 'incomplete_expired'
+  const isScheduledCancel =
+    !isEnded && Boolean(subscription?.cancel_at_period_end)
 
   return (
     <tr>
       <td className="px-4 py-3 font-medium text-fg">{property.name}</td>
       <td className="px-4 py-3">
         {subscription ? (
-          <SubscriptionStatusBadge status={subscription.status} />
+          <>
+            <SubscriptionStatusBadge status={subscription.status} />
+            {isScheduledCancel && subscription.current_period_end ? (
+              <p className="mt-1 text-xs text-warning-fg">
+                Ends {formatDate(subscription.current_period_end)}
+              </p>
+            ) : null}
+          </>
         ) : (
           <Badge tone="neutral">Not started</Badge>
         )}
@@ -201,6 +214,8 @@ function PropertyRow({
             >
               Start &amp; add card
             </StripeRedirectButton>
+          ) : isEnded ? (
+            <ResubscribeButton propertyId={property.id} />
           ) : (
             <PropertyCardManager
               propertyId={property.id}
@@ -210,6 +225,8 @@ function PropertyRow({
               currentBrand={subscription.default_payment_brand ?? null}
               currentLast4={subscription.default_payment_last4 ?? null}
               savedCards={savedCards}
+              cancelAtPeriodEnd={subscription.cancel_at_period_end}
+              currentPeriodEnd={subscription.current_period_end}
             />
           )
         ) : null}

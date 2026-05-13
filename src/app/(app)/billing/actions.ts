@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireOrgOwner } from '@/lib/auth/session'
 import { stripe } from '@/lib/stripe/client'
+import { startSubscriptionForProperty } from '@/lib/stripe/start-subscription'
 import {
   getStripeCustomerForOrg,
   syncSubscriptionToDb,
@@ -164,4 +165,173 @@ export async function detachPaymentMethodAction(
 
   revalidatePath('/billing')
   return { success: 'Card removed.' }
+}
+
+/**
+ * Schedule a property's subscription for cancellation at the end of the
+ * current billing period. The customer keeps full access to the property
+ * (the gate treats `active + cancel_at_period_end` as unrestricted) and
+ * is not charged for the next cycle. Reversible via
+ * {@link resumeSubscriptionAction} any time before `current_period_end`.
+ *
+ * No data is touched — the property row, R2 files, etc. all stay. Once
+ * the period ends Stripe fires customer.subscription.deleted, status
+ * flips to `canceled`, and the per-property gate locks access. The
+ * customer can resubscribe later via {@link resubscribePropertyAction}
+ * and pick up exactly where they left off.
+ */
+export async function cancelPropertySubscriptionAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await requireOrgOwner()
+  const propertyId = String(formData.get('property_id') ?? '')
+  if (!propertyId) return { error: 'Missing property.' }
+
+  const admin = createAdminClient()
+  const { data: sub, error: subErr } = await admin
+    .from('billing_subscriptions')
+    .select('stripe_subscription_id, status, org_id, cancel_at_period_end')
+    .eq('property_id', propertyId)
+    .maybeSingle()
+  if (subErr) return { error: subErr.message }
+  if (!sub?.stripe_subscription_id || sub.org_id !== session.organization.id) {
+    return { error: 'Subscription not found for this property.' }
+  }
+  if (sub.status === 'canceled' || sub.status === 'incomplete_expired') {
+    return { error: 'This subscription has already ended.' }
+  }
+  if (sub.cancel_at_period_end) {
+    return { error: 'Cancellation is already scheduled.' }
+  }
+
+  let updated
+  try {
+    updated = await stripe().subscriptions.update(sub.stripe_subscription_id, {
+      cancel_at_period_end: true,
+    })
+  } catch (err) {
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : 'Stripe rejected the cancellation; try again.',
+    }
+  }
+  await syncSubscriptionToDb(propertyId, sub.org_id, updated)
+
+  const endDate = updated.items.data[0]?.current_period_end
+    ? new Date(updated.items.data[0].current_period_end * 1000).toLocaleDateString()
+    : 'the period end'
+  revalidatePath('/billing')
+  return {
+    success: `Cancellation scheduled. Access continues until ${endDate}.`,
+  }
+}
+
+/**
+ * Abort a pending cancellation. Flips `cancel_at_period_end` back to
+ * false; the subscription resumes its normal renewal cycle. Idempotent
+ * for the "not currently scheduled" case (returns an error explaining
+ * there's nothing to abort).
+ */
+export async function resumeSubscriptionAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await requireOrgOwner()
+  const propertyId = String(formData.get('property_id') ?? '')
+  if (!propertyId) return { error: 'Missing property.' }
+
+  const admin = createAdminClient()
+  const { data: sub, error: subErr } = await admin
+    .from('billing_subscriptions')
+    .select('stripe_subscription_id, status, org_id, cancel_at_period_end')
+    .eq('property_id', propertyId)
+    .maybeSingle()
+  if (subErr) return { error: subErr.message }
+  if (!sub?.stripe_subscription_id || sub.org_id !== session.organization.id) {
+    return { error: 'Subscription not found for this property.' }
+  }
+  if (!sub.cancel_at_period_end) {
+    return { error: 'This subscription is not scheduled for cancellation.' }
+  }
+  if (sub.status === 'canceled' || sub.status === 'incomplete_expired') {
+    // Cancellation already took effect — too late to abort. The caller
+    // should use resubscribePropertyAction to create a fresh sub.
+    return {
+      error:
+        'This subscription has already ended. Use Resubscribe to start a new one.',
+    }
+  }
+
+  let updated
+  try {
+    updated = await stripe().subscriptions.update(sub.stripe_subscription_id, {
+      cancel_at_period_end: false,
+    })
+  } catch (err) {
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : 'Stripe rejected the resume; try again.',
+    }
+  }
+  await syncSubscriptionToDb(propertyId, sub.org_id, updated)
+
+  revalidatePath('/billing')
+  return { success: 'Cancellation aborted — subscription continues.' }
+}
+
+/**
+ * Start a fresh subscription for a property whose previous one has
+ * already ended (status=canceled or incomplete_expired). Delegates to
+ * {@link startSubscriptionForProperty}, which is idempotent and creates
+ * a new Stripe subscription scoped to the same property_id. The
+ * customer keeps their card on file (Stripe Customer wallet survives
+ * subscription cancellation), so resubscribing is a one-click action —
+ * no card re-entry required.
+ *
+ * If the existing sub is still in a non-terminal state, this returns
+ * the existing-subscription kind without creating a duplicate.
+ */
+export async function resubscribePropertyAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await requireOrgOwner()
+  const propertyId = String(formData.get('property_id') ?? '')
+  if (!propertyId) return { error: 'Missing property.' }
+
+  const admin = createAdminClient()
+  const { data: property, error: propErr } = await admin
+    .from('properties')
+    .select('id, org_id')
+    .eq('id', propertyId)
+    .maybeSingle()
+  if (propErr) return { error: propErr.message }
+  if (!property || property.org_id !== session.organization.id) {
+    return { error: 'Property not found.' }
+  }
+
+  let result
+  try {
+    result = await startSubscriptionForProperty(propertyId)
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : 'Failed to resubscribe.',
+    }
+  }
+
+  revalidatePath('/billing')
+  if (result.kind === 'existing') {
+    return {
+      success: 'A subscription was already active; nothing to do.',
+    }
+  }
+  return {
+    success:
+      'Resubscribed. If a card is on file the next invoice will auto-charge; otherwise add one from the row above.',
+  }
 }
