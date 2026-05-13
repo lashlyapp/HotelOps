@@ -1,6 +1,7 @@
 import 'server-only'
 import { stripe } from '@/lib/stripe/client'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { syncGateToCdn } from './cdn-gate'
 
 /**
  * Shared billing-reset machinery used by:
@@ -212,6 +213,20 @@ export async function executeTenantBillingReset(
       .update(updates)
       .eq('id', orgId)
     if (updErr) throw updErr
+  }
+
+  // Re-sync the CDN edge gate to reflect the post-reset state. Without
+  // this, Cloudflare KV would still hold the pre-reset decision until
+  // the next webhook event fires for this org — and after a full reset
+  // there ARE no more events for these subs. Best-effort: the in-app
+  // per-property gate is the primary defense; CDN is belt-and-braces.
+  try {
+    await syncGateToCdn(orgId)
+  } catch (err) {
+    console.warn(
+      '[billing] reset-tenant: syncGateToCdn failed; KV may be stale',
+      err instanceof Error ? err.message : err,
+    )
   }
 
   return {
