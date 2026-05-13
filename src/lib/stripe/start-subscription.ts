@@ -7,6 +7,7 @@ import {
   requirePriceIdByLookupKey,
   resolvePriceIdByLookupKey,
 } from './prices'
+import { claimSetupFee, releaseSetupFee } from './subscriptions'
 
 export type StartSubscriptionOptions = {
   priceId?: string
@@ -103,17 +104,30 @@ export async function startSubscriptionForProperty(
       HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
     ))
 
-  // Charge the one-time setup fee only on the first property for an org;
-  // additional properties get the recurring fee only.
-  const orgHasOtherSub = await orgHasAnySubscription(admin, org.id)
-  const setupFeePriceId =
-    !opts.skipSetupFee && !orgHasOtherSub
-      ? (opts.setupFeePriceId ??
+  // Charge the one-time setup fee only on the org's first property. We
+  // atomically claim the fee BEFORE the Stripe call so two parallel
+  // property-subscription creations can't both win the claim. If the
+  // Stripe create fails, the claim is released so the next attempt can
+  // re-charge.
+  let setupFeePriceId: string | null = null
+  let setupFeeClaimed = false
+  if (!opts.skipSetupFee) {
+    setupFeeClaimed = await claimSetupFee(org.id)
+    if (setupFeeClaimed) {
+      setupFeePriceId =
+        opts.setupFeePriceId ??
         (await resolvePriceIdByLookupKey(
           s,
           HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
-        )))
-      : null
+        ))
+      if (!setupFeePriceId) {
+        // No setup-fee Price configured. Release the claim so a future
+        // call doesn't think the fee was charged when it wasn't.
+        await releaseSetupFee(org.id)
+        setupFeeClaimed = false
+      }
+    }
+  }
 
   const ownerEmail = await findOwnerEmail(admin, org.id)
   const customerId = await ensureCustomer(
@@ -142,9 +156,19 @@ export async function startSubscriptionForProperty(
     params.add_invoice_items = [{ price: setupFeePriceId, quantity: 1 }]
   }
 
-  const subscription = await s.subscriptions.create(params, {
-    idempotencyKey: `subscription:${property.id}:${priceId}`,
-  })
+  let subscription: Stripe.Subscription
+  try {
+    subscription = await s.subscriptions.create(params, {
+      idempotencyKey: `subscription:${property.id}:${priceId}`,
+    })
+  } catch (err) {
+    // Stripe rejected the create — release the setup-fee claim so the
+    // next attempt can include it. (Stripe's own idempotency key is
+    // scoped per property_id+price, so a retry of the same property
+    // will replay the same intent rather than double-billing.)
+    if (setupFeeClaimed) await releaseSetupFee(org.id)
+    throw err
+  }
 
   const dueAt = new Date(Date.now() + graceDays * 24 * 60 * 60 * 1000)
   await syncToDb(admin, property.id, org.id, customerId, subscription, dueAt)
@@ -206,14 +230,15 @@ async function ensureCustomer(
   orgName: string,
   ownerEmail: string | null,
 ): Promise<string> {
-  const { data } = await admin
-    .from('billing_subscriptions')
+  // Source of truth lives on organizations.stripe_customer_id (unique).
+  // This avoids the "abandoned checkout creates a second Customer on
+  // retry" bug — see ensureStripeCustomer in subscriptions.ts.
+  const { data: org } = await admin
+    .from('organizations')
     .select('stripe_customer_id')
-    .eq('org_id', orgId)
-    .not('stripe_customer_id', 'is', null)
-    .limit(1)
+    .eq('id', orgId)
     .maybeSingle()
-  if (data?.stripe_customer_id) return data.stripe_customer_id
+  if (org?.stripe_customer_id) return org.stripe_customer_id
 
   const customer = await s.customers.create(
     {
@@ -223,21 +248,22 @@ async function ensureCustomer(
     },
     { idempotencyKey: `customer:${orgId}` },
   )
-  return customer.id
-}
 
-async function orgHasAnySubscription(
-  admin: AdminClient,
-  orgId: string,
-): Promise<boolean> {
-  const { data } = await admin
-    .from('billing_subscriptions')
-    .select('property_id')
-    .eq('org_id', orgId)
-    .not('stripe_subscription_id', 'is', null)
-    .limit(1)
-    .maybeSingle()
-  return Boolean(data?.property_id)
+  const { error: updErr } = await admin
+    .from('organizations')
+    .update({ stripe_customer_id: customer.id })
+    .eq('id', orgId)
+    .is('stripe_customer_id', null)
+  if (updErr) {
+    const { data: again } = await admin
+      .from('organizations')
+      .select('stripe_customer_id')
+      .eq('id', orgId)
+      .maybeSingle()
+    if (again?.stripe_customer_id) return again.stripe_customer_id
+    throw updErr
+  }
+  return customer.id
 }
 
 async function existingSubscription(

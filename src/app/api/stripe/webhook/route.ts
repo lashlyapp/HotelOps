@@ -63,6 +63,18 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ received: true })
 }
 
+async function resolvePropertyIdBySubscription(
+  subscriptionId: string,
+): Promise<string | null> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('billing_subscriptions')
+    .select('property_id')
+    .eq('stripe_subscription_id', subscriptionId)
+    .maybeSingle()
+  return data?.property_id ?? null
+}
+
 async function handleEvent(event: Stripe.Event): Promise<void> {
   switch (event.type) {
     case 'customer.subscription.created':
@@ -72,12 +84,30 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
     case 'customer.subscription.resumed': {
       const subscription = event.data.object as Stripe.Subscription
       const orgId = orgIdFromMetadata(subscription.metadata)
-      const propertyId = propertyIdFromMetadata(subscription.metadata)
-      // Subscriptions without property_id are legacy org-level subs — we
-      // can't reconcile them against the per-property schema, so ignore.
-      // The migration leaves them attached to the org's first property; if
-      // such a sub fires events the admin should cancel/re-create it.
-      if (!orgId || !propertyId) return
+      const propertyIdFromMeta = propertyIdFromMetadata(subscription.metadata)
+      if (!orgId) return
+      // Legacy subscriptions predating per-property billing have org_id
+      // but no property_id in metadata. Auto-heal by looking up the
+      // billing_subscriptions row we backfilled during migration, keyed
+      // by stripe_subscription_id (which is unique). This recovers
+      // routing without admin intervention; a warning is logged so
+      // operators can backfill the Stripe-side metadata later.
+      let propertyId = propertyIdFromMeta
+      if (!propertyId) {
+        propertyId = await resolvePropertyIdBySubscription(subscription.id)
+        if (!propertyId) {
+          console.warn(
+            `[stripe-webhook] subscription ${subscription.id} has no ` +
+              `property_id metadata and no matching billing_subscriptions ` +
+              `row; dropping event ${event.type}.`,
+          )
+          return
+        }
+        console.warn(
+          `[stripe-webhook] healed legacy subscription ${subscription.id} ` +
+            `to property ${propertyId}; backfill its Stripe metadata.`,
+        )
+      }
       await syncSubscriptionToDb(propertyId, orgId, subscription)
       return
     }
@@ -118,8 +148,15 @@ async function handleCheckoutCompleted(
 
   const subscriptionId = checkoutSession.metadata?.subscription_id
   const orgId = checkoutSession.metadata?.org_id
-  const propertyId = checkoutSession.metadata?.property_id
-  if (!subscriptionId || !orgId || !propertyId) return
+  let propertyId = checkoutSession.metadata?.property_id
+  if (!subscriptionId || !orgId) return
+  if (!propertyId) {
+    // Legacy setup-mode checkout from before property_id was stamped on
+    // the checkout session metadata. Recover via subscription lookup.
+    const resolved = await resolvePropertyIdBySubscription(subscriptionId)
+    if (!resolved) return
+    propertyId = resolved
+  }
 
   const setupIntentId =
     typeof checkoutSession.setup_intent === 'string'

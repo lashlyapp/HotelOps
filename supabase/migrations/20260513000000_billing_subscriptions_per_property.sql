@@ -40,6 +40,28 @@ from (
 where bs.org_id = sub.org_id
   and bs.property_id is null;
 
+-- Refuse to silently delete rows that still reference a live Stripe
+-- subscription — that would orphan a sub that's still billing the
+-- customer. Operators must cancel or reassign such rows manually before
+-- re-running the migration. Rows with no stripe_subscription_id are
+-- safe to drop (they're stale placeholders from earlier failed flows).
+do $$
+declare
+  active_orphans int;
+begin
+  select count(*) into active_orphans
+  from public.billing_subscriptions
+  where property_id is null
+    and stripe_subscription_id is not null;
+  if active_orphans > 0 then
+    raise exception
+      'billing_subscriptions has % row(s) with a stripe_subscription_id '
+      'but no property to attach to. Cancel or reassign these in Stripe '
+      'and update the DB before re-running this migration.',
+      active_orphans;
+  end if;
+end$$;
+
 delete from public.billing_subscriptions
 where property_id is null;
 

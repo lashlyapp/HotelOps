@@ -25,9 +25,11 @@ type EnsureCustomerInput = {
  * use a different card per property while sharing one billing identity
  * (one tax id, one billing email, one Manage-billing portal).
  *
- * The customer id is denormalized onto every billing_subscriptions row for
- * the org, so we look it up from any existing row first and only fall back
- * to a Stripe API call when there is none yet.
+ * The customer id is persisted on `organizations.stripe_customer_id` —
+ * NOT on billing_subscriptions — so a Stripe Customer created mid-flow
+ * (e.g. user creates customer, then abandons checkout) is reused on the
+ * next attempt instead of orphaned. The Stripe-side idempotencyKey is a
+ * second line of defense for the in-flight double-click case.
  */
 export async function ensureStripeCustomer({
   orgId,
@@ -36,16 +38,13 @@ export async function ensureStripeCustomer({
 }: EnsureCustomerInput): Promise<string> {
   const admin = createAdminClient()
 
-  const { data: existing } = await admin
-    .from('billing_subscriptions')
+  const { data: org, error: orgErr } = await admin
+    .from('organizations')
     .select('stripe_customer_id')
-    .eq('org_id', orgId)
-    .not('stripe_customer_id', 'is', null)
-    .limit(1)
+    .eq('id', orgId)
     .maybeSingle()
-  if (existing?.stripe_customer_id) {
-    return existing.stripe_customer_id
-  }
+  if (orgErr) throw orgErr
+  if (org?.stripe_customer_id) return org.stripe_customer_id
 
   const customer = await stripe().customers.create(
     {
@@ -54,13 +53,76 @@ export async function ensureStripeCustomer({
       metadata: { org_id: orgId, app: 'hotelops' },
     },
     {
-      // Same org calling this twice in flight (e.g. user double-clicks the
-      // CTA) must not create two customers.
+      // Same org calling this twice in flight (e.g. user double-clicks
+      // the CTA) must not create two customers.
       idempotencyKey: `customer:${orgId}`,
     },
   )
 
+  // Persist immediately so an abandoned checkout is recoverable. The
+  // unique constraint on organizations.stripe_customer_id means a
+  // concurrent racer that beat us to the Stripe create will have already
+  // stamped its id — in that case we lose the race, drop our newly-
+  // created customer, and adopt the winner's id.
+  const { error: updErr } = await admin
+    .from('organizations')
+    .update({ stripe_customer_id: customer.id })
+    .eq('id', orgId)
+    .is('stripe_customer_id', null)
+  if (updErr) {
+    // Race: another caller stamped the column between our SELECT and
+    // UPDATE. Re-read and adopt their id; the customer we just created
+    // is now an orphan but Stripe is fine with duplicate Customers (no
+    // real cost) and the idempotencyKey would normally prevent this.
+    const { data: again } = await admin
+      .from('organizations')
+      .select('stripe_customer_id')
+      .eq('id', orgId)
+      .maybeSingle()
+    if (again?.stripe_customer_id) return again.stripe_customer_id
+    throw updErr
+  }
   return customer.id
+}
+
+/**
+ * Atomically claim the one-time setup fee for an org. Returns true on the
+ * single call that wins the claim; subsequent calls return false. Used to
+ * gate add_invoice_items for the setup fee so two parallel property-
+ * subscription creations can't both charge it.
+ *
+ * Implemented as `UPDATE … WHERE setup_fee_charged_at IS NULL RETURNING`,
+ * which is atomic without an explicit lock and survives connection
+ * pooling (unlike pg_advisory_lock under PgBouncer transaction-pool).
+ */
+export async function claimSetupFee(orgId: string): Promise<boolean> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('organizations')
+    .update({ setup_fee_charged_at: new Date().toISOString() })
+    .eq('id', orgId)
+    .is('setup_fee_charged_at', null)
+    .select('id')
+    .maybeSingle()
+  if (error) {
+    // Surface DB errors — better to fail loudly than silently double-
+    // charge or silently skip the fee.
+    throw error
+  }
+  return Boolean(data)
+}
+
+/**
+ * Release the setup-fee claim. Used by the caller of {@link claimSetupFee}
+ * when the downstream Stripe call fails so the next attempt can re-charge.
+ * Safe to call even when nothing was claimed.
+ */
+export async function releaseSetupFee(orgId: string): Promise<void> {
+  const admin = createAdminClient()
+  await admin
+    .from('organizations')
+    .update({ setup_fee_charged_at: null })
+    .eq('id', orgId)
 }
 
 type SyncOptions = {
@@ -90,6 +152,27 @@ export async function syncSubscriptionToDb(
   options: SyncOptions = {},
 ): Promise<void> {
   const admin = createAdminClient()
+
+  // Tolerate the property having been deleted between the Stripe event
+  // firing and us handling it. Without this guard the upsert below would
+  // FK-violate on property_id and the webhook would 500-retry forever
+  // for a sub we already canceled. We've already canceled the Stripe
+  // subscription in removePropertyAction, so dropping the event on the
+  // floor is safe.
+  const { data: propertyRow, error: propErr } = await admin
+    .from('properties')
+    .select('id')
+    .eq('id', propertyId)
+    .maybeSingle()
+  if (propErr) throw propErr
+  if (!propertyRow) {
+    console.warn(
+      `[billing] syncSubscriptionToDb: property ${propertyId} no longer ` +
+        `exists; dropping event for subscription ${subscription.id}.`,
+    )
+    return
+  }
+
   const item = subscription.items.data[0]
   const price = item?.price
 
@@ -212,19 +295,19 @@ export async function getSubscriptionsForOrg(
 }
 
 /**
- * The single Stripe Customer for the org, looked up from any existing
- * subscription row. Returns null when the org has never subscribed.
+ * The single Stripe Customer for the org. Reads from organizations, which
+ * is the source of truth (billing_subscriptions denormalizes it but only
+ * once a subscription exists). Returns null when the org has never gone
+ * through the Stripe-customer-creation flow.
  */
 export async function getStripeCustomerForOrg(
   orgId: string,
 ): Promise<string | null> {
   const admin = createAdminClient()
   const { data, error } = await admin
-    .from('billing_subscriptions')
+    .from('organizations')
     .select('stripe_customer_id')
-    .eq('org_id', orgId)
-    .not('stripe_customer_id', 'is', null)
-    .limit(1)
+    .eq('id', orgId)
     .maybeSingle()
   if (error) throw error
   return data?.stripe_customer_id ?? null

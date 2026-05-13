@@ -411,10 +411,18 @@ export async function removePropertyAction(formData: FormData) {
 /**
  * Cancel the Stripe subscription associated with a property before the
  * property row (and therefore its billing_subscriptions row) is deleted.
- * Cancel-at-period-end so the customer isn't refunded for the current
- * period — they paid for it and get the rest of the month. Failures are
- * swallowed; the delete proceeds regardless so the admin isn't blocked by
- * a Stripe outage.
+ *
+ * Immediate cancel (not cancel_at_period_end) because the property is
+ * about to be deleted: keeping the subscription billable through the end
+ * of the period would have Stripe fire customer.subscription.updated /
+ * .deleted events whose webhook handler can't find the property row
+ * anymore (FK violation on upsert → webhook 500 → Stripe retry loop).
+ * `prorate: false` means no refund for the unused portion of the
+ * current period — the customer paid for it, the service ends now.
+ *
+ * Failures are swallowed so the property delete isn't blocked by a
+ * Stripe outage; the resulting orphan subscription can be cleaned up
+ * from the Stripe dashboard.
  */
 async function cancelPropertySubscriptionBestEffort(
   propertyId: string,
@@ -431,12 +439,13 @@ async function cancelPropertySubscriptionBestEffort(
     return
   }
   try {
-    await stripe().subscriptions.update(subId, {
-      cancel_at_period_end: true,
+    await stripe().subscriptions.cancel(subId, {
+      invoice_now: false,
+      prorate: false,
     })
   } catch (err) {
     console.warn(
-      '[admin] cancelPropertySubscription: stripe update failed',
+      '[admin] cancelPropertySubscription: stripe cancel failed',
       err instanceof Error ? err.message : err,
     )
   }
@@ -854,6 +863,32 @@ export async function deleteTenantAction(formData: FormData) {
   if (!orgId || !confirmation || confirmation !== expected) return
 
   const admin = createAdminClient()
+
+  // Cancel every Stripe subscription attached to this org before the
+  // cascade-delete removes our billing_subscriptions rows. Best-effort —
+  // a Stripe outage shouldn't block the tenant delete, but orphan subs
+  // that survive will keep charging the customer until manually cleaned
+  // up in the Stripe dashboard, so we want this to almost always succeed.
+  const { data: subs } = await admin
+    .from('billing_subscriptions')
+    .select('stripe_subscription_id, status')
+    .eq('org_id', orgId)
+  for (const s of subs ?? []) {
+    if (!s.stripe_subscription_id) continue
+    if (s.status === 'canceled' || s.status === 'incomplete_expired') continue
+    try {
+      await stripe().subscriptions.cancel(s.stripe_subscription_id, {
+        invoice_now: false,
+        prorate: false,
+      })
+    } catch (err) {
+      console.warn(
+        '[admin] deleteTenantAction: stripe cancel failed',
+        err instanceof Error ? err.message : err,
+      )
+    }
+  }
+
   // properties + invoices cascade; profiles get org_id set null via FK.
   await admin.from('organizations').delete().eq('id', orgId)
 
