@@ -1,12 +1,9 @@
 name: R2 CORS
 
 # Applies the Cloudflare R2 bucket CORS policy from infra/r2-cors.json so the
-# browser can PUT directly to R2 from the app's origins.
-#
-# **Manual-only by design.** A bad CORS policy can take uploads offline
-# for every tenant, so the operator runs this workflow_dispatch
-# explicitly after reviewing the merged change. Auto-trigger on push
-# was intentionally removed.
+# browser can PUT directly to R2 from the app's origins. Runs automatically
+# whenever the policy file (or this workflow) changes on a tracked branch, and
+# is also available via manual dispatch.
 #
 # Required repo secrets (one-time setup):
 #   CLOUDFLARE_API_TOKEN  — token with "Workers R2 Storage:Edit" on the
@@ -14,6 +11,10 @@ name: R2 CORS
 #   CLOUDFLARE_ACCOUNT_ID — account that owns the app-hotelops bucket
 
 on:
+  push:
+    paths:
+      - infra/r2-cors.json
+      - .github/workflows/r2-cors.yml
   workflow_dispatch:
     inputs:
       bucket:

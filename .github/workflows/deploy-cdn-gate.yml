@@ -1,25 +1,21 @@
 # Deploy the cdn-gate Worker.
 #
-# **Production deploys are manual-only by design.** Merging to `main`
-# does NOT auto-flip traffic — operators run this workflow_dispatch
-# after confirming the change is safe and any canary has baked. This
-# keeps every tenant-affecting Worker change as a deliberate action.
-#
 # Triggers:
 #   - pull_request touching the Worker, its deploy workflow, the KV-sync
 #     script, or the app-side gate helpers → uploads the Worker to the
 #     account using the default (no-routes) env. Real deploy against real
-#     credentials, but zero traffic flips — the production catch-all route
-#     is untouched.
-#   - workflow_dispatch → choose any target (canary, production,
-#     sync-only, rollback-*). Production is gated on the
-#     `cdn-gate-production` GitHub Environment; set required reviewers
-#     there for two-person approval.
+#     credentials, but zero traffic flips. Same files trigger again on
+#     merge below, which is when the catch-all route gets updated.
+#   - push to main touching the same files → auto-deploys target=production
+#     and then runs the KV backfill. Pair with a required reviewer on the
+#     `cdn-gate-production` GitHub Environment if you want an approval gate.
+#   - workflow_dispatch → choose any target (canary, upload-only, sync-only,
+#     rollback-*).
 #
 # Targets:
 #   1. upload-only            → uploads Worker with no routes, no traffic
 #   2. canary  + canary_slug  → one tenant only, watch for ~24hr
-#   3. production             → catch-all route, all tenants (manual dispatch)
+#   3. production             → catch-all route, all tenants (default on push)
 #   4. sync-only              → re-run KV backfill without touching the Worker
 #   5. rollback-canary        → revert canary to previous Worker version
 #   6. rollback-production    → revert production to previous Worker version
@@ -31,6 +27,13 @@ name: Deploy cdn-gate Worker
 
 on:
   pull_request:
+    paths:
+      - 'workers/cdn-gate/**'
+      - '.github/workflows/deploy-cdn-gate.yml'
+      - 'scripts/sync-cdn-gate.ts'
+      - 'src/lib/billing/cdn-gate.ts'
+  push:
+    branches: [main]
     paths:
       - 'workers/cdn-gate/**'
       - '.github/workflows/deploy-cdn-gate.yml'

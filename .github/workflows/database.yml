@@ -1,22 +1,16 @@
 name: Database
 
-# Applies Supabase migrations to the linked remote project.
-#
-# **Manual-only by design.** Migrations are not auto-applied on push —
-# operators run this workflow_dispatch after reviewing the merged PR and
-# deciding the production DB is ready. This prevents a typo'd migration on
-# a feature branch from accidentally hitting prod, and keeps every schema
-# change as a deliberate operator action.
-#
-# Idempotent: Supabase CLI tracks applied migrations in
-# supabase_migrations.schema_migrations, so re-runs are no-ops on
-# already-applied files.
+# Applies Supabase migrations to the linked remote project on every push
+# (feature branches AND the push that lands on main when a PR merges) and via
+# manual dispatch. Idempotent: Supabase CLI tracks applied migrations in
+# supabase_migrations.schema_migrations.
 #
 # Tenant onboarding (creating an org, its properties, and inviting the owner)
 # is intentionally NOT part of this workflow — that's a per-customer
 # operation, done from the admin portal at /admin → "New tenant".
 
 on:
+  push:
   workflow_dispatch:
 
 concurrency:
