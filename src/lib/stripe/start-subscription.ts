@@ -10,19 +10,24 @@ import {
 
 export type StartSubscriptionOptions = {
   priceId?: string
+  /** One-time setup fee applied on the very first subscription for the org.
+   *  Subsequent properties don't get charged the setup fee again. */
   setupFeePriceId?: string
-  quantity?: number
   graceDays?: number
+  /** Suppress the setup fee even if a price is configured. The admin flow
+   *  uses this when subscribing additional properties for an org that has
+   *  already paid setup. */
+  skipSetupFee?: boolean
 }
 
-export type StartSubscriptionResult =
+export type StartSubscriptionForPropertyResult =
   | {
       kind: 'created'
       orgId: string
+      propertyId: string
       stripeCustomerId: string
       stripeSubscriptionId: string
       status: Stripe.Subscription.Status
-      quantity: number
       priceId: string
       setupFeePriceId: string | null
       paymentMethodDueAt: Date
@@ -30,23 +35,32 @@ export type StartSubscriptionResult =
   | {
       kind: 'existing'
       orgId: string
+      propertyId: string
       stripeCustomerId: string
       stripeSubscriptionId: string
     }
 
+export type StartSubscriptionForOrgResult = {
+  orgId: string
+  stripeCustomerId: string
+  results: StartSubscriptionForPropertyResult[]
+}
+
 /**
- * Create a per-property Stripe subscription for the org. Idempotent: returns
- * `{ kind: 'existing' }` if a non-terminal subscription is already attached.
- * Mirrors the Stripe state into `billing_subscriptions` and stamps a 14-day
- * (configurable) payment-method-due deadline.
+ * Create a Stripe subscription for one property under its org's Stripe
+ * Customer. Idempotent: if a non-terminal subscription already exists for
+ * the property, returns it without creating a duplicate.
  *
- * Called from the "Start subscription" button on /admin/tenants/[id] via
- * `startSubscriptionAction` in `lib/admin/actions.ts`.
+ * quantity is always 1 — a property is the billing unit. The subscription
+ * carries property_id and org_id in its metadata, which the webhook keys
+ * off when mirroring state back into billing_subscriptions and which the
+ * invoice shows via description so the customer's bookkeeper can tell at a
+ * glance which property a charge is for.
  */
-export async function startSubscriptionForOrg(
-  orgId: string,
+export async function startSubscriptionForProperty(
+  propertyId: string,
   opts: StartSubscriptionOptions = {},
-): Promise<StartSubscriptionResult> {
+): Promise<StartSubscriptionForPropertyResult> {
   const graceDays = opts.graceDays ?? 14
   if (!Number.isInteger(graceDays) || graceDays < 0 || graceDays > 90) {
     throw new Error('graceDays must be an integer between 0 and 90')
@@ -55,22 +69,29 @@ export async function startSubscriptionForOrg(
   const admin = createAdminClient()
   const s = stripe()
 
+  const { data: property, error: propErr } = await admin
+    .from('properties')
+    .select('id, name, slug, org_id, created_at')
+    .eq('id', propertyId)
+    .maybeSingle()
+  if (propErr) throw propErr
+  if (!property) throw new Error(`No property with id "${propertyId}".`)
+
   const { data: org, error: orgErr } = await admin
     .from('organizations')
     .select('id, name, slug')
-    .eq('id', orgId)
+    .eq('id', property.org_id)
     .maybeSingle()
   if (orgErr) throw orgErr
-  if (!org) throw new Error(`No organization with id "${orgId}".`)
+  if (!org) throw new Error(`No organization with id "${property.org_id}".`)
 
-  // Short-circuit: a non-terminal subscription on file means we already
-  // have what we'd create. Return its id rather than making a duplicate.
-  const existing = await existingSubscriptionId(admin, orgId)
-  if (existing.subscriptionId) {
+  const existing = await existingSubscription(admin, propertyId)
+  if (existing.subscriptionId && existing.customerId) {
     return {
       kind: 'existing',
       orgId: org.id,
-      stripeCustomerId: existing.customerId!,
+      propertyId: property.id,
+      stripeCustomerId: existing.customerId,
       stripeSubscriptionId: existing.subscriptionId,
     }
   }
@@ -81,66 +102,102 @@ export async function startSubscriptionForOrg(
       s,
       HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
     ))
-  const setupFeePriceId =
-    opts.setupFeePriceId ??
-    (await resolvePriceIdByLookupKey(
-      s,
-      HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
-    ))
 
-  const propertyCount = await countProperties(admin, org.id)
-  const quantity = opts.quantity ?? Math.max(1, propertyCount)
-  if (!Number.isInteger(quantity) || quantity < 1) {
-    throw new Error('quantity must be a positive integer')
-  }
+  // Charge the one-time setup fee only on the first property for an org;
+  // additional properties get the recurring fee only.
+  const orgHasOtherSub = await orgHasAnySubscription(admin, org.id)
+  const setupFeePriceId =
+    !opts.skipSetupFee && !orgHasOtherSub
+      ? (opts.setupFeePriceId ??
+        (await resolvePriceIdByLookupKey(
+          s,
+          HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
+        )))
+      : null
 
   const ownerEmail = await findOwnerEmail(admin, org.id)
-  const customerId = await ensureCustomer(admin, s, org.id, org.name, ownerEmail)
+  const customerId = await ensureCustomer(
+    admin,
+    s,
+    org.id,
+    org.name,
+    ownerEmail,
+  )
 
+  const description = `HotelOps subscription — ${property.name}`
   const params: Stripe.SubscriptionCreateParams = {
     customer: customerId,
-    items: [{ price: priceId, quantity }],
+    items: [{ price: priceId, quantity: 1 }],
     collection_method: 'send_invoice',
     days_until_due: graceDays,
-    metadata: { org_id: org.id, app: 'hotelops' },
+    description,
+    metadata: {
+      org_id: org.id,
+      property_id: property.id,
+      property_slug: property.slug,
+      app: 'hotelops',
+    },
   }
   if (setupFeePriceId) {
     params.add_invoice_items = [{ price: setupFeePriceId, quantity: 1 }]
   }
 
   const subscription = await s.subscriptions.create(params, {
-    idempotencyKey: `subscription:${org.id}:${priceId}`,
+    idempotencyKey: `subscription:${property.id}:${priceId}`,
   })
 
   const dueAt = new Date(Date.now() + graceDays * 24 * 60 * 60 * 1000)
-  await syncToDb(admin, org.id, customerId, subscription, dueAt)
+  await syncToDb(admin, property.id, org.id, customerId, subscription, dueAt)
 
   return {
     kind: 'created',
     orgId: org.id,
+    propertyId: property.id,
     stripeCustomerId: customerId,
     stripeSubscriptionId: subscription.id,
     status: subscription.status,
-    quantity,
     priceId,
     setupFeePriceId,
     paymentMethodDueAt: dueAt,
   }
 }
 
-type AdminClient = ReturnType<typeof createAdminClient>
-
-async function countProperties(
-  admin: AdminClient,
+/**
+ * Convenience: subscribe every property an org owns that doesn't already
+ * have a subscription. The admin "Start subscription" action calls this so
+ * an org with several pre-existing properties gets one Stripe subscription
+ * per property in a single click. Returns one entry per property (including
+ * `existing` for properties already subscribed).
+ */
+export async function startSubscriptionsForOrg(
   orgId: string,
-): Promise<number> {
-  const { count, error } = await admin
+  opts: StartSubscriptionOptions = {},
+): Promise<StartSubscriptionForOrgResult> {
+  const admin = createAdminClient()
+  const { data: properties, error } = await admin
     .from('properties')
-    .select('id', { count: 'exact', head: true })
+    .select('id')
     .eq('org_id', orgId)
+    .order('created_at', { ascending: true })
   if (error) throw error
-  return count ?? 0
+  if (!properties?.length) {
+    throw new Error(
+      `Org "${orgId}" has no properties yet — add a property before starting billing.`,
+    )
+  }
+
+  const results: StartSubscriptionForPropertyResult[] = []
+  for (const p of properties) {
+    results.push(await startSubscriptionForProperty(p.id, opts))
+  }
+  const customerId = results[0]?.stripeCustomerId
+  if (!customerId) {
+    throw new Error('Subscription creation produced no customer id.')
+  }
+  return { orgId, stripeCustomerId: customerId, results }
 }
+
+type AdminClient = ReturnType<typeof createAdminClient>
 
 async function ensureCustomer(
   admin: AdminClient,
@@ -153,6 +210,8 @@ async function ensureCustomer(
     .from('billing_subscriptions')
     .select('stripe_customer_id')
     .eq('org_id', orgId)
+    .not('stripe_customer_id', 'is', null)
+    .limit(1)
     .maybeSingle()
   if (data?.stripe_customer_id) return data.stripe_customer_id
 
@@ -164,33 +223,35 @@ async function ensureCustomer(
     },
     { idempotencyKey: `customer:${orgId}` },
   )
-
-  const { error } = await admin.from('billing_subscriptions').upsert(
-    {
-      org_id: orgId,
-      stripe_customer_id: customer.id,
-      status: 'incomplete',
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'org_id' },
-  )
-  if (error) throw error
   return customer.id
 }
 
-async function existingSubscriptionId(
+async function orgHasAnySubscription(
   admin: AdminClient,
   orgId: string,
+): Promise<boolean> {
+  const { data } = await admin
+    .from('billing_subscriptions')
+    .select('property_id')
+    .eq('org_id', orgId)
+    .not('stripe_subscription_id', 'is', null)
+    .limit(1)
+    .maybeSingle()
+  return Boolean(data?.property_id)
+}
+
+async function existingSubscription(
+  admin: AdminClient,
+  propertyId: string,
 ): Promise<{ subscriptionId: string | null; customerId: string | null }> {
   const { data } = await admin
     .from('billing_subscriptions')
     .select('stripe_subscription_id, stripe_customer_id, status')
-    .eq('org_id', orgId)
+    .eq('property_id', propertyId)
     .maybeSingle()
   if (!data?.stripe_subscription_id) {
     return { subscriptionId: null, customerId: data?.stripe_customer_id ?? null }
   }
-  // Re-running is allowed if the prior attempt ended terminal.
   if (data.status === 'canceled' || data.status === 'incomplete_expired') {
     return { subscriptionId: null, customerId: data.stripe_customer_id ?? null }
   }
@@ -202,6 +263,7 @@ async function existingSubscriptionId(
 
 async function syncToDb(
   admin: AdminClient,
+  propertyId: string,
   orgId: string,
   customerId: string,
   subscription: Stripe.Subscription,
@@ -211,6 +273,7 @@ async function syncToDb(
   const price = item?.price
   const { error } = await admin.from('billing_subscriptions').upsert(
     {
+      property_id: propertyId,
       org_id: orgId,
       stripe_customer_id: customerId,
       stripe_subscription_id: subscription.id,
@@ -229,7 +292,7 @@ async function syncToDb(
       currency: price?.currency ?? 'usd',
       updated_at: new Date().toISOString(),
     },
-    { onConflict: 'org_id' },
+    { onConflict: 'property_id' },
   )
   if (error) throw error
 }

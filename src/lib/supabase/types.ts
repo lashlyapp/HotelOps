@@ -185,6 +185,7 @@ export type BillingSubscriptionStatus =
   | 'paused'
 
 export type BillingSubscription = {
+  property_id: string
   org_id: string
   stripe_customer_id: string
   stripe_subscription_id: string | null

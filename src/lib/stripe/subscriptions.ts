@@ -6,7 +6,7 @@ import type { BillingSubscription, BillingSubscriptionStatus } from '@/lib/supab
 import { stripe } from './client'
 
 /**
- * Days the customer has, after the subscription starts, to attach a payment
+ * Days the customer has, after a subscription starts, to attach a payment
  * method before the first invoice goes past due. Implemented Stripe-side as
  * collection_method='send_invoice' + days_until_due=N. The subscription is
  * `active` from day one — this is *not* a trial.
@@ -20,9 +20,14 @@ type EnsureCustomerInput = {
 }
 
 /**
- * Find-or-create the Stripe Customer for an org. The org_id metadata is the
- * link Stripe-side; we also store the customer id in billing_subscriptions
- * for the reverse lookup.
+ * Find-or-create the org-level Stripe Customer. Each property in the org
+ * has its own Subscription under this single Customer so the customer can
+ * use a different card per property while sharing one billing identity
+ * (one tax id, one billing email, one Manage-billing portal).
+ *
+ * The customer id is denormalized onto every billing_subscriptions row for
+ * the org, so we look it up from any existing row first and only fall back
+ * to a Stripe API call when there is none yet.
  */
 export async function ensureStripeCustomer({
   orgId,
@@ -35,6 +40,8 @@ export async function ensureStripeCustomer({
     .from('billing_subscriptions')
     .select('stripe_customer_id')
     .eq('org_id', orgId)
+    .not('stripe_customer_id', 'is', null)
+    .limit(1)
     .maybeSingle()
   if (existing?.stripe_customer_id) {
     return existing.stripe_customer_id
@@ -53,69 +60,7 @@ export async function ensureStripeCustomer({
     },
   )
 
-  const { error } = await admin
-    .from('billing_subscriptions')
-    .upsert(
-      {
-        org_id: orgId,
-        stripe_customer_id: customer.id,
-        status: 'incomplete',
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'org_id' },
-    )
-  if (error) throw error
-
   return customer.id
-}
-
-type StartSubscriptionInput = {
-  orgId: string
-  customerId: string
-  priceId: string
-  quantity: number
-  graceDays?: number
-  /** Optional one-time setup fee Price id; tacked onto the first invoice. */
-  setupFeePriceId?: string
-}
-
-/**
- * Create a per-property recurring subscription. Active and billable from day
- * one; collection_method='send_invoice' means Stripe issues the invoice but
- * does not auto-charge — that gives the customer `graceDays` to attach a
- * card. Once they do, the webhook flips the sub to charge_automatically.
- *
- * setupFeePriceId is added via add_invoice_items so it lands on the very
- * first invoice and never recurs.
- */
-export async function startSubscription({
-  orgId,
-  customerId,
-  priceId,
-  quantity,
-  graceDays = PAYMENT_METHOD_GRACE_DAYS,
-  setupFeePriceId,
-}: StartSubscriptionInput): Promise<Stripe.Subscription> {
-  const params: Stripe.SubscriptionCreateParams = {
-    customer: customerId,
-    items: [{ price: priceId, quantity }],
-    collection_method: 'send_invoice',
-    days_until_due: graceDays,
-    metadata: { org_id: orgId, app: 'hotelops' },
-  }
-  if (setupFeePriceId) {
-    params.add_invoice_items = [{ price: setupFeePriceId, quantity: 1 }]
-  }
-
-  const subscription = await stripe().subscriptions.create(params, {
-    idempotencyKey: `subscription:${orgId}:${priceId}`,
-  })
-
-  // Stamp the cooling-period deadline so the billing page can show a
-  // countdown without parsing invoices.
-  const dueAt = new Date(Date.now() + graceDays * 24 * 60 * 60 * 1000)
-  await syncSubscriptionToDb(orgId, subscription, { paymentMethodDueAt: dueAt })
-  return subscription
 }
 
 type SyncOptions = {
@@ -125,16 +70,21 @@ type SyncOptions = {
 }
 
 /**
- * Mirror a Stripe subscription into billing_subscriptions. Called from the
- * webhook handler on every customer.subscription.* event and from the admin
- * script after creation. The default-payment-method snapshot is denormalized
- * here so the billing page doesn't need a Stripe round-trip.
+ * Mirror a Stripe subscription into billing_subscriptions, keyed by the
+ * property the subscription was created for. The Stripe Subscription must
+ * carry property_id and org_id in its metadata — that's the link both the
+ * webhook and the start-subscription paths set.
+ *
+ * The default-payment-method snapshot is denormalized here so the billing
+ * page doesn't need a Stripe round-trip to show "Visa ending 4242" per
+ * property.
  *
  * past_due_since is stamped the first time we see status=past_due/unpaid
  * and cleared when the status leaves that state — that's the timestamp the
  * 15-day gating policy keys off.
  */
 export async function syncSubscriptionToDb(
+  propertyId: string,
   orgId: string,
   subscription: Stripe.Subscription,
   options: SyncOptions = {},
@@ -159,18 +109,17 @@ export async function syncSubscriptionToDb(
   const status = subscription.status as BillingSubscriptionStatus
   const isPastDue = status === 'past_due' || status === 'unpaid'
 
-  // Look up the current row so we know whether to stamp / preserve / clear
-  // past_due_since on this transition.
   const { data: existing } = await admin
     .from('billing_subscriptions')
     .select('past_due_since')
-    .eq('org_id', orgId)
+    .eq('property_id', propertyId)
     .maybeSingle()
   const pastDueSince = isPastDue
     ? (existing?.past_due_since ?? new Date().toISOString())
     : null
 
   const update: Record<string, unknown> = {
+    property_id: propertyId,
     org_id: orgId,
     stripe_customer_id:
       typeof subscription.customer === 'string'
@@ -203,12 +152,13 @@ export async function syncSubscriptionToDb(
 
   const { error } = await admin
     .from('billing_subscriptions')
-    .upsert(update, { onConflict: 'org_id' })
+    .upsert(update, { onConflict: 'property_id' })
   if (error) throw error
 
   // Propagate the (possibly new) gate state to Cloudflare KV so the
-  // cdn-gate Worker enforces it on incoming media requests. No-op when CF
-  // env isn't configured (local dev / pre-deploy).
+  // cdn-gate Worker enforces it on incoming media requests. The CDN gate
+  // is org-level (any property in a bad state locks the org's media);
+  // syncGateToCdn re-derives that across the org's subscriptions.
   try {
     await syncGateToCdn(orgId)
   } catch (err) {
@@ -216,60 +166,6 @@ export async function syncSubscriptionToDb(
       '[billing] syncGateToCdn failed; CDN gate may be stale until next event',
       err instanceof Error ? err.message : err,
     )
-  }
-}
-
-/**
- * After a property is added or removed, push the new quantity to Stripe so
- * billing tracks property count. Best-effort: logs and returns false on
- * failure rather than rolling back the property change. No-op when the org
- * has no subscription yet (admin hasn't clicked Start subscription) or the sub
- * is in a terminal state.
- *
- * proration_behavior='create_prorations' is the default and produces a
- * prorated charge or credit on the next invoice.
- */
-export async function syncSubscriptionQuantity(
-  orgId: string,
-): Promise<boolean> {
-  const admin = createAdminClient()
-  const { data: row, error } = await admin
-    .from('billing_subscriptions')
-    .select('stripe_subscription_id, status, quantity')
-    .eq('org_id', orgId)
-    .maybeSingle()
-  if (error) {
-    console.warn('[billing] syncSubscriptionQuantity: load failed', error)
-    return false
-  }
-  if (!row?.stripe_subscription_id) return false
-  if (row.status === 'canceled' || row.status === 'incomplete_expired') {
-    return false
-  }
-
-  const propertyCount = await countPropertiesForOrg(orgId)
-  const newQuantity = Math.max(1, propertyCount)
-  if (newQuantity === row.quantity) return true
-
-  try {
-    const sub = await stripe().subscriptions.retrieve(row.stripe_subscription_id)
-    const itemId = sub.items.data[0]?.id
-    if (!itemId) return false
-    const updated = await stripe().subscriptions.update(
-      row.stripe_subscription_id,
-      {
-        items: [{ id: itemId, quantity: newQuantity }],
-        proration_behavior: 'create_prorations',
-      },
-    )
-    await syncSubscriptionToDb(orgId, updated)
-    return true
-  } catch (err) {
-    console.warn(
-      '[billing] syncSubscriptionQuantity: stripe update failed',
-      err instanceof Error ? err.message : err,
-    )
-    return false
   }
 }
 
@@ -281,28 +177,57 @@ function resolveDefaultPaymentMethodId(
   return typeof dpm === 'string' ? dpm : dpm.id
 }
 
-export async function getSubscriptionForOrg(
-  orgId: string,
+/**
+ * Load the subscription for a single property. Returns null if the property
+ * hasn't been subscribed yet.
+ */
+export async function getSubscriptionForProperty(
+  propertyId: string,
 ): Promise<BillingSubscription | null> {
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('billing_subscriptions')
     .select('*')
-    .eq('org_id', orgId)
+    .eq('property_id', propertyId)
     .maybeSingle()
   if (error) throw error
   return (data as BillingSubscription | null) ?? null
 }
 
-/** How many properties an org has — the default subscription quantity. */
-export async function countPropertiesForOrg(orgId: string): Promise<number> {
+/**
+ * Load all subscriptions for an org, ordered by created_at so the billing
+ * page renders them in the same order as the property list.
+ */
+export async function getSubscriptionsForOrg(
+  orgId: string,
+): Promise<BillingSubscription[]> {
   const admin = createAdminClient()
-  const { count, error } = await admin
-    .from('properties')
-    .select('id', { count: 'exact', head: true })
+  const { data, error } = await admin
+    .from('billing_subscriptions')
+    .select('*')
     .eq('org_id', orgId)
+    .order('created_at', { ascending: true })
   if (error) throw error
-  return count ?? 0
+  return (data as BillingSubscription[] | null) ?? []
+}
+
+/**
+ * The single Stripe Customer for the org, looked up from any existing
+ * subscription row. Returns null when the org has never subscribed.
+ */
+export async function getStripeCustomerForOrg(
+  orgId: string,
+): Promise<string | null> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('billing_subscriptions')
+    .select('stripe_customer_id')
+    .eq('org_id', orgId)
+    .not('stripe_customer_id', 'is', null)
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data?.stripe_customer_id ?? null
 }
 
 export type StripeInvoiceSummary = {
@@ -316,16 +241,18 @@ export type StripeInvoiceSummary = {
   due_at: string | null
   hosted_url: string | null
   pdf_url: string | null
+  subscription_id: string | null
 }
 
 /**
  * Pull the customer's Stripe invoices for display in the billing UI. Read-
  * only and tolerant of network failures — the page should still render the
- * subscription card even if Stripe is unreachable.
+ * subscription cards even if Stripe is unreachable. subscription_id is kept
+ * on the result so the billing page can group invoices by property.
  */
 export async function listStripeInvoices(
   customerId: string,
-  limit = 12,
+  limit = 24,
 ): Promise<StripeInvoiceSummary[]> {
   try {
     const result = await stripe().invoices.list({
@@ -343,6 +270,7 @@ export async function listStripeInvoices(
       due_at: inv.due_date ? new Date(inv.due_date * 1000).toISOString() : null,
       hosted_url: inv.hosted_invoice_url ?? null,
       pdf_url: inv.invoice_pdf ?? null,
+      subscription_id: extractSubscriptionId(inv),
     }))
   } catch (err) {
     console.warn(
@@ -351,4 +279,21 @@ export async function listStripeInvoices(
     )
     return []
   }
+}
+
+/**
+ * Pull the originating Subscription id off an Invoice. In modern Stripe API
+ * versions this lives at `invoice.parent.subscription_details.subscription`;
+ * older code paths used a top-level `invoice.subscription` that is no longer
+ * exposed in the TS types. We accept either shape so listStripeInvoices
+ * keeps working across SDK upgrades.
+ */
+function extractSubscriptionId(inv: Stripe.Invoice): string | null {
+  const parent = inv.parent
+  if (parent?.type === 'subscription_details') {
+    const ref = parent.subscription_details?.subscription
+    if (typeof ref === 'string') return ref
+    if (ref && typeof ref === 'object') return ref.id ?? null
+  }
+  return null
 }

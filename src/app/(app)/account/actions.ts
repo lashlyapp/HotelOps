@@ -46,21 +46,25 @@ export async function deleteMyAccountAction(formData: FormData) {
     // admin-side delete-tenant flow.
     if (confirmation !== session.organization.slug) return
 
-    // Cancel Stripe subscription first (best-effort — keep deleting
-    // even if Stripe fails so we honor the user's deletion request).
-    const { data: sub } = await admin
+    // Cancel every property's Stripe subscription (best-effort — keep
+    // deleting even if Stripe fails so we honor the user's deletion
+    // request). One subscription per property under the same Customer.
+    const { data: subs } = await admin
       .from('billing_subscriptions')
       .select('stripe_subscription_id')
       .eq('org_id', session.organization.id)
-      .maybeSingle()
-    if (sub?.stripe_subscription_id) {
+    for (const s of subs ?? []) {
+      if (!s.stripe_subscription_id) continue
       try {
-        await stripe().subscriptions.cancel(sub.stripe_subscription_id, {
+        await stripe().subscriptions.cancel(s.stripe_subscription_id, {
           invoice_now: false,
           prorate: false,
         })
       } catch (err) {
-        console.warn('[account] stripe cancel failed during account deletion', err)
+        console.warn(
+          '[account] stripe cancel failed during account deletion',
+          err,
+        )
       }
     }
 

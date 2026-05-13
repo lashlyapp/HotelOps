@@ -296,6 +296,21 @@ async function loadTenants(): Promise<TenantRow[]> {
     propertyCounts.set(p.org_id, (propertyCounts.get(p.org_id) ?? 0) + 1)
   }
 
+  // One row per property — aggregate into a per-org view. Status uses the
+  // worst rank across the org's properties so a single past_due property
+  // is visible at a glance. MRR sums each property's recurring amount.
+  // has_card is "all subs have a card" — any property missing one is
+  // surfaced as "no card" to nudge the admin.
+  const STATUS_RANK: Record<BillingSubscriptionStatus, number> = {
+    incomplete_expired: 6,
+    canceled: 5,
+    paused: 4,
+    unpaid: 3,
+    past_due: 2,
+    incomplete: 1,
+    trialing: 0,
+    active: 0,
+  }
   const billingByOrg = new Map<
     string,
     {
@@ -305,11 +320,24 @@ async function loadTenants(): Promise<TenantRow[]> {
     }
   >()
   for (const s of subs ?? []) {
-    billingByOrg.set(s.org_id, {
-      status: s.status as BillingSubscriptionStatus,
-      has_card: Boolean(s.default_payment_method_id),
-      mrr_cents: (s.unit_amount_cents ?? 0) * (s.quantity ?? 1),
-    })
+    const status = s.status as BillingSubscriptionStatus
+    const mrr = (s.unit_amount_cents ?? 0) * (s.quantity ?? 1)
+    const hasCard = Boolean(s.default_payment_method_id)
+    const prev = billingByOrg.get(s.org_id)
+    if (!prev) {
+      billingByOrg.set(s.org_id, {
+        status,
+        has_card: hasCard,
+        mrr_cents: mrr,
+      })
+    } else {
+      billingByOrg.set(s.org_id, {
+        status:
+          STATUS_RANK[status] > STATUS_RANK[prev.status] ? status : prev.status,
+        has_card: prev.has_card && hasCard,
+        mrr_cents: prev.mrr_cents + mrr,
+      })
+    }
   }
 
   const ownerIds = (ownerProfiles ?? []).map((p) => p.id)

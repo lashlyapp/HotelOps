@@ -18,10 +18,11 @@ import { isEmailConfigured } from '@/lib/email/client'
 import { sendWelcomeEmail } from '@/lib/email/send'
 import { r2DeleteObject, r2PutObject } from '@/lib/r2/upload'
 import {
-  startSubscriptionForOrg,
-  type StartSubscriptionResult,
+  startSubscriptionForProperty,
+  startSubscriptionsForOrg,
+  type StartSubscriptionForOrgResult,
 } from '@/lib/stripe/start-subscription'
-import { syncSubscriptionQuantity } from '@/lib/stripe/subscriptions'
+import { stripe } from '@/lib/stripe/client'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { AppRole, Property } from '@/lib/supabase/types'
 import { slugify, uniqueSlug } from '@/lib/utils/slugify'
@@ -353,12 +354,16 @@ export async function addPropertyAction(
   }
 
   const admin = createAdminClient()
-  const { error } = await admin.from('properties').insert({
-    org_id: orgId,
-    slug,
-    name,
-    r2_prefix: `${orgSlug}/${slug}/`,
-  })
+  const { data: inserted, error } = await admin
+    .from('properties')
+    .insert({
+      org_id: orgId,
+      slug,
+      name,
+      r2_prefix: `${orgSlug}/${slug}/`,
+    })
+    .select('id')
+    .single()
   if (error) {
     if (error.code === '23505') {
       return { error: `Property slug "${slug}" already exists in this org.` }
@@ -366,8 +371,21 @@ export async function addPropertyAction(
     return { error: error.message }
   }
 
-  // Bill for the new property on the next invoice. Best-effort.
-  await syncSubscriptionQuantity(orgId)
+  // Start the property's subscription on Stripe (best-effort — the property
+  // is created even if Stripe is unreachable; admin can retry from the
+  // Billing page). Setup fee is suppressed because the org has at least
+  // one prior subscription if it had any properties before this one — and
+  // startSubscriptionForProperty's own check confirms that.
+  if (inserted?.id) {
+    try {
+      await startSubscriptionForProperty(inserted.id)
+    } catch (err) {
+      console.warn(
+        '[admin] addPropertyAction: subscription start failed',
+        err instanceof Error ? err.message : err,
+      )
+    }
+  }
 
   revalidatePath(`/admin/tenants/${orgId}`)
   revalidatePath('/admin')
@@ -380,12 +398,48 @@ export async function removePropertyAction(formData: FormData) {
   const propertyId = String(formData.get('property_id') ?? '')
   if (!orgId || !propertyId) return
 
+  await cancelPropertySubscriptionBestEffort(propertyId)
+
   const admin = createAdminClient()
   await admin.from('properties').delete().eq('id', propertyId)
-  await syncSubscriptionQuantity(orgId)
+  // The billing_subscriptions row cascades on property delete.
 
   revalidatePath(`/admin/tenants/${orgId}`)
   revalidatePath('/admin')
+}
+
+/**
+ * Cancel the Stripe subscription associated with a property before the
+ * property row (and therefore its billing_subscriptions row) is deleted.
+ * Cancel-at-period-end so the customer isn't refunded for the current
+ * period — they paid for it and get the rest of the month. Failures are
+ * swallowed; the delete proceeds regardless so the admin isn't blocked by
+ * a Stripe outage.
+ */
+async function cancelPropertySubscriptionBestEffort(
+  propertyId: string,
+): Promise<void> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('billing_subscriptions')
+    .select('stripe_subscription_id, status')
+    .eq('property_id', propertyId)
+    .maybeSingle()
+  const subId = data?.stripe_subscription_id
+  if (!subId) return
+  if (data?.status === 'canceled' || data?.status === 'incomplete_expired') {
+    return
+  }
+  try {
+    await stripe().subscriptions.update(subId, {
+      cancel_at_period_end: true,
+    })
+  } catch (err) {
+    console.warn(
+      '[admin] cancelPropertySubscription: stripe update failed',
+      err instanceof Error ? err.message : err,
+    )
+  }
 }
 
 export async function addOrgMemberAction(
@@ -536,16 +590,31 @@ export async function ownerAddPropertyAction(
   const taken = new Set((existing ?? []).map((p) => p.slug))
   const slug = uniqueSlug(base, (s) => taken.has(s))
 
-  const { error } = await admin.from('properties').insert({
-    org_id: session.organization.id,
-    slug,
-    name,
-    r2_prefix: `${session.organization.slug}/${slug}/`,
-  })
+  const { data: inserted, error } = await admin
+    .from('properties')
+    .insert({
+      org_id: session.organization.id,
+      slug,
+      name,
+      r2_prefix: `${session.organization.slug}/${slug}/`,
+    })
+    .select('id')
+    .single()
   if (error) return { error: error.message }
 
-  // Bill for the new property on the next invoice. Best-effort.
-  await syncSubscriptionQuantity(session.organization.id)
+  // Create the per-property Stripe subscription so this property starts
+  // billing on its own card. Best-effort — owner can also kick this off
+  // from /billing if Stripe is unreachable.
+  if (inserted?.id) {
+    try {
+      await startSubscriptionForProperty(inserted.id)
+    } catch (err) {
+      console.warn(
+        '[owner] addProperty: subscription start failed',
+        err instanceof Error ? err.message : err,
+      )
+    }
+  }
 
   revalidatePath('/properties')
   revalidatePath('/dashboard')
@@ -559,6 +628,8 @@ export async function ownerRemovePropertyAction(formData: FormData) {
   const propertyId = String(formData.get('property_id') ?? '')
   if (!propertyId) return
 
+  await cancelPropertySubscriptionBestEffort(propertyId)
+
   const admin = createAdminClient()
   // Scope the delete to the caller's org so nobody can pass an arbitrary id.
   await admin
@@ -566,7 +637,6 @@ export async function ownerRemovePropertyAction(formData: FormData) {
     .delete()
     .eq('id', propertyId)
     .eq('org_id', session.organization.id)
-  await syncSubscriptionQuantity(session.organization.id)
 
   revalidatePath('/properties')
   revalidatePath('/dashboard')
@@ -738,9 +808,10 @@ export async function removePropertyLogoAction(formData: FormData) {
 }
 
 /**
- * Platform-admin action: start a Stripe subscription for a tenant. See
- * `lib/stripe/start-subscription.ts` for the idempotency contract (no
- * duplicate subs, customer reused if one already exists for the org).
+ * Platform-admin action: start one Stripe subscription per property for a
+ * tenant. Idempotent — properties that already have a non-terminal sub are
+ * skipped (returned as `existing`). Setup fee is added to the first
+ * subscription only.
  */
 export async function startSubscriptionAction(
   _prev: ActionResult,
@@ -750,9 +821,9 @@ export async function startSubscriptionAction(
   const orgId = String(formData.get('org_id') ?? '')
   if (!orgId) return { error: 'Missing org.' }
 
-  let result: StartSubscriptionResult
+  let result: StartSubscriptionForOrgResult
   try {
-    result = await startSubscriptionForOrg(orgId)
+    result = await startSubscriptionsForOrg(orgId)
   } catch (err) {
     return { error: err instanceof Error ? err.message : String(err) }
   }
@@ -760,17 +831,18 @@ export async function startSubscriptionAction(
   revalidatePath(`/admin/tenants/${orgId}`)
   revalidatePath('/admin')
 
-  if (result.kind === 'existing') {
+  const created = result.results.filter((r) => r.kind === 'created').length
+  const existing = result.results.filter((r) => r.kind === 'existing').length
+  if (created === 0) {
     return {
-      success: `Already subscribed — ${result.stripeSubscriptionId}. No change.`,
+      success: `No new subscriptions — all ${existing} properties were already subscribed.`,
     }
   }
-  const due = result.paymentMethodDueAt.toLocaleDateString()
   return {
     success:
-      `Subscription created: ${result.stripeSubscriptionId} ` +
-      `(status: ${result.status}, qty ${result.quantity}). ` +
-      `Cooling period ends ${due}.`,
+      `Created ${created} subscription${created === 1 ? '' : 's'}` +
+      (existing > 0 ? ` (${existing} already existed)` : '') +
+      `. Each property has 14 days to attach a card.`,
   }
 }
 

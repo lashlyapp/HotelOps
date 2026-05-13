@@ -7,11 +7,13 @@ type Endpoint = '/api/stripe/setup-checkout' | '/api/stripe/portal'
 
 export function StripeRedirectButton({
   endpoint,
+  body,
   children,
   variant = 'primary',
   size = 'md',
 }: {
   endpoint: Endpoint
+  body?: Record<string, unknown>
   children: React.ReactNode
   variant?: 'primary' | 'secondary'
   size?: 'sm' | 'md' | 'lg'
@@ -23,10 +25,14 @@ export function StripeRedirectButton({
     setError(null)
     startTransition(async () => {
       try {
-        const res = await fetch(endpoint, { method: 'POST' })
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: body ? { 'Content-Type': 'application/json' } : undefined,
+          body: body ? JSON.stringify(body) : undefined,
+        })
         if (!res.ok) {
-          const body = await res.json().catch(() => ({}))
-          setError(body.error ?? `Request failed (${res.status})`)
+          const errBody = await res.json().catch(() => ({}))
+          setError(errBody.error ?? `Request failed (${res.status})`)
           return
         }
         const { url } = (await res.json()) as { url?: string }

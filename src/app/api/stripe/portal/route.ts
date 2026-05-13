@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireOrgOwner } from '@/lib/auth/session'
 import { stripe } from '@/lib/stripe/client'
-import { getSubscriptionForOrg } from '@/lib/stripe/subscriptions'
+import { getStripeCustomerForOrg } from '@/lib/stripe/subscriptions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -13,8 +13,8 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST() {
   const session = await requireOrgOwner()
-  const subscription = await getSubscriptionForOrg(session.organization.id)
-  if (!subscription?.stripe_customer_id) {
+  const customerId = await getStripeCustomerForOrg(session.organization.id)
+  if (!customerId) {
     return NextResponse.json(
       { error: 'No billing customer for this org yet.' },
       { status: 400 },
@@ -26,7 +26,7 @@ export async function POST() {
   ).replace(/\/+$/, '')
 
   const portal = await stripe().billingPortal.sessions.create({
-    customer: subscription.stripe_customer_id,
+    customer: customerId,
     return_url: `${siteUrl}/billing`,
   })
 

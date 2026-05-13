@@ -7,40 +7,77 @@ import {
   resolvePriceIdByLookupKey,
 } from '@/lib/stripe/prices'
 import {
-  countPropertiesForOrg,
   ensureStripeCustomer,
-  getSubscriptionForOrg,
+  getSubscriptionForProperty,
+  getSubscriptionsForOrg,
 } from '@/lib/stripe/subscriptions'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 /**
- * Owner-only: create a Stripe Checkout session that the customer uses to save
- * a card. We pick the mode based on whether a subscription already exists:
+ * Owner-only: create a Stripe Checkout session scoped to a single property,
+ * so the customer can put a different credit card on each property's
+ * subscription. The property_id comes from the POST body and is verified
+ * against the caller's org before any Stripe call.
  *
- *  - Subscription exists (admin-created from /admin/tenants/[id]) →
- *    mode=setup. The saved card is attached to the customer, then promoted
- *    to the subscription's default_payment_method via the webhook and the
- *    subscription is flipped from send_invoice to charge_automatically.
+ * Behavior depends on what's already in place for the property:
  *
- *  - No subscription yet → mode=subscription. Stripe creates the per-property
- *    subscription AND collects the card in one step. (Used if the org self-
- *    onboards instead of being admin-onboarded.)
+ *  - Subscription exists (admin-created, or self-started earlier) →
+ *    mode=setup. The card from this checkout is attached to the org's
+ *    Customer, then promoted via the webhook to *this property's*
+ *    subscription default_payment_method and the subscription is flipped
+ *    from send_invoice to charge_automatically.
  *
- * The returned URL is opened in the same tab; success/cancel both bounce back
- * to /billing where the webhook will have updated state by the time the user
- * lands (or shortly after).
+ *  - No subscription yet for the property → mode=subscription. Stripe
+ *    creates the property's subscription AND collects its card in one
+ *    step. quantity = 1 (a property is the billing unit). The one-time
+ *    setup fee is added only if no other property in the org has been
+ *    subscribed yet — subsequent properties don't pay setup again.
+ *
+ * The returned URL is opened in the same tab; success/cancel both bounce
+ * back to /billing.
  */
 export async function POST(request: Request) {
   const session = await requireOrgOwner()
+
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    body = {}
+  }
+  const propertyId =
+    typeof body === 'object' && body !== null && 'property_id' in body
+      ? String((body as { property_id?: unknown }).property_id ?? '')
+      : ''
+  if (!propertyId) {
+    return NextResponse.json(
+      { error: 'property_id is required.' },
+      { status: 400 },
+    )
+  }
+
+  const admin = createAdminClient()
+  const { data: property, error: propErr } = await admin
+    .from('properties')
+    .select('id, name, slug, org_id')
+    .eq('id', propertyId)
+    .maybeSingle()
+  if (propErr) {
+    return NextResponse.json({ error: propErr.message }, { status: 500 })
+  }
+  if (!property || property.org_id !== session.organization.id) {
+    return NextResponse.json({ error: 'Property not found.' }, { status: 404 })
+  }
+
   // Use the request's own origin for the Stripe return URLs so the user
   // bounces back to the deployment they came from (preview or prod), not
   // to whatever NEXT_PUBLIC_SITE_URL happened to be baked in at build time.
-  // That env var is still right for things like email recovery links — but
-  // for in-flight Stripe checkout, "same origin you started on" is what we
-  // want.
   const siteUrl = new URL(request.url).origin
+  const successUrl = `${siteUrl}/billing?stripe=success&property=${property.slug}`
+  const cancelUrl = `${siteUrl}/billing?stripe=cancelled&property=${property.slug}`
 
   const customerId = await ensureStripeCustomer({
     orgId: session.organization.id,
@@ -48,62 +85,70 @@ export async function POST(request: Request) {
     ownerEmail: session.email,
   })
 
-  const subscription = await getSubscriptionForOrg(session.organization.id)
-  const successUrl = `${siteUrl}/billing?stripe=success`
-  const cancelUrl = `${siteUrl}/billing?stripe=cancelled`
-
-  if (subscription?.stripe_subscription_id) {
+  const existing = await getSubscriptionForProperty(property.id)
+  if (existing?.stripe_subscription_id) {
     const checkout = await stripe().checkout.sessions.create({
       mode: 'setup',
       customer: customerId,
       payment_method_types: ['card'],
       success_url: successUrl,
       cancel_url: cancelUrl,
-      // Pass the subscription id forward so the webhook knows which sub to
-      // attach the resulting payment method to.
+      // The webhook reads these to know which subscription to attach the
+      // new card to. property_id is the source of truth; subscription_id is
+      // a convenience so the handler doesn't have to re-query.
       metadata: {
         org_id: session.organization.id,
-        subscription_id: subscription.stripe_subscription_id,
+        property_id: property.id,
+        subscription_id: existing.stripe_subscription_id,
       },
     })
     return NextResponse.json({ url: checkout.url })
   }
 
-  // Self-serve path: no admin-created subscription yet. Checkout collects
-  // the card and creates the subscription in one step (charge_automatically
-  // — there's no need for a grace period when a card is provided up front).
-  // Quantity = property count; setup fee tacks onto invoice 1.
-  const quantity = Math.max(
-    1,
-    await countPropertiesForOrg(session.organization.id),
-  )
+  // Self-serve creation path. quantity is fixed at 1 because the billing
+  // unit is a property. The setup fee is added only on the org's first
+  // property — subsequent properties don't get charged setup again.
   const stripeClient = stripe()
+  const orgSubs = await getSubscriptionsForOrg(session.organization.id)
+  const orgAlreadyHasSubscription = orgSubs.some(
+    (s) => s.stripe_subscription_id != null,
+  )
+
   const [recurringPriceId, setupFeePriceId] = await Promise.all([
     requirePriceIdByLookupKey(
       stripeClient,
       HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
     ),
-    resolvePriceIdByLookupKey(
-      stripeClient,
-      HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
-    ),
+    orgAlreadyHasSubscription
+      ? Promise.resolve(null)
+      : resolvePriceIdByLookupKey(
+          stripeClient,
+          HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
+        ),
   ])
 
   const checkout = await stripeClient.checkout.sessions.create({
     mode: 'subscription',
     customer: customerId,
     line_items: [
-      { price: recurringPriceId, quantity },
-      ...(setupFeePriceId
-        ? [{ price: setupFeePriceId, quantity: 1 }]
-        : []),
+      { price: recurringPriceId, quantity: 1 },
+      ...(setupFeePriceId ? [{ price: setupFeePriceId, quantity: 1 }] : []),
     ],
     subscription_data: {
-      metadata: { org_id: session.organization.id, app: 'hotelops' },
+      description: `HotelOps subscription — ${property.name}`,
+      metadata: {
+        org_id: session.organization.id,
+        property_id: property.id,
+        property_slug: property.slug,
+        app: 'hotelops',
+      },
     },
     success_url: successUrl,
     cancel_url: cancelUrl,
-    metadata: { org_id: session.organization.id },
+    metadata: {
+      org_id: session.organization.id,
+      property_id: property.id,
+    },
   })
   return NextResponse.json({ url: checkout.url })
 }

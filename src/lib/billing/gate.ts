@@ -33,20 +33,16 @@ const OK_STATUSES: BillingSubscriptionStatus[] = [
 ]
 
 /**
- * Map the stored subscription state to the gating decision used across the
- * app. Pure function — call sites pass in the row from billing_subscriptions
- * (or null) so we don't fan out a query per request.
+ * Map a single subscription row to its gating decision. Pure function — call
+ * sites pass in the row (or null) so we don't fan out a query per request.
+ *
+ * Org-wide gating is computed by aggregating these per-property decisions
+ * via {@link computeOrgGate}.
  */
 export function computeGate(
   subscription: BillingSubscription | null,
 ): BillingGate {
   if (!subscription) {
-    // No subscription on file. Pricing is per-property, so the trigger
-    // to start billing is the owner adding their first property — which
-    // they kick off from /billing. Until then, writes + media access
-    // are restricted so a free account can't accumulate billable
-    // activity. The banner copy + the empty state on /properties both
-    // point to /billing for the self-serve "Start subscription" flow.
     return {
       banner: true,
       restrictWrites: true,
@@ -85,8 +81,8 @@ export function computeGate(
       restrictWrites: restricted,
       restrictMedia: restricted,
       message: restricted
-        ? `Your account is ${daysPastDue} days past due. Editing and media access are locked until billing is restored.`
-        : `Your last invoice is past due. Update your payment method in Billing to keep editing and media access (locks after ${PAST_DUE_RESTRICT_DAYS} days).`,
+        ? `One or more properties are ${daysPastDue} days past due. Editing and media access are locked until billing is restored.`
+        : `A property’s last invoice is past due. Update its payment method in Billing to keep editing and media access (locks after ${PAST_DUE_RESTRICT_DAYS} days).`,
       status: subscription.status,
       daysPastDue,
     }
@@ -101,7 +97,7 @@ export function computeGate(
       restrictWrites: true,
       restrictMedia: true,
       message:
-        'Your subscription has ended. Editing and media access are locked. Contact support to restore service.',
+        'A property’s subscription has ended. Editing and media access are locked. Contact support to restore service.',
       status: subscription.status,
       daysPastDue: null,
     }
@@ -113,7 +109,7 @@ export function computeGate(
       restrictWrites: true,
       restrictMedia: true,
       message:
-        'Your subscription is paused. Add a payment method in Billing to resume.',
+        'A property’s subscription is paused. Add a payment method in Billing to resume.',
       status: subscription.status,
       daysPastDue: null,
     }
@@ -130,18 +126,88 @@ export function computeGate(
 }
 
 /**
- * Server-side helper for guards that don't already have the subscription row
- * in scope (server actions, /media). Reads through the service-role client
- * because RLS on billing_subscriptions is select-only for org members and
- * we sometimes want to check before the user's session has org context.
+ * Org-wide gating decision: pick the worst case across all of the org's
+ * property subscriptions. Rule of thumb: if any property would lock the
+ * user out, lock the whole org. That mirrors how the customer's books are
+ * separated but operational personnel are shared, so a single past_due
+ * property restricts the whole shared app surface.
+ *
+ * `hasProperties` lets us distinguish "no subscriptions because no
+ * properties yet" from "properties exist but billing was never started" —
+ * both are restricted, but they use different onboarding copy.
+ */
+export function computeOrgGate(
+  subscriptions: BillingSubscription[],
+  hasProperties = true,
+): BillingGate {
+  if (subscriptions.length === 0) {
+    return {
+      banner: true,
+      restrictWrites: true,
+      restrictMedia: true,
+      message: hasProperties
+        ? 'You have properties but no active subscription. Go to Billing to add a payment method.'
+        : 'You haven’t started a subscription yet. Go to Billing to add a payment method and your first property.',
+      status: 'no_subscription',
+      daysPastDue: null,
+    }
+  }
+  return subscriptions
+    .map((s) => computeGate(s))
+    .reduce<BillingGate>((worst, g) => mergeGates(worst, g), {
+      banner: false,
+      restrictWrites: false,
+      restrictMedia: false,
+      message: null,
+      status: 'active',
+      daysPastDue: null,
+    })
+}
+
+function severity(g: BillingGate): number {
+  if (g.restrictMedia || g.restrictWrites) return 3
+  if (g.banner) return 2
+  return 1
+}
+
+function mergeGates(a: BillingGate, b: BillingGate): BillingGate {
+  const restrictWrites = a.restrictWrites || b.restrictWrites
+  const restrictMedia = a.restrictMedia || b.restrictMedia
+  const banner = a.banner || b.banner
+  const pick = severity(b) > severity(a) ? b : a
+  const daysPastDue =
+    a.daysPastDue != null && b.daysPastDue != null
+      ? Math.max(a.daysPastDue, b.daysPastDue)
+      : (a.daysPastDue ?? b.daysPastDue)
+  return {
+    banner,
+    restrictWrites,
+    restrictMedia,
+    message: pick.message,
+    status: pick.status,
+    daysPastDue,
+  }
+}
+
+/**
+ * Server-side helper for guards that don't already have the subscription
+ * rows in scope (server actions, /media). Reads through the service-role
+ * client because RLS on billing_subscriptions is select-only for org
+ * members and we sometimes want to check before the user's session has
+ * org context.
  */
 export async function getGateForOrg(orgId: string): Promise<BillingGate> {
   const admin = createAdminClient()
-  const { data, error } = await admin
-    .from('billing_subscriptions')
-    .select('*')
-    .eq('org_id', orgId)
-    .maybeSingle()
-  if (error) throw error
-  return computeGate((data as BillingSubscription | null) ?? null)
+  const [subsRes, propsRes] = await Promise.all([
+    admin.from('billing_subscriptions').select('*').eq('org_id', orgId),
+    admin
+      .from('properties')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', orgId),
+  ])
+  if (subsRes.error) throw subsRes.error
+  if (propsRes.error) throw propsRes.error
+  const subs = (subsRes.data as BillingSubscription[] | null) ?? []
+  const hasProperties = (propsRes.count ?? 0) > 0
+  return computeOrgGate(subs, hasProperties)
 }

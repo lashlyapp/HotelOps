@@ -24,12 +24,13 @@ export function StartSubscriptionButton({
     <form
       action={action}
       onSubmit={(e) => {
-        const qty = Math.max(1, propertyCount)
+        const n = Math.max(1, propertyCount)
         const msg =
-          `Start a Stripe subscription for ${orgName} at quantity ${qty}?\n\n` +
-          `Uses the hotelops_per_property_monthly price + setup fee (if a ` +
-          `hotelops_setup_fee price exists) and gives the customer 14 days ` +
-          `to attach a payment method.`
+          `Start Stripe subscriptions for ${orgName}?\n\n` +
+          `Creates one subscription per property (${n} total), each with ` +
+          `quantity 1, using the hotelops_per_property_monthly price. The ` +
+          `one-time setup fee is added to the first property's invoice only. ` +
+          `Each customer gets 14 days to attach a card per subscription.`
         if (!confirm(msg)) e.preventDefault()
       }}
       className="space-y-2"

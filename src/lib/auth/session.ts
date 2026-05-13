@@ -2,7 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { isInternalEmail } from '@/lib/admin/policy'
-import { computeGate, type BillingGate } from '@/lib/billing/gate'
+import { computeOrgGate, type BillingGate } from '@/lib/billing/gate'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import type {
@@ -84,7 +84,7 @@ const loadOrgSession = cache(async (): Promise<OrgSession> => {
 
   const supabase = await createClient()
   const admin = createAdminClient()
-  const [{ data: organization }, { data: properties }, { data: subscription }] =
+  const [{ data: organization }, { data: properties }, { data: subscriptions }] =
     await Promise.all([
       supabase
         .from('organizations')
@@ -101,16 +101,17 @@ const loadOrgSession = cache(async (): Promise<OrgSession> => {
       admin
         .from('billing_subscriptions')
         .select('*')
-        .eq('org_id', base.profile.org_id)
-        .maybeSingle(),
+        .eq('org_id', base.profile.org_id),
     ])
   if (!organization) redirect('/login?error=no_org')
 
-  const gate = computeGate((subscription as BillingSubscription | null) ?? null)
+  const propertyList = (properties ?? []) as Property[]
+  const subs = (subscriptions as BillingSubscription[] | null) ?? []
+  const gate = computeOrgGate(subs, propertyList.length > 0)
   return {
     ...base,
     organization: organization as Organization,
-    properties: (properties ?? []) as Property[],
+    properties: propertyList,
     gate,
   }
 })
