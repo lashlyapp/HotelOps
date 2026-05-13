@@ -380,3 +380,48 @@ function extractSubscriptionId(inv: Stripe.Invoice): string | null {
   }
   return null
 }
+
+export type SavedCard = {
+  id: string
+  brand: string | null
+  last4: string | null
+  exp_month: number | null
+  exp_year: number | null
+}
+
+/**
+ * List the saved cards on the org's Stripe Customer. Used by the Billing
+ * page's per-property card picker so the customer can swap a property's
+ * subscription onto a card they've already saved (without re-typing it).
+ *
+ * Returns [] when the org has no Stripe Customer yet, or when the Stripe
+ * call fails — the picker degrades to "Add new card" only, which is the
+ * same as the old behavior. We don't surface the error to the UI; the
+ * server logs it.
+ */
+export async function listOrgPaymentMethods(
+  orgId: string,
+): Promise<SavedCard[]> {
+  const customerId = await getStripeCustomerForOrg(orgId)
+  if (!customerId) return []
+  try {
+    const result = await stripe().paymentMethods.list({
+      customer: customerId,
+      type: 'card',
+      limit: 50,
+    })
+    return result.data.map((pm) => ({
+      id: pm.id,
+      brand: pm.card?.brand ?? null,
+      last4: pm.card?.last4 ?? null,
+      exp_month: pm.card?.exp_month ?? null,
+      exp_year: pm.card?.exp_year ?? null,
+    }))
+  } catch (err) {
+    console.warn(
+      '[stripe] listOrgPaymentMethods failed',
+      err instanceof Error ? err.message : err,
+    )
+    return []
+  }
+}

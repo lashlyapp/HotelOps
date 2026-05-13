@@ -5,7 +5,9 @@ import { BRAND } from '@/lib/brand'
 import {
   getStripeCustomerForOrg,
   getSubscriptionsForOrg,
+  listOrgPaymentMethods,
   listStripeInvoices,
+  type SavedCard,
   type StripeInvoiceSummary,
 } from '@/lib/stripe/subscriptions'
 import type {
@@ -14,12 +16,14 @@ import type {
   Property,
 } from '@/lib/supabase/types'
 import { StripeRedirectButton } from './_components/billing-actions'
+import { PropertyCardManager } from './_components/property-card-manager'
 
 export default async function BillingPage() {
   const session = await requireSession()
-  const [subscriptions, customerId] = await Promise.all([
+  const [subscriptions, customerId, savedCards] = await Promise.all([
     getSubscriptionsForOrg(session.organization.id),
     getStripeCustomerForOrg(session.organization.id),
+    listOrgPaymentMethods(session.organization.id),
   ])
   const stripeInvoices = customerId ? await listStripeInvoices(customerId) : []
   const isOwner = session.profile.role === 'org_owner'
@@ -50,7 +54,11 @@ export default async function BillingPage() {
       {rows.length === 0 ? (
         <NoPropertiesCard />
       ) : (
-        <PropertyBillingTable rows={rows} canManage={isOwner} />
+        <PropertyBillingTable
+          rows={rows}
+          canManage={isOwner}
+          savedCards={savedCards}
+        />
       )}
 
       <StripeInvoicesCard invoices={stripeInvoices} />
@@ -102,9 +110,11 @@ function NoPropertiesCard() {
 function PropertyBillingTable({
   rows,
   canManage,
+  savedCards,
 }: {
   rows: { property: Property; subscription: BillingSubscription | null }[]
   canManage: boolean
+  savedCards: SavedCard[]
 }) {
   return (
     <Card className="overflow-hidden">
@@ -131,6 +141,7 @@ function PropertyBillingTable({
               property={property}
               subscription={subscription}
               canManage={canManage}
+              savedCards={savedCards}
             />
           ))}
         </tbody>
@@ -143,10 +154,12 @@ function PropertyRow({
   property,
   subscription,
   canManage,
+  savedCards,
 }: {
   property: Property
   subscription: BillingSubscription | null
   canManage: boolean
+  savedCards: SavedCard[]
 }) {
   const hasCard = Boolean(subscription?.default_payment_method_id)
   const daysLeft = daysUntil(subscription?.payment_method_due_at ?? null)
@@ -188,23 +201,16 @@ function PropertyRow({
             >
               Start &amp; add card
             </StripeRedirectButton>
-          ) : !hasCard ? (
-            <StripeRedirectButton
-              endpoint="/api/stripe/setup-checkout"
-              body={{ property_id: property.id }}
-              size="sm"
-            >
-              Add card
-            </StripeRedirectButton>
           ) : (
-            <StripeRedirectButton
-              endpoint="/api/stripe/setup-checkout"
-              body={{ property_id: property.id }}
-              variant="secondary"
-              size="sm"
-            >
-              Change card
-            </StripeRedirectButton>
+            <PropertyCardManager
+              propertyId={property.id}
+              currentPaymentMethodId={
+                subscription.default_payment_method_id ?? null
+              }
+              currentBrand={subscription.default_payment_brand ?? null}
+              currentLast4={subscription.default_payment_last4 ?? null}
+              savedCards={savedCards}
+            />
           )
         ) : null}
       </td>
