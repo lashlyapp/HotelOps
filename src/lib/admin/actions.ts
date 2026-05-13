@@ -14,6 +14,12 @@ import {
 } from '@/lib/auth/password'
 import { BRAND } from '@/lib/brand'
 import { getGateForProperty } from '@/lib/billing/gate'
+import {
+  executeTenantBillingReset,
+  previewTenantBillingReset,
+  type ResetPreview,
+  type ResetSummary,
+} from '@/lib/billing/reset-tenant'
 import { isEmailConfigured } from '@/lib/email/client'
 import { sendWelcomeEmail } from '@/lib/email/send'
 import { r2DeleteObject, r2PutObject } from '@/lib/r2/upload'
@@ -852,6 +858,64 @@ export async function startSubscriptionAction(
       `Created ${created} subscription${created === 1 ? '' : 's'}` +
       (existing > 0 ? ` (${existing} already existed)` : '') +
       `. Each property has 14 days to attach a card.`,
+  }
+}
+
+/**
+ * Platform-admin action: dry-run a tenant billing reset. Returns counts of
+ * what an actual reset would touch so the confirmation UI can show
+ * "this will cancel 3 subscriptions and void 2 invoices" before the
+ * destructive button is enabled. Read-only against both Stripe and the
+ * DB — no writes.
+ */
+export async function previewResetTenantBillingAction(
+  _prev: ActionResult & { preview?: ResetPreview },
+  formData: FormData,
+): Promise<ActionResult & { preview?: ResetPreview }> {
+  await requirePlatformAdmin()
+  const orgId = String(formData.get('org_id') ?? '')
+  if (!orgId) return { error: 'Missing org.' }
+  try {
+    const preview = await previewTenantBillingReset(orgId)
+    return { preview }
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : 'Failed to load preview.',
+    }
+  }
+}
+
+/**
+ * Platform-admin action: actually perform the reset. Requires the org
+ * slug to be typed back as `confirmation` (same convention as
+ * deleteTenantAction). `hard=on` in the form data additionally deletes
+ * the Stripe Customer and clears organizations.stripe_customer_id.
+ *
+ * See lib/billing/reset-tenant.ts for full semantics.
+ */
+export async function resetTenantBillingAction(
+  _prev: ActionResult & { summary?: ResetSummary },
+  formData: FormData,
+): Promise<ActionResult & { summary?: ResetSummary }> {
+  await requirePlatformAdmin()
+  const orgId = String(formData.get('org_id') ?? '')
+  const confirmation = String(formData.get('confirmation') ?? '').trim()
+  const expected = String(formData.get('expected_confirmation') ?? '').trim()
+  const hard = formData.get('hard') === 'on'
+  if (!orgId) return { error: 'Missing org.' }
+  if (!confirmation || confirmation !== expected) {
+    return { error: 'Confirmation does not match the org slug.' }
+  }
+  try {
+    const summary = await executeTenantBillingReset(orgId, { hard })
+    revalidatePath(`/admin/tenants/${orgId}`)
+    revalidatePath('/admin')
+    revalidatePath('/billing')
+    return { summary, success: 'Billing reset complete.' }
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : 'Reset failed.',
+    }
   }
 }
 

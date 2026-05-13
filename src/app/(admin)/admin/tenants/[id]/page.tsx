@@ -19,6 +19,7 @@ import { DeleteTenantSection } from './_components/delete-tenant-section'
 import { OrgNameSection } from './_components/org-name-section'
 import { RemovePropertyButton } from './_components/remove-property-button'
 import { RemoveMemberButton } from './_components/remove-member-button'
+import { ResetBillingSection } from './_components/reset-billing-section'
 import { StartSubscriptionButton } from './_components/start-subscription-button'
 
 type Member = {
@@ -190,6 +191,12 @@ export default async function TenantDetailPage({
           <AddMemberSection orgId={organization.id} />
         </CardBody>
       </Card>
+
+      <ResetBillingSection
+        orgId={organization.id}
+        orgSlug={organization.slug}
+        orgName={organization.name}
+      />
 
       <DeleteTenantSection
         orgId={organization.id}
