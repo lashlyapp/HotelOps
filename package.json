@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "tsx --conditions=react-server --test \"src/**/*.test.ts\"",
     "sync:cdn-gate": "tsx --conditions=react-server scripts/sync-cdn-gate.ts",
-    "bootstrap:admin": "tsx scripts/bootstrap-admin.ts"
+    "bootstrap:admin": "tsx scripts/bootstrap-admin.ts",
+    "reset:tenant-billing": "tsx --conditions=react-server scripts/reset-tenant-billing.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1045.0",

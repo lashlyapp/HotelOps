@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from 'next/server'
 import type Stripe from 'stripe'
 import { stripe } from '@/lib/stripe/client'
 import { syncSubscriptionToDb } from '@/lib/stripe/subscriptions'
-import { orgIdFromMetadata, parseStripeEvent } from '@/lib/stripe/webhook'
+import {
+  orgIdFromMetadata,
+  parseStripeEvent,
+  propertyIdFromMetadata,
+} from '@/lib/stripe/webhook'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
@@ -59,6 +63,18 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ received: true })
 }
 
+async function resolvePropertyIdBySubscription(
+  subscriptionId: string,
+): Promise<string | null> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('billing_subscriptions')
+    .select('property_id')
+    .eq('stripe_subscription_id', subscriptionId)
+    .maybeSingle()
+  return data?.property_id ?? null
+}
+
 async function handleEvent(event: Stripe.Event): Promise<void> {
   switch (event.type) {
     case 'customer.subscription.created':
@@ -68,8 +84,31 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
     case 'customer.subscription.resumed': {
       const subscription = event.data.object as Stripe.Subscription
       const orgId = orgIdFromMetadata(subscription.metadata)
+      const propertyIdFromMeta = propertyIdFromMetadata(subscription.metadata)
       if (!orgId) return
-      await syncSubscriptionToDb(orgId, subscription)
+      // Legacy subscriptions predating per-property billing have org_id
+      // but no property_id in metadata. Auto-heal by looking up the
+      // billing_subscriptions row we backfilled during migration, keyed
+      // by stripe_subscription_id (which is unique). This recovers
+      // routing without admin intervention; a warning is logged so
+      // operators can backfill the Stripe-side metadata later.
+      let propertyId = propertyIdFromMeta
+      if (!propertyId) {
+        propertyId = await resolvePropertyIdBySubscription(subscription.id)
+        if (!propertyId) {
+          console.warn(
+            `[stripe-webhook] subscription ${subscription.id} has no ` +
+              `property_id metadata and no matching billing_subscriptions ` +
+              `row; dropping event ${event.type}.`,
+          )
+          return
+        }
+        console.warn(
+          `[stripe-webhook] healed legacy subscription ${subscription.id} ` +
+            `to property ${propertyId}; backfill its Stripe metadata.`,
+        )
+      }
+      await syncSubscriptionToDb(propertyId, orgId, subscription)
       return
     }
 
@@ -87,10 +126,13 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
 
 /**
  * Setup-mode Checkout finishes with a Setup Intent that has a payment method
- * but no subscription attached. Promote that pm to:
- *   1. The customer's default invoice payment method;
- *   2. The subscription's default_payment_method;
- * and flip the subscription from `send_invoice` to `charge_automatically` so
+ * but no subscription attached. Attach the pm to this *property's*
+ * subscription only — explicitly NOT to the org-level Customer's
+ * invoice_settings.default_payment_method, because that's shared across all
+ * of the org's per-property subscriptions and would silently flip every
+ * other property's card too. Each property keeps its own card.
+ *
+ * Flip the subscription from `send_invoice` to `charge_automatically` so
  * future (recurring) invoices auto-charge. The currently-open first invoice
  * is left alone — it's already listed in the billing UI for the customer to
  * pay through their preferred channel.
@@ -106,7 +148,15 @@ async function handleCheckoutCompleted(
 
   const subscriptionId = checkoutSession.metadata?.subscription_id
   const orgId = checkoutSession.metadata?.org_id
+  let propertyId = checkoutSession.metadata?.property_id
   if (!subscriptionId || !orgId) return
+  if (!propertyId) {
+    // Legacy setup-mode checkout from before property_id was stamped on
+    // the checkout session metadata. Recover via subscription lookup.
+    const resolved = await resolvePropertyIdBySubscription(subscriptionId)
+    if (!resolved) return
+    propertyId = resolved
+  }
 
   const setupIntentId =
     typeof checkoutSession.setup_intent === 'string'
@@ -121,16 +171,10 @@ async function handleCheckoutCompleted(
       : setupIntent.payment_method?.id
   if (!paymentMethodId) return
 
-  const customerId =
-    typeof setupIntent.customer === 'string'
-      ? setupIntent.customer
-      : setupIntent.customer?.id
-  if (customerId) {
-    await stripe().customers.update(customerId, {
-      invoice_settings: { default_payment_method: paymentMethodId },
-    })
-  }
-
+  // Deliberately do NOT update the Customer's invoice_settings here — the
+  // Customer is shared across the org's per-property subscriptions and
+  // touching its default payment method would change every property's
+  // default. The pm only attaches to this one subscription.
   const subscription = await stripe().subscriptions.update(subscriptionId, {
     default_payment_method: paymentMethodId,
     collection_method: 'charge_automatically',
@@ -138,6 +182,8 @@ async function handleCheckoutCompleted(
 
   // Card on file → grace period no longer applies. Clear the deadline so the
   // billing UI stops showing the "X days remaining" countdown.
-  await syncSubscriptionToDb(orgId, subscription, { paymentMethodDueAt: null })
+  await syncSubscriptionToDb(propertyId, orgId, subscription, {
+    paymentMethodDueAt: null,
+  })
 }
 

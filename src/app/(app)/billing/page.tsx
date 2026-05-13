@@ -3,23 +3,41 @@ import { Card } from '@/components/ui/card'
 import { requireSession } from '@/lib/auth/session'
 import { BRAND } from '@/lib/brand'
 import {
-  getSubscriptionForOrg,
+  getStripeCustomerForOrg,
+  getSubscriptionsForOrg,
+  listOrgPaymentMethods,
   listStripeInvoices,
+  type SavedCard,
   type StripeInvoiceSummary,
 } from '@/lib/stripe/subscriptions'
 import type {
   BillingSubscription,
   BillingSubscriptionStatus,
+  Property,
 } from '@/lib/supabase/types'
 import { StripeRedirectButton } from './_components/billing-actions'
+import { PropertyCardManager } from './_components/property-card-manager'
+import { ResubscribeButton } from './_components/resubscribe-button'
 
 export default async function BillingPage() {
   const session = await requireSession()
-  const subscription = await getSubscriptionForOrg(session.organization.id)
-  const stripeInvoices = subscription?.stripe_customer_id
-    ? await listStripeInvoices(subscription.stripe_customer_id)
-    : []
+  const [subscriptions, customerId, savedCards] = await Promise.all([
+    getSubscriptionsForOrg(session.organization.id),
+    getStripeCustomerForOrg(session.organization.id),
+    listOrgPaymentMethods(session.organization.id),
+  ])
+  const stripeInvoices = customerId ? await listStripeInvoices(customerId) : []
   const isOwner = session.profile.role === 'org_owner'
+
+  // Pair every property with its subscription (or null if it doesn't have
+  // one yet). The Billing page is the single org-level view: one row per
+  // property, each with its own card / status / "manage" affordance.
+  const subsByProperty = new Map<string, BillingSubscription>()
+  for (const s of subscriptions) subsByProperty.set(s.property_id, s)
+  const rows = session.properties.map((property) => ({
+    property,
+    subscription: subsByProperty.get(property.id) ?? null,
+  }))
 
   return (
     <div className="p-8 space-y-6">
@@ -28,144 +46,192 @@ export default async function BillingPage() {
           Billing
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Subscription and payment method for {session.organization.name}.
+          One subscription per property — each can be paid with a different
+          credit card. All subscriptions bill under the same{' '}
+          {session.organization.name} customer.
         </p>
       </div>
 
-      <SubscriptionCard subscription={subscription} canManage={isOwner} />
+      {rows.length === 0 ? (
+        <NoPropertiesCard />
+      ) : (
+        <PropertyBillingTable
+          rows={rows}
+          canManage={isOwner}
+          savedCards={savedCards}
+        />
+      )}
 
       <StripeInvoicesCard invoices={stripeInvoices} />
-    </div>
-  )
-}
 
-function SubscriptionCard({
-  subscription,
-  canManage,
-}: {
-  subscription: BillingSubscription | null
-  canManage: boolean
-}) {
-  if (!subscription) {
-    return (
-      <Card>
-        <div className="p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-fg">Subscription</h2>
-            <Badge tone="neutral">Not started</Badge>
-          </div>
-          <p className="text-sm text-muted leading-relaxed">
-            You haven&apos;t started a subscription yet. {BRAND.name} is{' '}
-            <strong className="text-fg">$100 / month per property</strong>{' '}
-            plus a one-time{' '}
-            <strong className="text-fg">$250 setup fee</strong> on the first
-            invoice. Cancel anytime from this page.
-          </p>
-          <p className="text-sm text-muted leading-relaxed">
-            Click below to enter a card and add your first property. Your
-            subscription quantity automatically adjusts whenever you add or
-            remove a property.
-          </p>
-          {canManage ? (
+      {customerId && isOwner ? (
+        <Card>
+          <div className="p-5 space-y-3">
+            <h2 className="text-sm font-semibold text-fg">
+              Customer-level billing
+            </h2>
+            <p className="text-sm text-muted leading-relaxed">
+              View and update your billing email, address, and saved payment
+              methods. Per-property card selection is managed in the table
+              above.
+            </p>
             <div className="pt-1">
-              <StripeRedirectButton endpoint="/api/stripe/setup-checkout">
-                Start subscription &amp; add card
-              </StripeRedirectButton>
-            </div>
-          ) : (
-            <p className="text-sm text-subtle">
-              Ask the account owner to start the subscription from this page.
-            </p>
-          )}
-        </div>
-      </Card>
-    )
-  }
-
-  const hasCard = Boolean(subscription.default_payment_method_id)
-  const daysLeft = daysUntil(subscription.payment_method_due_at)
-
-  return (
-    <Card>
-      <div className="p-5 space-y-4">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-fg">Subscription</h2>
-          <SubscriptionStatusBadge status={subscription.status} />
-        </div>
-
-        {!hasCard ? (
-          <div className="rounded-md border border-warning-bg bg-warning-bg px-4 py-3 text-sm text-warning-fg">
-            <p className="font-medium">
-              Save a payment method for auto-renewal
-            </p>
-            <p className="mt-1">
-              Your subscription is active. Add a credit card so future monthly
-              invoices charge automatically.
-              {subscription.payment_method_due_at && daysLeft !== null
-                ? ` You have ${daysLeft} day${daysLeft === 1 ? '' : 's'} (until ${formatDate(subscription.payment_method_due_at)}) before the first invoice goes past due.`
-                : ''}
-            </p>
-          </div>
-        ) : null}
-
-        {subscription.status === 'past_due' || subscription.status === 'unpaid' ? (
-          <p className="text-sm text-danger-fg">
-            Payment failed on the most recent charge. Update your card to
-            restore auto-renewal.
-          </p>
-        ) : null}
-
-        <div className="grid gap-4 sm:grid-cols-3 pt-2 border-t border-border-subtle">
-          <div>
-            <p className="text-xs uppercase tracking-wider text-subtle">Plan</p>
-            <p className="mt-1 text-sm text-fg">
-              {formatPlan(subscription)}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wider text-subtle">
-              Payment method
-            </p>
-            <p className="mt-1 text-sm text-fg">
-              {hasCard
-                ? `${capitalize(subscription.default_payment_brand)} ending ${subscription.default_payment_last4 ?? '••••'}`
-                : 'None on file'}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wider text-subtle">
-              {subscription.current_period_end ? 'Next renewal' : 'First invoice'}
-            </p>
-            <p className="mt-1 text-sm text-fg">
-              {subscription.current_period_end
-                ? formatDate(subscription.current_period_end)
-                : '—'}
-            </p>
-          </div>
-        </div>
-
-        {canManage ? (
-          <div className="pt-2 flex flex-wrap gap-3">
-            {!hasCard ? (
-              <StripeRedirectButton endpoint="/api/stripe/setup-checkout">
-                Save card for auto-renewal
-              </StripeRedirectButton>
-            ) : (
               <StripeRedirectButton
                 endpoint="/api/stripe/portal"
                 variant="secondary"
               >
-                Manage billing
+                Open Stripe billing portal
               </StripeRedirectButton>
-            )}
+            </div>
           </div>
-        ) : (
-          <p className="text-xs text-subtle">
-            Only an organization owner can update the payment method.
-          </p>
-        )}
+        </Card>
+      ) : null}
+    </div>
+  )
+}
+
+function NoPropertiesCard() {
+  return (
+    <Card>
+      <div className="p-5 space-y-3">
+        <h2 className="text-sm font-semibold text-fg">No properties yet</h2>
+        <p className="text-sm text-muted leading-relaxed">
+          {BRAND.name} bills{' '}
+          <strong className="text-fg">$100 / month per property</strong> plus a
+          one-time <strong className="text-fg">$250 setup fee</strong> on your
+          first property&apos;s invoice. Add your first property from the
+          Properties page; each property gets its own subscription with its
+          own credit card.
+        </p>
       </div>
     </Card>
+  )
+}
+
+function PropertyBillingTable({
+  rows,
+  canManage,
+  savedCards,
+}: {
+  rows: { property: Property; subscription: BillingSubscription | null }[]
+  canManage: boolean
+  savedCards: SavedCard[]
+}) {
+  return (
+    <Card className="overflow-hidden">
+      <div className="px-5 py-4 border-b border-border-subtle">
+        <h2 className="text-sm font-semibold text-fg">
+          Property subscriptions
+        </h2>
+      </div>
+      <table className="w-full text-sm">
+        <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
+          <tr>
+            <th className="px-4 py-3 font-medium">Property</th>
+            <th className="px-4 py-3 font-medium">Status</th>
+            <th className="px-4 py-3 font-medium">Card</th>
+            <th className="px-4 py-3 font-medium">Plan</th>
+            <th className="px-4 py-3 font-medium">Next renewal</th>
+            <th className="px-4 py-3 font-medium" />
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border-subtle">
+          {rows.map(({ property, subscription }) => (
+            <PropertyRow
+              key={property.id}
+              property={property}
+              subscription={subscription}
+              canManage={canManage}
+              savedCards={savedCards}
+            />
+          ))}
+        </tbody>
+      </table>
+    </Card>
+  )
+}
+
+function PropertyRow({
+  property,
+  subscription,
+  canManage,
+  savedCards,
+}: {
+  property: Property
+  subscription: BillingSubscription | null
+  canManage: boolean
+  savedCards: SavedCard[]
+}) {
+  const hasCard = Boolean(subscription?.default_payment_method_id)
+  const daysLeft = daysUntil(subscription?.payment_method_due_at ?? null)
+  const needsCard =
+    subscription &&
+    !hasCard &&
+    !['canceled', 'incomplete_expired'].includes(subscription.status)
+  const isEnded =
+    subscription?.status === 'canceled' ||
+    subscription?.status === 'incomplete_expired'
+  const isScheduledCancel =
+    !isEnded && Boolean(subscription?.cancel_at_period_end)
+
+  return (
+    <tr>
+      <td className="px-4 py-3 font-medium text-fg">{property.name}</td>
+      <td className="px-4 py-3">
+        {subscription ? (
+          <>
+            <SubscriptionStatusBadge status={subscription.status} />
+            {isScheduledCancel && subscription.current_period_end ? (
+              <p className="mt-1 text-xs text-warning-fg">
+                Ends {formatDate(subscription.current_period_end)}
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <Badge tone="neutral">Not started</Badge>
+        )}
+      </td>
+      <td className="px-4 py-3 text-muted">
+        {hasCard
+          ? `${capitalize(subscription?.default_payment_brand)} ending ${subscription?.default_payment_last4 ?? '••••'}`
+          : '—'}
+      </td>
+      <td className="px-4 py-3 text-muted">{formatPlan(subscription)}</td>
+      <td className="px-4 py-3 text-muted">
+        {subscription?.current_period_end
+          ? formatDate(subscription.current_period_end)
+          : needsCard && subscription?.payment_method_due_at
+            ? `Due in ${daysLeft ?? 0}d`
+            : '—'}
+      </td>
+      <td className="px-4 py-3 text-right">
+        {canManage ? (
+          !subscription ? (
+            <StripeRedirectButton
+              endpoint="/api/stripe/setup-checkout"
+              body={{ property_id: property.id }}
+              size="sm"
+            >
+              Start &amp; add card
+            </StripeRedirectButton>
+          ) : isEnded ? (
+            <ResubscribeButton propertyId={property.id} />
+          ) : (
+            <PropertyCardManager
+              propertyId={property.id}
+              currentPaymentMethodId={
+                subscription.default_payment_method_id ?? null
+              }
+              currentBrand={subscription.default_payment_brand ?? null}
+              currentLast4={subscription.default_payment_last4 ?? null}
+              savedCards={savedCards}
+              cancelAtPeriodEnd={subscription.cancel_at_period_end}
+              currentPeriodEnd={subscription.current_period_end}
+            />
+          )
+        ) : null}
+      </td>
+    </tr>
   )
 }
 
@@ -269,12 +335,9 @@ function StripeInvoiceStatusBadge({
   return <Badge tone={tone}>{status ?? 'unknown'}</Badge>
 }
 
-function formatPlan(s: BillingSubscription): string {
-  if (s.unit_amount_cents == null) return '—'
-  const per = formatMoney(s.unit_amount_cents, s.currency)
-  if (s.quantity <= 1) return `${per}/mo`
-  const total = formatMoney(s.unit_amount_cents * s.quantity, s.currency)
-  return `${per} × ${s.quantity} properties = ${total}/mo`
+function formatPlan(s: BillingSubscription | null): string {
+  if (!s || s.unit_amount_cents == null) return '—'
+  return `${formatMoney(s.unit_amount_cents, s.currency)}/mo`
 }
 
 function formatMoney(cents: number, currency: string): string {

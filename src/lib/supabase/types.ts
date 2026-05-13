@@ -5,6 +5,7 @@ export type Organization = {
   slug: string
   name: string
   created_at: string
+  stripe_customer_id: string | null
 }
 
 export type Profile = {
@@ -185,6 +186,7 @@ export type BillingSubscriptionStatus =
   | 'paused'
 
 export type BillingSubscription = {
+  property_id: string
   org_id: string
   stripe_customer_id: string
   stripe_subscription_id: string | null

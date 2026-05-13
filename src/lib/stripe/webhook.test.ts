@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { orgIdFromMetadata } from './webhook'
+import { orgIdFromMetadata, propertyIdFromMetadata } from './webhook'
 
 describe('orgIdFromMetadata', () => {
   it('returns null when metadata is null/undefined', () => {
@@ -28,6 +28,32 @@ describe('orgIdFromMetadata', () => {
     // wiring), we drop it on the floor instead of touching our DB.
     assert.equal(
       orgIdFromMetadata({ app: 'lashly', org_id: 'org_abc' }),
+      null,
+    )
+  })
+})
+
+describe('propertyIdFromMetadata', () => {
+  it('returns null for missing metadata or property_id', () => {
+    assert.equal(propertyIdFromMetadata(null), null)
+    assert.equal(propertyIdFromMetadata(undefined), null)
+    assert.equal(propertyIdFromMetadata({ app: 'hotelops' }), null)
+  })
+
+  it('returns property_id when app tag matches or is omitted', () => {
+    assert.equal(
+      propertyIdFromMetadata({ app: 'hotelops', property_id: 'prop_abc' }),
+      'prop_abc',
+    )
+    assert.equal(
+      propertyIdFromMetadata({ property_id: 'prop_abc' }),
+      'prop_abc',
+    )
+  })
+
+  it('returns null when app tag belongs to a different app', () => {
+    assert.equal(
+      propertyIdFromMetadata({ app: 'lashly', property_id: 'prop_abc' }),
       null,
     )
   })

@@ -19,6 +19,7 @@ import { DeleteTenantSection } from './_components/delete-tenant-section'
 import { OrgNameSection } from './_components/org-name-section'
 import { RemovePropertyButton } from './_components/remove-property-button'
 import { RemoveMemberButton } from './_components/remove-member-button'
+import { ResetBillingSection } from './_components/reset-billing-section'
 import { StartSubscriptionButton } from './_components/start-subscription-button'
 
 type Member = {
@@ -40,7 +41,7 @@ export default async function TenantDetailPage({
   const data = await loadTenant(id)
   if (!data) notFound()
 
-  const { organization, properties, members, subscription } = data
+  const { organization, properties, members, subscriptions } = data
 
   // Per-property R2 listing — cached per-property (60s + mediaCacheTag) so
   // repeat admin navigations don't fan out to R2 every time.
@@ -83,7 +84,8 @@ export default async function TenantDetailPage({
         orgId={organization.id}
         orgName={organization.name}
         propertyCount={properties.length}
-        subscription={subscription}
+        properties={properties}
+        subscriptions={subscriptions}
       />
 
       <Card>
@@ -190,6 +192,12 @@ export default async function TenantDetailPage({
         </CardBody>
       </Card>
 
+      <ResetBillingSection
+        orgId={organization.id}
+        orgSlug={organization.slug}
+        orgName={organization.name}
+      />
+
       <DeleteTenantSection
         orgId={organization.id}
         orgSlug={organization.slug}
@@ -236,7 +244,7 @@ async function loadTenant(orgId: string) {
     .maybeSingle()
   if (!organization) return null
 
-  const [{ data: properties }, { data: profiles }, { data: subscription }] =
+  const [{ data: properties }, { data: profiles }, { data: subscriptions }] =
     await Promise.all([
       admin
         .from('properties')
@@ -251,8 +259,7 @@ async function loadTenant(orgId: string) {
       admin
         .from('billing_subscriptions')
         .select('*')
-        .eq('org_id', orgId)
-        .maybeSingle(),
+        .eq('org_id', orgId),
     ])
 
   // Resolve emails via auth admin API.
@@ -280,7 +287,7 @@ async function loadTenant(orgId: string) {
     organization: organization as Organization,
     properties: (properties ?? []) as Property[],
     members,
-    subscription: (subscription as BillingSubscription | null) ?? null,
+    subscriptions: (subscriptions as BillingSubscription[] | null) ?? [],
   }
 }
 
@@ -288,22 +295,38 @@ function BillingSection({
   orgId,
   orgName,
   propertyCount,
-  subscription,
+  properties,
+  subscriptions,
 }: {
   orgId: string
   orgName: string
   propertyCount: number
-  subscription: BillingSubscription | null
+  properties: Property[]
+  subscriptions: BillingSubscription[]
 }) {
+  const subsByProperty = new Map<string, BillingSubscription>()
+  for (const s of subscriptions) subsByProperty.set(s.property_id, s)
+  const customerId = subscriptions[0]?.stripe_customer_id ?? null
+  const unsubscribedCount = properties.filter(
+    (p) => !subsByProperty.has(p.id),
+  ).length
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Billing</CardTitle>
       </CardHeader>
-      <CardBody className="space-y-3 text-sm">
-        {!subscription ? (
-          <div className="space-y-3">
-            <p className="text-muted">No subscription on file.</p>
+      <CardBody className="space-y-4 text-sm">
+        {properties.length === 0 ? (
+          <p className="text-muted">
+            No properties yet — add a property below before starting billing.
+          </p>
+        ) : unsubscribedCount > 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-muted">
+              {unsubscribedCount} {unsubscribedCount === 1 ? 'property has' : 'properties have'}{' '}
+              no subscription yet.
+            </p>
             <StartSubscriptionButton
               orgId={orgId}
               orgName={orgName}
@@ -311,66 +334,63 @@ function BillingSection({
             />
           </div>
         ) : (
-          <>
-            <div className="flex flex-wrap items-center gap-2">
-              <BillingStatusBadge status={subscription.status} />
-              {subscription.cancel_at_period_end ? (
-                <Badge tone="warning">Cancels at period end</Badge>
-              ) : null}
-              {subscription.past_due_since ? (
-                <Badge tone="danger">
-                  Past due since{' '}
-                  {new Date(subscription.past_due_since).toLocaleDateString()}
-                </Badge>
-              ) : null}
-            </div>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-              <Field label="Plan">{formatPlan(subscription)}</Field>
-              <Field label="Payment method">
-                {subscription.default_payment_method_id
-                  ? `${subscription.default_payment_brand ?? 'Card'} ···· ${subscription.default_payment_last4 ?? '••••'}`
-                  : 'None on file'}
-              </Field>
-              <Field label="Renews">
-                {subscription.current_period_end
-                  ? new Date(subscription.current_period_end).toLocaleDateString()
-                  : '—'}
-              </Field>
-              <Field label="Cooling deadline">
-                {subscription.payment_method_due_at
-                  ? new Date(subscription.payment_method_due_at).toLocaleDateString()
-                  : '—'}
-              </Field>
-              <Field label="Stripe Customer">
-                <code className="font-mono text-xs">
-                  {subscription.stripe_customer_id}
-                </code>
-              </Field>
-              <Field label="Stripe Subscription">
-                <code className="font-mono text-xs">
-                  {subscription.stripe_subscription_id ?? '—'}
-                </code>
-              </Field>
-            </dl>
-          </>
+          <p className="text-muted">
+            All properties have a subscription. Customer: {' '}
+            <code className="font-mono text-xs">{customerId ?? '—'}</code>
+          </p>
         )}
+
+        {properties.length > 0 ? (
+          <table className="w-full text-sm">
+            <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
+              <tr>
+                <th className="px-3 py-2 font-medium">Property</th>
+                <th className="px-3 py-2 font-medium">Status</th>
+                <th className="px-3 py-2 font-medium">Card</th>
+                <th className="px-3 py-2 font-medium">Plan</th>
+                <th className="px-3 py-2 font-medium">Renews</th>
+                <th className="px-3 py-2 font-medium">Stripe sub</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-subtle">
+              {properties.map((p) => {
+                const sub = subsByProperty.get(p.id) ?? null
+                return (
+                  <tr key={p.id}>
+                    <td className="px-3 py-2 text-fg">{p.name}</td>
+                    <td className="px-3 py-2">
+                      {sub ? (
+                        <BillingStatusBadge status={sub.status} />
+                      ) : (
+                        <Badge tone="neutral">Not started</Badge>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-muted">
+                      {sub?.default_payment_method_id
+                        ? `${sub.default_payment_brand ?? 'Card'} ···· ${sub.default_payment_last4 ?? '••••'}`
+                        : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-muted">
+                      {formatPlan(sub)}
+                    </td>
+                    <td className="px-3 py-2 text-muted">
+                      {sub?.current_period_end
+                        ? new Date(sub.current_period_end).toLocaleDateString()
+                        : '—'}
+                    </td>
+                    <td className="px-3 py-2">
+                      <code className="font-mono text-xs">
+                        {sub?.stripe_subscription_id ?? '—'}
+                      </code>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        ) : null}
       </CardBody>
     </Card>
-  )
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <div>
-      <dt className="text-xs uppercase tracking-wider text-subtle">{label}</dt>
-      <dd className="mt-0.5 text-fg">{children}</dd>
-    </div>
   )
 }
 
@@ -392,13 +412,12 @@ function BillingStatusBadge({
   return <Badge tone={tone}>{status.replace(/_/g, ' ')}</Badge>
 }
 
-function formatPlan(s: BillingSubscription): string {
-  if (s.unit_amount_cents == null) return '—'
+function formatPlan(s: BillingSubscription | null): string {
+  if (!s || s.unit_amount_cents == null) return '—'
   const cur = (s.currency || 'USD').toUpperCase()
   const fmt = (cents: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: cur }).format(
       cents / 100,
     )
-  if (s.quantity <= 1) return `${fmt(s.unit_amount_cents)}/mo`
-  return `${fmt(s.unit_amount_cents)} × ${s.quantity} = ${fmt(s.unit_amount_cents * s.quantity)}/mo`
+  return `${fmt(s.unit_amount_cents)}/mo`
 }

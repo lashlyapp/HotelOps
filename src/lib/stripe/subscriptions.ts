@@ -6,7 +6,7 @@ import type { BillingSubscription, BillingSubscriptionStatus } from '@/lib/supab
 import { stripe } from './client'
 
 /**
- * Days the customer has, after the subscription starts, to attach a payment
+ * Days the customer has, after a subscription starts, to attach a payment
  * method before the first invoice goes past due. Implemented Stripe-side as
  * collection_method='send_invoice' + days_until_due=N. The subscription is
  * `active` from day one — this is *not* a trial.
@@ -20,9 +20,16 @@ type EnsureCustomerInput = {
 }
 
 /**
- * Find-or-create the Stripe Customer for an org. The org_id metadata is the
- * link Stripe-side; we also store the customer id in billing_subscriptions
- * for the reverse lookup.
+ * Find-or-create the org-level Stripe Customer. Each property in the org
+ * has its own Subscription under this single Customer so the customer can
+ * use a different card per property while sharing one billing identity
+ * (one tax id, one billing email, one Manage-billing portal).
+ *
+ * The customer id is persisted on `organizations.stripe_customer_id` —
+ * NOT on billing_subscriptions — so a Stripe Customer created mid-flow
+ * (e.g. user creates customer, then abandons checkout) is reused on the
+ * next attempt instead of orphaned. The Stripe-side idempotencyKey is a
+ * second line of defense for the in-flight double-click case.
  */
 export async function ensureStripeCustomer({
   orgId,
@@ -31,14 +38,13 @@ export async function ensureStripeCustomer({
 }: EnsureCustomerInput): Promise<string> {
   const admin = createAdminClient()
 
-  const { data: existing } = await admin
-    .from('billing_subscriptions')
+  const { data: org, error: orgErr } = await admin
+    .from('organizations')
     .select('stripe_customer_id')
-    .eq('org_id', orgId)
+    .eq('id', orgId)
     .maybeSingle()
-  if (existing?.stripe_customer_id) {
-    return existing.stripe_customer_id
-  }
+  if (orgErr) throw orgErr
+  if (org?.stripe_customer_id) return org.stripe_customer_id
 
   const customer = await stripe().customers.create(
     {
@@ -47,75 +53,61 @@ export async function ensureStripeCustomer({
       metadata: { org_id: orgId, app: 'hotelops' },
     },
     {
-      // Same org calling this twice in flight (e.g. user double-clicks the
-      // CTA) must not create two customers.
+      // Same org calling this twice in flight (e.g. user double-clicks
+      // the CTA) must not create two customers.
       idempotencyKey: `customer:${orgId}`,
     },
   )
 
-  const { error } = await admin
-    .from('billing_subscriptions')
-    .upsert(
-      {
-        org_id: orgId,
-        stripe_customer_id: customer.id,
-        status: 'incomplete',
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'org_id' },
-    )
-  if (error) throw error
-
+  // Persist immediately so an abandoned checkout is recoverable. The
+  // unique constraint on organizations.stripe_customer_id means a
+  // concurrent racer that beat us to the Stripe create will have already
+  // stamped its id — in that case we lose the race, drop our newly-
+  // created customer, and adopt the winner's id.
+  const { error: updErr } = await admin
+    .from('organizations')
+    .update({ stripe_customer_id: customer.id })
+    .eq('id', orgId)
+    .is('stripe_customer_id', null)
+  if (updErr) {
+    // Race: another caller stamped the column between our SELECT and
+    // UPDATE. Re-read and adopt their id; the customer we just created
+    // is now an orphan but Stripe is fine with duplicate Customers (no
+    // real cost) and the idempotencyKey would normally prevent this.
+    const { data: again } = await admin
+      .from('organizations')
+      .select('stripe_customer_id')
+      .eq('id', orgId)
+      .maybeSingle()
+    if (again?.stripe_customer_id) return again.stripe_customer_id
+    throw updErr
+  }
   return customer.id
 }
 
-type StartSubscriptionInput = {
-  orgId: string
-  customerId: string
-  priceId: string
-  quantity: number
-  graceDays?: number
-  /** Optional one-time setup fee Price id; tacked onto the first invoice. */
-  setupFeePriceId?: string
-}
-
 /**
- * Create a per-property recurring subscription. Active and billable from day
- * one; collection_method='send_invoice' means Stripe issues the invoice but
- * does not auto-charge — that gives the customer `graceDays` to attach a
- * card. Once they do, the webhook flips the sub to charge_automatically.
+ * Has this property ever had a Stripe subscription? Used to decide
+ * whether to include the one-time setup fee in a new property
+ * subscription: charge it on a property's first-ever sub, but not on
+ * resubscribes (a canceled-and-then-resumed property already paid).
  *
- * setupFeePriceId is added via add_invoice_items so it lands on the very
- * first invoice and never recurs.
+ * Looks for ANY billing_subscriptions row for the property with a
+ * stripe_subscription_id set. A canceled sub still satisfies this — the
+ * row is not deleted on cancel, only on property delete or via the
+ * platform-admin reset flow (both of which legitimately reset history).
  */
-export async function startSubscription({
-  orgId,
-  customerId,
-  priceId,
-  quantity,
-  graceDays = PAYMENT_METHOD_GRACE_DAYS,
-  setupFeePriceId,
-}: StartSubscriptionInput): Promise<Stripe.Subscription> {
-  const params: Stripe.SubscriptionCreateParams = {
-    customer: customerId,
-    items: [{ price: priceId, quantity }],
-    collection_method: 'send_invoice',
-    days_until_due: graceDays,
-    metadata: { org_id: orgId, app: 'hotelops' },
-  }
-  if (setupFeePriceId) {
-    params.add_invoice_items = [{ price: setupFeePriceId, quantity: 1 }]
-  }
-
-  const subscription = await stripe().subscriptions.create(params, {
-    idempotencyKey: `subscription:${orgId}:${priceId}`,
-  })
-
-  // Stamp the cooling-period deadline so the billing page can show a
-  // countdown without parsing invoices.
-  const dueAt = new Date(Date.now() + graceDays * 24 * 60 * 60 * 1000)
-  await syncSubscriptionToDb(orgId, subscription, { paymentMethodDueAt: dueAt })
-  return subscription
+export async function propertyHasBeenSubscribed(
+  propertyId: string,
+): Promise<boolean> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('billing_subscriptions')
+    .select('property_id')
+    .eq('property_id', propertyId)
+    .not('stripe_subscription_id', 'is', null)
+    .maybeSingle()
+  if (error) throw error
+  return Boolean(data)
 }
 
 type SyncOptions = {
@@ -125,21 +117,47 @@ type SyncOptions = {
 }
 
 /**
- * Mirror a Stripe subscription into billing_subscriptions. Called from the
- * webhook handler on every customer.subscription.* event and from the admin
- * script after creation. The default-payment-method snapshot is denormalized
- * here so the billing page doesn't need a Stripe round-trip.
+ * Mirror a Stripe subscription into billing_subscriptions, keyed by the
+ * property the subscription was created for. The Stripe Subscription must
+ * carry property_id and org_id in its metadata — that's the link both the
+ * webhook and the start-subscription paths set.
+ *
+ * The default-payment-method snapshot is denormalized here so the billing
+ * page doesn't need a Stripe round-trip to show "Visa ending 4242" per
+ * property.
  *
  * past_due_since is stamped the first time we see status=past_due/unpaid
  * and cleared when the status leaves that state — that's the timestamp the
  * 15-day gating policy keys off.
  */
 export async function syncSubscriptionToDb(
+  propertyId: string,
   orgId: string,
   subscription: Stripe.Subscription,
   options: SyncOptions = {},
 ): Promise<void> {
   const admin = createAdminClient()
+
+  // Tolerate the property having been deleted between the Stripe event
+  // firing and us handling it. Without this guard the upsert below would
+  // FK-violate on property_id and the webhook would 500-retry forever
+  // for a sub we already canceled. We've already canceled the Stripe
+  // subscription in removePropertyAction, so dropping the event on the
+  // floor is safe.
+  const { data: propertyRow, error: propErr } = await admin
+    .from('properties')
+    .select('id')
+    .eq('id', propertyId)
+    .maybeSingle()
+  if (propErr) throw propErr
+  if (!propertyRow) {
+    console.warn(
+      `[billing] syncSubscriptionToDb: property ${propertyId} no longer ` +
+        `exists; dropping event for subscription ${subscription.id}.`,
+    )
+    return
+  }
+
   const item = subscription.items.data[0]
   const price = item?.price
 
@@ -159,18 +177,17 @@ export async function syncSubscriptionToDb(
   const status = subscription.status as BillingSubscriptionStatus
   const isPastDue = status === 'past_due' || status === 'unpaid'
 
-  // Look up the current row so we know whether to stamp / preserve / clear
-  // past_due_since on this transition.
   const { data: existing } = await admin
     .from('billing_subscriptions')
     .select('past_due_since')
-    .eq('org_id', orgId)
+    .eq('property_id', propertyId)
     .maybeSingle()
   const pastDueSince = isPastDue
     ? (existing?.past_due_since ?? new Date().toISOString())
     : null
 
   const update: Record<string, unknown> = {
+    property_id: propertyId,
     org_id: orgId,
     stripe_customer_id:
       typeof subscription.customer === 'string'
@@ -203,12 +220,13 @@ export async function syncSubscriptionToDb(
 
   const { error } = await admin
     .from('billing_subscriptions')
-    .upsert(update, { onConflict: 'org_id' })
+    .upsert(update, { onConflict: 'property_id' })
   if (error) throw error
 
   // Propagate the (possibly new) gate state to Cloudflare KV so the
-  // cdn-gate Worker enforces it on incoming media requests. No-op when CF
-  // env isn't configured (local dev / pre-deploy).
+  // cdn-gate Worker enforces it on incoming media requests. The CDN gate
+  // is org-level (any property in a bad state locks the org's media);
+  // syncGateToCdn re-derives that across the org's subscriptions.
   try {
     await syncGateToCdn(orgId)
   } catch (err) {
@@ -216,60 +234,6 @@ export async function syncSubscriptionToDb(
       '[billing] syncGateToCdn failed; CDN gate may be stale until next event',
       err instanceof Error ? err.message : err,
     )
-  }
-}
-
-/**
- * After a property is added or removed, push the new quantity to Stripe so
- * billing tracks property count. Best-effort: logs and returns false on
- * failure rather than rolling back the property change. No-op when the org
- * has no subscription yet (admin hasn't clicked Start subscription) or the sub
- * is in a terminal state.
- *
- * proration_behavior='create_prorations' is the default and produces a
- * prorated charge or credit on the next invoice.
- */
-export async function syncSubscriptionQuantity(
-  orgId: string,
-): Promise<boolean> {
-  const admin = createAdminClient()
-  const { data: row, error } = await admin
-    .from('billing_subscriptions')
-    .select('stripe_subscription_id, status, quantity')
-    .eq('org_id', orgId)
-    .maybeSingle()
-  if (error) {
-    console.warn('[billing] syncSubscriptionQuantity: load failed', error)
-    return false
-  }
-  if (!row?.stripe_subscription_id) return false
-  if (row.status === 'canceled' || row.status === 'incomplete_expired') {
-    return false
-  }
-
-  const propertyCount = await countPropertiesForOrg(orgId)
-  const newQuantity = Math.max(1, propertyCount)
-  if (newQuantity === row.quantity) return true
-
-  try {
-    const sub = await stripe().subscriptions.retrieve(row.stripe_subscription_id)
-    const itemId = sub.items.data[0]?.id
-    if (!itemId) return false
-    const updated = await stripe().subscriptions.update(
-      row.stripe_subscription_id,
-      {
-        items: [{ id: itemId, quantity: newQuantity }],
-        proration_behavior: 'create_prorations',
-      },
-    )
-    await syncSubscriptionToDb(orgId, updated)
-    return true
-  } catch (err) {
-    console.warn(
-      '[billing] syncSubscriptionQuantity: stripe update failed',
-      err instanceof Error ? err.message : err,
-    )
-    return false
   }
 }
 
@@ -281,28 +245,57 @@ function resolveDefaultPaymentMethodId(
   return typeof dpm === 'string' ? dpm : dpm.id
 }
 
-export async function getSubscriptionForOrg(
-  orgId: string,
+/**
+ * Load the subscription for a single property. Returns null if the property
+ * hasn't been subscribed yet.
+ */
+export async function getSubscriptionForProperty(
+  propertyId: string,
 ): Promise<BillingSubscription | null> {
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('billing_subscriptions')
     .select('*')
-    .eq('org_id', orgId)
+    .eq('property_id', propertyId)
     .maybeSingle()
   if (error) throw error
   return (data as BillingSubscription | null) ?? null
 }
 
-/** How many properties an org has — the default subscription quantity. */
-export async function countPropertiesForOrg(orgId: string): Promise<number> {
+/**
+ * Load all subscriptions for an org, ordered by created_at so the billing
+ * page renders them in the same order as the property list.
+ */
+export async function getSubscriptionsForOrg(
+  orgId: string,
+): Promise<BillingSubscription[]> {
   const admin = createAdminClient()
-  const { count, error } = await admin
-    .from('properties')
-    .select('id', { count: 'exact', head: true })
+  const { data, error } = await admin
+    .from('billing_subscriptions')
+    .select('*')
     .eq('org_id', orgId)
+    .order('created_at', { ascending: true })
   if (error) throw error
-  return count ?? 0
+  return (data as BillingSubscription[] | null) ?? []
+}
+
+/**
+ * The single Stripe Customer for the org. Reads from organizations, which
+ * is the source of truth (billing_subscriptions denormalizes it but only
+ * once a subscription exists). Returns null when the org has never gone
+ * through the Stripe-customer-creation flow.
+ */
+export async function getStripeCustomerForOrg(
+  orgId: string,
+): Promise<string | null> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('organizations')
+    .select('stripe_customer_id')
+    .eq('id', orgId)
+    .maybeSingle()
+  if (error) throw error
+  return data?.stripe_customer_id ?? null
 }
 
 export type StripeInvoiceSummary = {
@@ -316,16 +309,18 @@ export type StripeInvoiceSummary = {
   due_at: string | null
   hosted_url: string | null
   pdf_url: string | null
+  subscription_id: string | null
 }
 
 /**
  * Pull the customer's Stripe invoices for display in the billing UI. Read-
  * only and tolerant of network failures — the page should still render the
- * subscription card even if Stripe is unreachable.
+ * subscription cards even if Stripe is unreachable. subscription_id is kept
+ * on the result so the billing page can group invoices by property.
  */
 export async function listStripeInvoices(
   customerId: string,
-  limit = 12,
+  limit = 24,
 ): Promise<StripeInvoiceSummary[]> {
   try {
     const result = await stripe().invoices.list({
@@ -343,10 +338,73 @@ export async function listStripeInvoices(
       due_at: inv.due_date ? new Date(inv.due_date * 1000).toISOString() : null,
       hosted_url: inv.hosted_invoice_url ?? null,
       pdf_url: inv.invoice_pdf ?? null,
+      subscription_id: extractSubscriptionId(inv),
     }))
   } catch (err) {
     console.warn(
       '[stripe] listStripeInvoices failed',
+      err instanceof Error ? err.message : err,
+    )
+    return []
+  }
+}
+
+/**
+ * Pull the originating Subscription id off an Invoice. In modern Stripe API
+ * versions this lives at `invoice.parent.subscription_details.subscription`;
+ * older code paths used a top-level `invoice.subscription` that is no longer
+ * exposed in the TS types. We accept either shape so listStripeInvoices
+ * keeps working across SDK upgrades.
+ */
+function extractSubscriptionId(inv: Stripe.Invoice): string | null {
+  const parent = inv.parent
+  if (parent?.type === 'subscription_details') {
+    const ref = parent.subscription_details?.subscription
+    if (typeof ref === 'string') return ref
+    if (ref && typeof ref === 'object') return ref.id ?? null
+  }
+  return null
+}
+
+export type SavedCard = {
+  id: string
+  brand: string | null
+  last4: string | null
+  exp_month: number | null
+  exp_year: number | null
+}
+
+/**
+ * List the saved cards on the org's Stripe Customer. Used by the Billing
+ * page's per-property card picker so the customer can swap a property's
+ * subscription onto a card they've already saved (without re-typing it).
+ *
+ * Returns [] when the org has no Stripe Customer yet, or when the Stripe
+ * call fails — the picker degrades to "Add new card" only, which is the
+ * same as the old behavior. We don't surface the error to the UI; the
+ * server logs it.
+ */
+export async function listOrgPaymentMethods(
+  orgId: string,
+): Promise<SavedCard[]> {
+  const customerId = await getStripeCustomerForOrg(orgId)
+  if (!customerId) return []
+  try {
+    const result = await stripe().paymentMethods.list({
+      customer: customerId,
+      type: 'card',
+      limit: 50,
+    })
+    return result.data.map((pm) => ({
+      id: pm.id,
+      brand: pm.card?.brand ?? null,
+      last4: pm.card?.last4 ?? null,
+      exp_month: pm.card?.exp_month ?? null,
+      exp_year: pm.card?.exp_year ?? null,
+    }))
+  } catch (err) {
+    console.warn(
+      '[stripe] listOrgPaymentMethods failed',
       err instanceof Error ? err.message : err,
     )
     return []

@@ -4,12 +4,17 @@ import type {
   BillingSubscription,
   BillingSubscriptionStatus,
 } from '@/lib/supabase/types'
-import { computeGate, PAST_DUE_RESTRICT_DAYS } from './gate'
+import {
+  computeOrgGate,
+  computePropertyGate,
+  PAST_DUE_RESTRICT_DAYS,
+} from './gate'
 
 function makeSub(
   partial: Partial<BillingSubscription> = {},
 ): BillingSubscription {
   return {
+    property_id: 'prop_test',
     org_id: 'org_test',
     stripe_customer_id: 'cus_test',
     stripe_subscription_id: 'sub_test',
@@ -35,31 +40,41 @@ function makeSub(
 const daysAgo = (n: number) =>
   new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString()
 
-describe('computeGate', () => {
-  it('returns no gate for null subscription (admin not yet onboarded)', () => {
-    const gate = computeGate(null)
-    assert.equal(gate.banner, false)
-    assert.equal(gate.restrictWrites, false)
-    assert.equal(gate.restrictMedia, false)
+describe('computePropertyGate', () => {
+  it('restricts a property with no subscription on file', () => {
+    const gate = computePropertyGate(null)
+    assert.equal(gate.banner, true)
+    assert.equal(gate.restrictWrites, true)
+    assert.equal(gate.restrictMedia, true)
     assert.equal(gate.status, 'no_subscription')
   })
 
-  it('returns no gate for active subscription', () => {
-    const gate = computeGate(makeSub({ status: 'active' }))
+  it('does not restrict active subscriptions', () => {
+    const gate = computePropertyGate(makeSub({ status: 'active' }))
     assert.equal(gate.banner, false)
     assert.equal(gate.restrictWrites, false)
   })
 
-  it('returns no gate for trialing or incomplete (just-created) subs', () => {
-    for (const status of ['trialing', 'incomplete'] as const) {
-      const gate = computeGate(makeSub({ status }))
-      assert.equal(gate.banner, false, `${status} should not banner`)
-      assert.equal(gate.restrictWrites, false, `${status} should not restrict`)
-    }
+  it('does not restrict an active subscription scheduled for cancellation', () => {
+    // cancel_at_period_end=true should not lock the property; the
+    // customer keeps access until current_period_end.
+    const gate = computePropertyGate(
+      makeSub({ status: 'active', cancel_at_period_end: true }),
+    )
+    assert.equal(gate.banner, false)
+    assert.equal(gate.restrictWrites, false)
+    assert.equal(gate.restrictMedia, false)
   })
 
-  it('shows banner but does not restrict when past_due < 15 days', () => {
-    const gate = computeGate(
+  it('locks a property whose subscription has been canceled', () => {
+    const gate = computePropertyGate(makeSub({ status: 'canceled' }))
+    assert.equal(gate.banner, true)
+    assert.equal(gate.restrictWrites, true)
+    assert.equal(gate.restrictMedia, true)
+  })
+
+  it('banners but does not restrict past_due under threshold', () => {
+    const gate = computePropertyGate(
       makeSub({ status: 'past_due', past_due_since: daysAgo(3) }),
     )
     assert.equal(gate.banner, true)
@@ -68,38 +83,73 @@ describe('computeGate', () => {
     assert.equal(gate.daysPastDue, 3)
   })
 
-  it('restricts writes and media after 15 days past_due', () => {
-    const gate = computeGate(
+  it('restricts past_due >= 15 days', () => {
+    const gate = computePropertyGate(
       makeSub({
         status: 'past_due',
         past_due_since: daysAgo(PAST_DUE_RESTRICT_DAYS + 1),
       }),
     )
-    assert.equal(gate.banner, true)
     assert.equal(gate.restrictWrites, true)
     assert.equal(gate.restrictMedia, true)
   })
 
-  it('restricts immediately when canceled', () => {
-    const gate = computeGate(makeSub({ status: 'canceled' }))
-    assert.equal(gate.banner, true)
+  it('locks paused subscriptions', () => {
+    const gate = computePropertyGate(makeSub({ status: 'paused' }))
     assert.equal(gate.restrictWrites, true)
     assert.equal(gate.restrictMedia, true)
   })
+})
 
-  it('restricts immediately when paused', () => {
-    const gate = computeGate(makeSub({ status: 'paused' }))
-    assert.equal(gate.restrictWrites, true)
-    assert.equal(gate.restrictMedia, true)
-  })
-
-  it('handles past_due with no past_due_since stamped (defensive)', () => {
-    const gate = computeGate(
-      makeSub({ status: 'past_due', past_due_since: null }),
-    )
-    // We can't compute daysPastDue, but we should still banner.
+describe('computeOrgGate', () => {
+  it('shows onboarding banner with no restrictions when org has no properties', () => {
+    const gate = computeOrgGate([], false)
     assert.equal(gate.banner, true)
     assert.equal(gate.restrictWrites, false)
-    assert.equal(gate.daysPastDue, 0)
+    assert.equal(gate.restrictMedia, false)
+    assert.equal(gate.status, 'no_subscription')
+  })
+
+  it('restricts the whole org when it has properties but no subscriptions at all', () => {
+    const gate = computeOrgGate([], true)
+    assert.equal(gate.banner, true)
+    assert.equal(gate.restrictWrites, true)
+    assert.equal(gate.restrictMedia, true)
+  })
+
+  it('does not restrict the org when at least one property has a subscription, even if another is canceled', () => {
+    // Customer requirement: one property's billing failure must not lock
+    // the rest of the org. Org-wide gate stays unrestricted; the canceled
+    // property is locked by computePropertyGate instead.
+    const gate = computeOrgGate([
+      makeSub({ property_id: 'p1', status: 'active' }),
+      makeSub({ property_id: 'p2', status: 'canceled' }),
+    ])
+    assert.equal(gate.restrictWrites, false)
+    assert.equal(gate.restrictMedia, false)
+    // But the org-shell banner does surface so the customer notices.
+    assert.equal(gate.banner, true)
+  })
+
+  it('does not banner when all properties are active', () => {
+    const gate = computeOrgGate([
+      makeSub({ property_id: 'p1', status: 'active' }),
+      makeSub({ property_id: 'p2', status: 'active' }),
+    ])
+    assert.equal(gate.banner, false)
+    assert.equal(gate.restrictWrites, false)
+  })
+
+  it('surfaces a banner when any property is past_due, without restricting the org', () => {
+    const gate = computeOrgGate([
+      makeSub({ property_id: 'p1', status: 'active' }),
+      makeSub({
+        property_id: 'p2',
+        status: 'past_due',
+        past_due_since: daysAgo(3),
+      }),
+    ])
+    assert.equal(gate.banner, true)
+    assert.equal(gate.restrictWrites, false)
   })
 })

@@ -4,19 +4,32 @@ import type {
   BillingSubscription,
   BillingSubscriptionStatus,
 } from '@/lib/supabase/types'
-import { computeGate, type BillingGate } from './gate'
+import { computeOrgGate, type BillingGate } from './gate'
 
 /**
  * Decide whether an org's media should be locked at the CDN edge.
  *
- * Pure function so it's testable. Currently delegates to computeGate so the
- * 15-day threshold (and "canceled" / "paused" terminal states) stay in one
- * place — if you change the in-app gate threshold, the CDN follows.
+ * Pure function so it's testable. Delegates to computeOrgGate, which under
+ * the per-property model only locks org-wide when the org has properties
+ * but no subscriptions at all (onboarding state). Single-property issues
+ * — canceled / paused / 15+ past-due on one property in a multi-property
+ * org — do NOT lock at the edge; the in-app gate (computePropertyGate)
+ * still blocks the property's pages and write actions.
+ *
+ * TODO: per-property CDN gating. The current KV namespace is keyed on
+ * org_slug only; extending to `gate:{org_slug}:{property_slug}` plus a
+ * worker update would close the under-lock gap for a single property in
+ * a multi-property org. Not in scope here.
  */
 export function shouldLockOrg(
-  subscription: BillingSubscription | null,
+  subscriptions: BillingSubscription[],
+  hasProperties = true,
 ): boolean {
-  return computeGate(subscription).restrictMedia
+  // Brand-new org with no properties has no media to serve; CDN lock is a
+  // no-op (and a false-positive lock would block logo uploads during
+  // onboarding). The in-app gate still nudges them to /billing.
+  if (subscriptions.length === 0 && !hasProperties) return false
+  return computeOrgGate(subscriptions, hasProperties).restrictMedia
 }
 
 type CfConfig = {
@@ -70,20 +83,20 @@ export async function syncGateToCdn(orgId: string): Promise<void> {
   if (!cfg) return // not configured, e.g. local dev or pre-deploy
 
   const admin = createAdminClient()
-  const [orgRes, subRes] = await Promise.all([
+  const [orgRes, subRes, propRes] = await Promise.all([
     admin.from('organizations').select('slug').eq('id', orgId).maybeSingle(),
+    admin.from('billing_subscriptions').select('*').eq('org_id', orgId),
     admin
-      .from('billing_subscriptions')
-      .select('*')
-      .eq('org_id', orgId)
-      .maybeSingle(),
+      .from('properties')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', orgId),
   ])
   const orgSlug = orgRes.data?.slug
   if (!orgSlug) return // org deleted or not found
 
-  const lock = shouldLockOrg(
-    (subRes.data as BillingSubscription | null) ?? null,
-  )
+  const subs = (subRes.data as BillingSubscription[] | null) ?? []
+  const hasProperties = (propRes.count ?? 0) > 0
+  const lock = shouldLockOrg(subs, hasProperties)
   await writeKv(cfg, orgSlug, lock)
   if (lock && cfg.zoneId && cfg.cdnHost) {
     // Only purge on lock — on unlock, stale 403s in cache are short
@@ -170,19 +183,48 @@ export async function listGateDecisions(): Promise<
     .select('id, slug')
     .order('slug')
   const { data: subs } = await admin.from('billing_subscriptions').select('*')
+  const { data: properties } = await admin
+    .from('properties')
+    .select('id, org_id')
 
-  const subByOrg = new Map<string, BillingSubscription>()
+  const subsByOrg = new Map<string, BillingSubscription[]>()
   for (const s of (subs ?? []) as BillingSubscription[]) {
-    subByOrg.set(s.org_id, s)
+    const list = subsByOrg.get(s.org_id) ?? []
+    list.push(s)
+    subsByOrg.set(s.org_id, list)
+  }
+  const orgsWithProperties = new Set<string>()
+  for (const p of properties ?? []) {
+    orgsWithProperties.add(p.org_id as string)
+  }
+
+  // Pick the most representative status to surface for ops dashboards. Order:
+  // worst-active issue (past_due/unpaid/paused/canceled) → first active → null.
+  const STATUS_RANK: Record<BillingSubscriptionStatus, number> = {
+    incomplete_expired: 6,
+    canceled: 5,
+    paused: 4,
+    unpaid: 3,
+    past_due: 2,
+    incomplete: 1,
+    trialing: 0,
+    active: 0,
   }
 
   return (orgs ?? []).map((o) => {
-    const sub = subByOrg.get(o.id) ?? null
+    const orgSubs = subsByOrg.get(o.id) ?? []
+    const hasProperties = orgsWithProperties.has(o.id)
+    const worst =
+      orgSubs.length === 0
+        ? null
+        : orgSubs.reduce((acc, s) =>
+            STATUS_RANK[s.status] > STATUS_RANK[acc.status] ? s : acc,
+          )
     return {
       org_id: o.id,
       org_slug: o.slug,
-      status: sub?.status ?? null,
-      lock: shouldLockOrg(sub),
+      status: worst?.status ?? null,
+      lock: shouldLockOrg(orgSubs, hasProperties),
     }
   })
 }

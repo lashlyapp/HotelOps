@@ -13,15 +13,22 @@ import {
   validatePassword,
 } from '@/lib/auth/password'
 import { BRAND } from '@/lib/brand'
-import { getGateForOrg } from '@/lib/billing/gate'
+import { getGateForProperty } from '@/lib/billing/gate'
+import {
+  executeTenantBillingReset,
+  previewTenantBillingReset,
+  type ResetPreview,
+  type ResetSummary,
+} from '@/lib/billing/reset-tenant'
 import { isEmailConfigured } from '@/lib/email/client'
 import { sendWelcomeEmail } from '@/lib/email/send'
 import { r2DeleteObject, r2PutObject } from '@/lib/r2/upload'
 import {
-  startSubscriptionForOrg,
-  type StartSubscriptionResult,
+  startSubscriptionForProperty,
+  startSubscriptionsForOrg,
+  type StartSubscriptionForOrgResult,
 } from '@/lib/stripe/start-subscription'
-import { syncSubscriptionQuantity } from '@/lib/stripe/subscriptions'
+import { stripe } from '@/lib/stripe/client'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { AppRole, Property } from '@/lib/supabase/types'
 import { slugify, uniqueSlug } from '@/lib/utils/slugify'
@@ -353,12 +360,16 @@ export async function addPropertyAction(
   }
 
   const admin = createAdminClient()
-  const { error } = await admin.from('properties').insert({
-    org_id: orgId,
-    slug,
-    name,
-    r2_prefix: `${orgSlug}/${slug}/`,
-  })
+  const { data: inserted, error } = await admin
+    .from('properties')
+    .insert({
+      org_id: orgId,
+      slug,
+      name,
+      r2_prefix: `${orgSlug}/${slug}/`,
+    })
+    .select('id')
+    .single()
   if (error) {
     if (error.code === '23505') {
       return { error: `Property slug "${slug}" already exists in this org.` }
@@ -366,8 +377,21 @@ export async function addPropertyAction(
     return { error: error.message }
   }
 
-  // Bill for the new property on the next invoice. Best-effort.
-  await syncSubscriptionQuantity(orgId)
+  // Start the property's subscription on Stripe (best-effort — the property
+  // is created even if Stripe is unreachable; admin can retry from the
+  // Billing page). Setup fee is suppressed because the org has at least
+  // one prior subscription if it had any properties before this one — and
+  // startSubscriptionForProperty's own check confirms that.
+  if (inserted?.id) {
+    try {
+      await startSubscriptionForProperty(inserted.id)
+    } catch (err) {
+      console.warn(
+        '[admin] addPropertyAction: subscription start failed',
+        err instanceof Error ? err.message : err,
+      )
+    }
+  }
 
   revalidatePath(`/admin/tenants/${orgId}`)
   revalidatePath('/admin')
@@ -380,12 +404,57 @@ export async function removePropertyAction(formData: FormData) {
   const propertyId = String(formData.get('property_id') ?? '')
   if (!orgId || !propertyId) return
 
+  await cancelPropertySubscriptionBestEffort(propertyId)
+
   const admin = createAdminClient()
   await admin.from('properties').delete().eq('id', propertyId)
-  await syncSubscriptionQuantity(orgId)
+  // The billing_subscriptions row cascades on property delete.
 
   revalidatePath(`/admin/tenants/${orgId}`)
   revalidatePath('/admin')
+}
+
+/**
+ * Cancel the Stripe subscription associated with a property before the
+ * property row (and therefore its billing_subscriptions row) is deleted.
+ *
+ * Immediate cancel (not cancel_at_period_end) because the property is
+ * about to be deleted: keeping the subscription billable through the end
+ * of the period would have Stripe fire customer.subscription.updated /
+ * .deleted events whose webhook handler can't find the property row
+ * anymore (FK violation on upsert → webhook 500 → Stripe retry loop).
+ * `prorate: false` means no refund for the unused portion of the
+ * current period — the customer paid for it, the service ends now.
+ *
+ * Failures are swallowed so the property delete isn't blocked by a
+ * Stripe outage; the resulting orphan subscription can be cleaned up
+ * from the Stripe dashboard.
+ */
+async function cancelPropertySubscriptionBestEffort(
+  propertyId: string,
+): Promise<void> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('billing_subscriptions')
+    .select('stripe_subscription_id, status')
+    .eq('property_id', propertyId)
+    .maybeSingle()
+  const subId = data?.stripe_subscription_id
+  if (!subId) return
+  if (data?.status === 'canceled' || data?.status === 'incomplete_expired') {
+    return
+  }
+  try {
+    await stripe().subscriptions.cancel(subId, {
+      invoice_now: false,
+      prorate: false,
+    })
+  } catch (err) {
+    console.warn(
+      '[admin] cancelPropertySubscription: stripe cancel failed',
+      err instanceof Error ? err.message : err,
+    )
+  }
 }
 
 export async function addOrgMemberAction(
@@ -536,16 +605,31 @@ export async function ownerAddPropertyAction(
   const taken = new Set((existing ?? []).map((p) => p.slug))
   const slug = uniqueSlug(base, (s) => taken.has(s))
 
-  const { error } = await admin.from('properties').insert({
-    org_id: session.organization.id,
-    slug,
-    name,
-    r2_prefix: `${session.organization.slug}/${slug}/`,
-  })
+  const { data: inserted, error } = await admin
+    .from('properties')
+    .insert({
+      org_id: session.organization.id,
+      slug,
+      name,
+      r2_prefix: `${session.organization.slug}/${slug}/`,
+    })
+    .select('id')
+    .single()
   if (error) return { error: error.message }
 
-  // Bill for the new property on the next invoice. Best-effort.
-  await syncSubscriptionQuantity(session.organization.id)
+  // Create the per-property Stripe subscription so this property starts
+  // billing on its own card. Best-effort — owner can also kick this off
+  // from /billing if Stripe is unreachable.
+  if (inserted?.id) {
+    try {
+      await startSubscriptionForProperty(inserted.id)
+    } catch (err) {
+      console.warn(
+        '[owner] addProperty: subscription start failed',
+        err instanceof Error ? err.message : err,
+      )
+    }
+  }
 
   revalidatePath('/properties')
   revalidatePath('/dashboard')
@@ -559,6 +643,8 @@ export async function ownerRemovePropertyAction(formData: FormData) {
   const propertyId = String(formData.get('property_id') ?? '')
   if (!propertyId) return
 
+  await cancelPropertySubscriptionBestEffort(propertyId)
+
   const admin = createAdminClient()
   // Scope the delete to the caller's org so nobody can pass an arbitrary id.
   await admin
@@ -566,7 +652,6 @@ export async function ownerRemovePropertyAction(formData: FormData) {
     .delete()
     .eq('id', propertyId)
     .eq('org_id', session.organization.id)
-  await syncSubscriptionQuantity(session.organization.id)
 
   revalidatePath('/properties')
   revalidatePath('/dashboard')
@@ -621,7 +706,7 @@ export async function updatePropertyAction(
   const propertyId = String(formData.get('property_id') ?? '')
   if (!propertyId) return { error: 'Missing property.' }
   const property = await authorizePropertyAccess(propertyId)
-  const gate = await getGateForOrg(property.org_id)
+  const gate = await getGateForProperty(property.id)
   if (gate.restrictWrites) {
     return { error: gate.message ?? 'Editing is locked while billing is past due.' }
   }
@@ -675,7 +760,7 @@ export async function uploadPropertyLogoAction(
   const propertyId = String(formData.get('property_id') ?? '')
   if (!propertyId) return { error: 'Missing property.' }
   const property = await authorizePropertyAccess(propertyId)
-  const gate = await getGateForOrg(property.org_id)
+  const gate = await getGateForProperty(property.id)
   if (gate.restrictWrites) {
     return { error: gate.message ?? 'Editing is locked while billing is past due.' }
   }
@@ -721,7 +806,7 @@ export async function removePropertyLogoAction(formData: FormData) {
   const propertyId = String(formData.get('property_id') ?? '')
   if (!propertyId) return
   const property = await authorizePropertyAccess(propertyId)
-  const gate = await getGateForOrg(property.org_id)
+  const gate = await getGateForProperty(property.id)
   if (gate.restrictWrites) return
 
   if (property.logo_key) {
@@ -738,9 +823,10 @@ export async function removePropertyLogoAction(formData: FormData) {
 }
 
 /**
- * Platform-admin action: start a Stripe subscription for a tenant. See
- * `lib/stripe/start-subscription.ts` for the idempotency contract (no
- * duplicate subs, customer reused if one already exists for the org).
+ * Platform-admin action: start one Stripe subscription per property for a
+ * tenant. Idempotent — properties that already have a non-terminal sub are
+ * skipped (returned as `existing`). Setup fee is added to the first
+ * subscription only.
  */
 export async function startSubscriptionAction(
   _prev: ActionResult,
@@ -750,9 +836,9 @@ export async function startSubscriptionAction(
   const orgId = String(formData.get('org_id') ?? '')
   if (!orgId) return { error: 'Missing org.' }
 
-  let result: StartSubscriptionResult
+  let result: StartSubscriptionForOrgResult
   try {
-    result = await startSubscriptionForOrg(orgId)
+    result = await startSubscriptionsForOrg(orgId)
   } catch (err) {
     return { error: err instanceof Error ? err.message : String(err) }
   }
@@ -760,17 +846,76 @@ export async function startSubscriptionAction(
   revalidatePath(`/admin/tenants/${orgId}`)
   revalidatePath('/admin')
 
-  if (result.kind === 'existing') {
+  const created = result.results.filter((r) => r.kind === 'created').length
+  const existing = result.results.filter((r) => r.kind === 'existing').length
+  if (created === 0) {
     return {
-      success: `Already subscribed — ${result.stripeSubscriptionId}. No change.`,
+      success: `No new subscriptions — all ${existing} properties were already subscribed.`,
     }
   }
-  const due = result.paymentMethodDueAt.toLocaleDateString()
   return {
     success:
-      `Subscription created: ${result.stripeSubscriptionId} ` +
-      `(status: ${result.status}, qty ${result.quantity}). ` +
-      `Cooling period ends ${due}.`,
+      `Created ${created} subscription${created === 1 ? '' : 's'}` +
+      (existing > 0 ? ` (${existing} already existed)` : '') +
+      `. Each property has 14 days to attach a card.`,
+  }
+}
+
+/**
+ * Platform-admin action: dry-run a tenant billing reset. Returns counts of
+ * what an actual reset would touch so the confirmation UI can show
+ * "this will cancel 3 subscriptions and void 2 invoices" before the
+ * destructive button is enabled. Read-only against both Stripe and the
+ * DB — no writes.
+ */
+export async function previewResetTenantBillingAction(
+  _prev: ActionResult & { preview?: ResetPreview },
+  formData: FormData,
+): Promise<ActionResult & { preview?: ResetPreview }> {
+  await requirePlatformAdmin()
+  const orgId = String(formData.get('org_id') ?? '')
+  if (!orgId) return { error: 'Missing org.' }
+  try {
+    const preview = await previewTenantBillingReset(orgId)
+    return { preview }
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : 'Failed to load preview.',
+    }
+  }
+}
+
+/**
+ * Platform-admin action: actually perform the reset. Requires the org
+ * slug to be typed back as `confirmation` (same convention as
+ * deleteTenantAction). `hard=on` in the form data additionally deletes
+ * the Stripe Customer and clears organizations.stripe_customer_id.
+ *
+ * See lib/billing/reset-tenant.ts for full semantics.
+ */
+export async function resetTenantBillingAction(
+  _prev: ActionResult & { summary?: ResetSummary },
+  formData: FormData,
+): Promise<ActionResult & { summary?: ResetSummary }> {
+  await requirePlatformAdmin()
+  const orgId = String(formData.get('org_id') ?? '')
+  const confirmation = String(formData.get('confirmation') ?? '').trim()
+  const expected = String(formData.get('expected_confirmation') ?? '').trim()
+  const hard = formData.get('hard') === 'on'
+  if (!orgId) return { error: 'Missing org.' }
+  if (!confirmation || confirmation !== expected) {
+    return { error: 'Confirmation does not match the org slug.' }
+  }
+  try {
+    const summary = await executeTenantBillingReset(orgId, { hard })
+    revalidatePath(`/admin/tenants/${orgId}`)
+    revalidatePath('/admin')
+    revalidatePath('/billing')
+    return { summary, success: 'Billing reset complete.' }
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : 'Reset failed.',
+    }
   }
 }
 
@@ -782,6 +927,32 @@ export async function deleteTenantAction(formData: FormData) {
   if (!orgId || !confirmation || confirmation !== expected) return
 
   const admin = createAdminClient()
+
+  // Cancel every Stripe subscription attached to this org before the
+  // cascade-delete removes our billing_subscriptions rows. Best-effort —
+  // a Stripe outage shouldn't block the tenant delete, but orphan subs
+  // that survive will keep charging the customer until manually cleaned
+  // up in the Stripe dashboard, so we want this to almost always succeed.
+  const { data: subs } = await admin
+    .from('billing_subscriptions')
+    .select('stripe_subscription_id, status')
+    .eq('org_id', orgId)
+  for (const s of subs ?? []) {
+    if (!s.stripe_subscription_id) continue
+    if (s.status === 'canceled' || s.status === 'incomplete_expired') continue
+    try {
+      await stripe().subscriptions.cancel(s.stripe_subscription_id, {
+        invoice_now: false,
+        prorate: false,
+      })
+    } catch (err) {
+      console.warn(
+        '[admin] deleteTenantAction: stripe cancel failed',
+        err instanceof Error ? err.message : err,
+      )
+    }
+  }
+
   // properties + invoices cascade; profiles get org_id set null via FK.
   await admin.from('organizations').delete().eq('id', orgId)
 
