@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { validatePassword } from '@/lib/auth/password'
 import { requireOrgUser, requireUser } from '@/lib/auth/session'
@@ -8,6 +9,95 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
 export type ActionResult = { error?: string; success?: string }
+
+const PHONE_MAX = 40
+const TITLE_MAX = 120
+const BIO_MAX = 600
+
+/**
+ * Save the signed-in user's editable profile fields: name, phone, title,
+ * bio. Email is handled separately by {@link changeEmailAction} because
+ * it requires Supabase's verification round-trip.
+ *
+ * Length floors mirror the CHECK constraints on the profiles table so a
+ * client that bypasses the maxLength attribute still gets a clean error
+ * here instead of a 23514 from Postgres.
+ */
+export async function updateProfileAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await requireUser()
+  const fullName = String(formData.get('full_name') ?? '').trim()
+  const phone = String(formData.get('phone') ?? '').trim()
+  const title = String(formData.get('title') ?? '').trim()
+  const bio = String(formData.get('bio') ?? '').trim()
+
+  if (phone.length > PHONE_MAX) {
+    return { error: `Phone is too long (${PHONE_MAX} characters max).` }
+  }
+  if (title.length > TITLE_MAX) {
+    return { error: `Title is too long (${TITLE_MAX} characters max).` }
+  }
+  if (bio.length > BIO_MAX) {
+    return { error: `Bio is too long (${BIO_MAX} characters max).` }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      full_name: fullName || null,
+      phone: phone || null,
+      title: title || null,
+      bio: bio || null,
+    })
+    .eq('id', session.userId)
+  if (error) return { error: error.message }
+
+  revalidatePath('/account')
+  return { success: 'Profile updated.' }
+}
+
+/**
+ * Initiate an email change. Supabase sends a confirmation link to the
+ * NEW address; the change only takes effect when the user clicks it. We
+ * surface that explicitly in the success message so the user knows to
+ * check their inbox.
+ *
+ * If the Supabase project has "Secure email change" enabled, BOTH the
+ * old and new addresses receive a confirmation link — both must be
+ * clicked for the swap to complete. Either way, no app-side write
+ * happens here; auth.users is the source of truth for email.
+ */
+export async function changeEmailAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireUser()
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
+  if (!email) return { error: 'Email is required.' }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: 'Enter a valid email address.' }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Your session has expired. Sign in again.' }
+  if (email === user.email) {
+    return { error: 'That is already your current email address.' }
+  }
+
+  const { error } = await supabase.auth.updateUser({ email })
+  if (error) return { error: error.message }
+
+  return {
+    success:
+      "Check your inbox at the new address to confirm the change. The update won't take effect until you click the link.",
+  }
+}
 
 /**
  * Change the signed-in user's password from the inline form on /account.
