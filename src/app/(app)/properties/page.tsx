@@ -96,9 +96,9 @@ export default async function PropertiesPage() {
               <p className="text-sm text-muted leading-relaxed">
                 Pricing is per property: <strong className="text-fg">$100 / month</strong>{' '}
                 per property plus a one-time{' '}
-                <strong className="text-fg">$250 setup fee</strong> on the first
-                invoice. We&apos;ll add your card and your first property in one
-                step.
+                <strong className="text-fg">$150 setup fee</strong> charged on
+                each property&apos;s first invoice. We&apos;ll add your card and
+                your first property in one step.
               </p>
               <Link
                 href="/billing"

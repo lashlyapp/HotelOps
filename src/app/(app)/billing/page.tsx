@@ -98,8 +98,8 @@ function NoPropertiesCard() {
         <p className="text-sm text-muted leading-relaxed">
           {BRAND.name} bills{' '}
           <strong className="text-fg">$100 / month per property</strong> plus a
-          one-time <strong className="text-fg">$250 setup fee</strong> on your
-          first property&apos;s invoice. Add your first property from the
+          one-time <strong className="text-fg">$150 setup fee</strong> on each
+          property&apos;s first invoice. Add your first property from the
           Properties page; each property gets its own subscription with its
           own credit card.
         </p>
