@@ -25,7 +25,7 @@ export default async function LoginsPage() {
   const propertyById = new Map(session.properties.map((p) => [p.id, p]))
 
   return (
-    <div className="p-8 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
       <div>
         <h2 className="text-lg font-semibold tracking-tight text-fg">
           Vendor logins

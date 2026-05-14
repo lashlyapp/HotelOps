@@ -26,7 +26,7 @@ export default async function WifiPage() {
   const propertyById = new Map(properties.map((p) => [p.id, p]))
 
   return (
-    <div className="p-8 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold tracking-tight text-fg">

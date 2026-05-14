@@ -15,6 +15,18 @@ function contentSecurityPolicy(): string {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseHost = supabaseUrl ? new URL(supabaseUrl).origin : null
   const cdnHost = cdn?.origin ?? null
+  // `unsafe-eval` is only needed by the Next.js dev server (HMR/Fast
+  // Refresh wraps modules in `eval`). Production builds don't use it,
+  // so we drop it from the production CSP to shrink the XSS blast
+  // radius. `unsafe-inline` for scripts/styles stays for now — removing
+  // it requires a per-request nonce pipeline (separate effort).
+  const isDev = process.env.NODE_ENV !== 'production'
+  const scriptSrc = [
+    "'self'",
+    "'unsafe-inline'",
+    ...(isDev ? ["'unsafe-eval'"] : []),
+    ...STRIPE_HOSTS,
+  ]
 
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
@@ -22,12 +34,7 @@ function contentSecurityPolicy(): string {
     'object-src': ["'none'"],
     'frame-ancestors': ["'none'"],
     'form-action': ["'self'", ...STRIPE_HOSTS],
-    // Next.js inlines small bits of script at build time + uses inline
-    // styles for streaming SSR. Allowing `unsafe-inline` for these is
-    // standard for Next apps that don't have CSP nonces wired through
-    // middleware. Tighten with a nonce pass later if we add an SSR
-    // middleware.
-    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", ...STRIPE_HOSTS],
+    'script-src': scriptSrc,
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': [
       "'self'",

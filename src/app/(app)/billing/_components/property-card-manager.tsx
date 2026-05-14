@@ -56,22 +56,45 @@ export function PropertyCardManager({
     text: string
   } | null>(null)
   const [pending, startTransition] = useTransition()
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
+  // Panel uses position:fixed so it can escape ancestor overflow (the
+  // surrounding table cell may sit inside an `overflow-x-auto` wrapper).
+  // We recompute the anchor coords whenever the popover opens, the
+  // viewport resizes, or the user scrolls.
+  const [coords, setCoords] = useState<{ top: number; right: number } | null>(
+    null,
+  )
 
-  // Close on outside click and on Escape.
   useEffect(() => {
     if (!open) return
+    function place() {
+      const rect = triggerRef.current?.getBoundingClientRect()
+      if (!rect) return
+      setCoords({
+        top: rect.bottom + 8,
+        right: Math.max(8, window.innerWidth - rect.right),
+      })
+    }
+    place()
     function onDocClick(e: MouseEvent) {
-      if (!panelRef.current?.contains(e.target as Node)) setOpen(false)
+      const target = e.target as Node
+      if (panelRef.current?.contains(target)) return
+      if (triggerRef.current?.contains(target)) return
+      setOpen(false)
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false)
     }
     document.addEventListener('mousedown', onDocClick)
     document.addEventListener('keydown', onKey)
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
     return () => {
       document.removeEventListener('mousedown', onDocClick)
       document.removeEventListener('keydown', onKey)
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
     }
   }, [open])
 
@@ -164,8 +187,9 @@ export function PropertyCardManager({
   }
 
   return (
-    <div className="relative inline-block text-left" ref={panelRef}>
+    <div className="inline-block text-left">
       <Button
+        ref={triggerRef}
         type="button"
         variant={hasCard ? 'secondary' : 'primary'}
         size="sm"
@@ -176,8 +200,12 @@ export function PropertyCardManager({
         {triggerLabel}
       </Button>
 
-      {open ? (
-        <div className="absolute right-0 z-20 mt-2 w-80 rounded-md border border-border-default bg-surface shadow-lg">
+      {open && coords ? (
+        <div
+          ref={panelRef}
+          className="fixed z-50 w-80 max-w-[calc(100vw-1rem)] rounded-md border border-border-default bg-surface shadow-lg"
+          style={{ top: coords.top, right: coords.right }}
+        >
           <div className="px-3 py-2 border-b border-border-subtle">
             <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
               Saved cards

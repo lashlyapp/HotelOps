@@ -39,7 +39,7 @@ export default async function EquipmentPage() {
   soon.setDate(today.getDate() + 60)
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-5xl">
       <div>
         <h2 className="text-lg font-semibold tracking-tight text-fg">
           Equipment
@@ -66,6 +66,7 @@ export default async function EquipmentPage() {
         </Card>
       ) : (
         <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
               <tr>
@@ -162,6 +163,7 @@ export default async function EquipmentPage() {
               })}
             </tbody>
           </table>
+          </div>
         </Card>
       )}
 

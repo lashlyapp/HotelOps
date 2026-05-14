@@ -11,6 +11,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   invalid: 'Invalid email or password.',
   no_org: "Your account isn't linked to an organization. Contact your admin.",
   unauthorized: 'Your account is not authorized for the admin portal.',
+  session_expired:
+    'You were signed out after a period of inactivity. Please log in again.',
+  rate_limited:
+    'Too many failed sign-in attempts. Wait a few minutes and try again.',
 }
 
 type SearchParams = Promise<{ error?: string }>

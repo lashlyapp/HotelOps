@@ -18,7 +18,7 @@ export default async function TeamPage() {
   const team = await loadTeam(session.organization.id)
 
   return (
-    <div className="p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-fg">
           Team
@@ -29,6 +29,7 @@ export default async function TeamPage() {
       </div>
 
       <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
             <tr>
@@ -59,6 +60,7 @@ export default async function TeamPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </Card>
 
       <AddMemberForm />

@@ -56,7 +56,7 @@ export default async function EventsListPage({
   const propertyById = new Map(session.properties.map((p) => [p.id, p]))
 
   return (
-    <div className="p-8 space-y-5 max-w-6xl">
+    <div className="p-4 sm:p-8 space-y-5 max-w-6xl">
       <nav
         aria-label="Filter events by status"
         className="flex flex-wrap gap-1 text-sm"
@@ -100,6 +100,7 @@ export default async function EventsListPage({
         </Card>
       ) : (
         <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
               <tr>
@@ -151,6 +152,7 @@ export default async function EventsListPage({
               })}
             </tbody>
           </table>
+          </div>
         </Card>
       )}
     </div>
