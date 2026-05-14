@@ -25,10 +25,10 @@ import type {
   Property,
 } from '@/lib/supabase/types'
 import { StripeRedirectButton } from './_components/billing-actions'
-import { AddonToggle } from './_components/addon-toggle'
 import { BillingDetailsForm } from './_components/billing-details-form'
 import { PropertyCardManager } from './_components/property-card-manager'
 import { ResubscribeButton } from './_components/resubscribe-button'
+import { RowActionsMenu } from './_components/row-actions-menu'
 
 export default async function BillingPage() {
   const session = await requireSession()
@@ -246,37 +246,16 @@ function PropertyBillingTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-border-subtle">
-          {rows.flatMap(({ property, subscription }) => {
-            const main = (
-              <PropertyRow
-                key={property.id}
-                property={property}
-                subscription={subscription}
-                canManage={canManage}
-                savedCards={savedCards}
-                autopayDefaultPmId={autopayDefaultPmId}
-              />
-            )
-            // Only show the add-on row when the property has a live
-            // subscription the operator can attach items to. Pre-start,
-            // canceled, and incomplete-expired rows hide the add-on
-            // controls — there's nothing for them to bill against.
-            if (
-              !canManage ||
-              !subscription ||
-              ['canceled', 'incomplete_expired'].includes(subscription.status)
-            ) {
-              return [main]
-            }
-            return [
-              main,
-              <AddonsRow
-                key={`${property.id}-addons`}
-                propertyId={property.id}
-                subscription={subscription}
-              />,
-            ]
-          })}
+          {rows.map(({ property, subscription }) => (
+            <PropertyRow
+              key={property.id}
+              property={property}
+              subscription={subscription}
+              canManage={canManage}
+              savedCards={savedCards}
+              autopayDefaultPmId={autopayDefaultPmId}
+            />
+          ))}
         </tbody>
       </table>
       </div>
@@ -309,9 +288,37 @@ function PropertyRow({
   const isScheduledCancel =
     !isEnded && Boolean(subscription?.cancel_at_period_end)
 
+  // Active add-ons render as small chips next to the property name —
+  // visible-when-on so the operator sees what they're paying for, but
+  // not occupying space when off. Toggle UI lives behind the row's …
+  // menu → Manage add-ons.
+  const activeAddons: Array<{ label: string }> = []
+  if (subscription?.signage_unlimited_active) {
+    activeAddons.push({ label: 'Signage Unlimited' })
+  }
+  if (subscription?.guest_experience_active) {
+    activeAddons.push({ label: 'Guest Experience' })
+  }
+  const canShowAddonsMenu =
+    canManage &&
+    subscription &&
+    !['canceled', 'incomplete_expired'].includes(subscription.status)
+
   return (
     <tr>
-      <td className="px-4 py-3 font-medium text-fg">{property.name}</td>
+      <td className="px-4 py-3 font-medium text-fg">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span>{property.name}</span>
+          {activeAddons.map((a) => (
+            <span
+              key={a.label}
+              className="inline-flex items-center rounded-full bg-success-bg px-2 py-0.5 text-[10px] font-medium text-success-fg"
+            >
+              {a.label}
+            </span>
+          ))}
+        </div>
+      </td>
       <td className="px-4 py-3">
         {subscription ? (
           <>
@@ -340,32 +347,37 @@ function PropertyRow({
             : '—'}
       </td>
       <td className="px-4 py-3 text-right">
-        {canManage ? (
-          !subscription ? (
-            <StripeRedirectButton
-              endpoint="/api/stripe/setup-checkout"
-              body={{ property_id: property.id }}
-              size="sm"
-            >
-              Start &amp; add card
-            </StripeRedirectButton>
-          ) : isEnded ? (
-            <ResubscribeButton propertyId={property.id} />
-          ) : (
-            <PropertyCardManager
-              propertyId={property.id}
-              currentPaymentMethodId={
-                subscription.default_payment_method_id ?? null
-              }
-              currentBrand={subscription.default_payment_brand ?? null}
-              currentLast4={subscription.default_payment_last4 ?? null}
-              savedCards={savedCards}
-              autopayDefaultPmId={autopayDefaultPmId}
-              cancelAtPeriodEnd={subscription.cancel_at_period_end}
-              currentPeriodEnd={subscription.current_period_end}
-            />
-          )
-        ) : null}
+        <div className="flex items-center justify-end gap-1">
+          {canManage ? (
+            !subscription ? (
+              <StripeRedirectButton
+                endpoint="/api/stripe/setup-checkout"
+                body={{ property_id: property.id }}
+                size="sm"
+              >
+                Start &amp; add card
+              </StripeRedirectButton>
+            ) : isEnded ? (
+              <ResubscribeButton propertyId={property.id} />
+            ) : (
+              <PropertyCardManager
+                propertyId={property.id}
+                currentPaymentMethodId={
+                  subscription.default_payment_method_id ?? null
+                }
+                currentBrand={subscription.default_payment_brand ?? null}
+                currentLast4={subscription.default_payment_last4 ?? null}
+                savedCards={savedCards}
+                autopayDefaultPmId={autopayDefaultPmId}
+                cancelAtPeriodEnd={subscription.cancel_at_period_end}
+                currentPeriodEnd={subscription.current_period_end}
+              />
+            )
+          ) : null}
+          {canShowAddonsMenu ? (
+            <RowActionsMenu propertyId={property.id} />
+          ) : null}
+        </div>
       </td>
     </tr>
   )
@@ -543,45 +555,3 @@ function capitalize(s: string | null | undefined): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-/**
- * Renders below the property row when the property has an active
- * subscription. Visually nests under its parent — no top border, indented
- * with a left accent rule, compact inline layout — so it reads as "these
- * add-ons belong to the property above" rather than a peer row. See
- * docs/pricing.md.
- */
-function AddonsRow({
-  propertyId,
-  subscription,
-}: {
-  propertyId: string
-  subscription: BillingSubscription
-}) {
-  return (
-    <tr className="!border-t-0">
-      <td colSpan={6} className="px-4 pt-0 pb-3">
-        <div className="ml-4 border-l-2 border-border-subtle pl-4">
-          <p className="mb-1.5 text-[10px] uppercase tracking-[0.18em] text-subtle">
-            Add-ons
-          </p>
-          <div className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
-            <AddonToggle
-              propertyId={propertyId}
-              addonKey="signage_unlimited"
-              label="Signage Unlimited"
-              priceCents={4900}
-              active={subscription.signage_unlimited_active}
-            />
-            <AddonToggle
-              propertyId={propertyId}
-              addonKey="guest_experience"
-              label="Guest Experience"
-              priceCents={3900}
-              active={subscription.guest_experience_active}
-            />
-          </div>
-        </div>
-      </td>
-    </tr>
-  )
-}
