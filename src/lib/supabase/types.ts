@@ -216,6 +216,14 @@ export type BillingSubscription = {
   default_payment_method_id: string | null
   default_payment_brand: string | null
   default_payment_last4: string | null
+  // Add-on line items. *_active reflects whether the corresponding Stripe
+  // Price is currently a SubscriptionItem on this subscription; *_item_id
+  // is the Stripe SubscriptionItem id used when removing the add-on.
+  // See docs/pricing.md for the canonical pricing structure.
+  signage_unlimited_active: boolean
+  signage_unlimited_item_id: string | null
+  guest_experience_active: boolean
+  guest_experience_item_id: string | null
   created_at: string
   updated_at: string
 }

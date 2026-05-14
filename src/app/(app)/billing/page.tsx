@@ -25,6 +25,7 @@ import type {
   Property,
 } from '@/lib/supabase/types'
 import { StripeRedirectButton } from './_components/billing-actions'
+import { AddonToggle } from './_components/addon-toggle'
 import { BillingDetailsForm } from './_components/billing-details-form'
 import { PropertyCardManager } from './_components/property-card-manager'
 import { ResubscribeButton } from './_components/resubscribe-button'
@@ -245,16 +246,37 @@ function PropertyBillingTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-border-subtle">
-          {rows.map(({ property, subscription }) => (
-            <PropertyRow
-              key={property.id}
-              property={property}
-              subscription={subscription}
-              canManage={canManage}
-              savedCards={savedCards}
-              autopayDefaultPmId={autopayDefaultPmId}
-            />
-          ))}
+          {rows.flatMap(({ property, subscription }) => {
+            const main = (
+              <PropertyRow
+                key={property.id}
+                property={property}
+                subscription={subscription}
+                canManage={canManage}
+                savedCards={savedCards}
+                autopayDefaultPmId={autopayDefaultPmId}
+              />
+            )
+            // Only show the add-on row when the property has a live
+            // subscription the operator can attach items to. Pre-start,
+            // canceled, and incomplete-expired rows hide the add-on
+            // controls — there's nothing for them to bill against.
+            if (
+              !canManage ||
+              !subscription ||
+              ['canceled', 'incomplete_expired'].includes(subscription.status)
+            ) {
+              return [main]
+            }
+            return [
+              main,
+              <AddonsRow
+                key={`${property.id}-addons`}
+                propertyId={property.id}
+                subscription={subscription}
+              />,
+            ]
+          })}
         </tbody>
       </table>
       </div>
@@ -519,4 +541,45 @@ function daysUntil(iso: string | null): number | null {
 function capitalize(s: string | null | undefined): string {
   if (!s) return 'Card'
   return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+/**
+ * Renders below the property row when the property has an active
+ * subscription. Lists the two add-ons with their current state — the
+ * operator toggles each independently. See docs/pricing.md.
+ */
+function AddonsRow({
+  propertyId,
+  subscription,
+}: {
+  propertyId: string
+  subscription: BillingSubscription
+}) {
+  return (
+    <tr className="bg-surface-muted/40">
+      <td colSpan={6} className="px-4 py-3">
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-wider text-subtle">
+            Add-ons
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <AddonToggle
+              propertyId={propertyId}
+              addonKey="signage_unlimited"
+              label="Signage Unlimited"
+              priceCents={4900}
+              active={subscription.signage_unlimited_active}
+            />
+            <AddonToggle
+              propertyId={propertyId}
+              addonKey="guest_experience"
+              label="Guest Experience"
+              priceCents={3900}
+              active={subscription.guest_experience_active}
+            />
+          </div>
+        </div>
+      </td>
+    </tr>
+  )
 }

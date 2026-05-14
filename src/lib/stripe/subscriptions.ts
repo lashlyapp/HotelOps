@@ -3,6 +3,7 @@ import type Stripe from 'stripe'
 import { syncGateToCdn } from '@/lib/billing/cdn-gate'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { BillingSubscription, BillingSubscriptionStatus } from '@/lib/supabase/types'
+import { extractAddonState } from './addon-config'
 import { stripe } from './client'
 import {
   HOTELOPS_PRICE_LOOKUP_KEYS,
@@ -242,8 +243,19 @@ export async function syncSubscriptionToDb(
     return
   }
 
-  const item = subscription.items.data[0]
+  // Pick the BASE item explicitly — relying on items.data[0] used to be
+  // safe when each subscription carried exactly one item, but add-ons
+  // (signage_unlimited, guest_experience) can now be present as
+  // additional items in any order. Fall back to data[0] if no item
+  // matches the base lookup key, which preserves behavior for legacy
+  // pre-2026 rows without metadata.
+  const item =
+    subscription.items.data.find(
+      (i) =>
+        i.price?.lookup_key === HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
+    ) ?? subscription.items.data[0]
   const price = item?.price
+  const addons = extractAddonState(subscription)
 
   const defaultPmId = resolveDefaultPaymentMethodId(subscription)
   let pmBrand: string | null = null
@@ -294,6 +306,10 @@ export async function syncSubscriptionToDb(
     default_payment_method_id: defaultPmId,
     default_payment_brand: pmBrand,
     default_payment_last4: pmLast4,
+    signage_unlimited_active: addons.signage_unlimited.active,
+    signage_unlimited_item_id: addons.signage_unlimited.itemId,
+    guest_experience_active: addons.guest_experience.active,
+    guest_experience_item_id: addons.guest_experience.itemId,
     updated_at: new Date().toISOString(),
   }
   if (Object.prototype.hasOwnProperty.call(options, 'paymentMethodDueAt')) {
