@@ -74,9 +74,8 @@ export async function setPropertyDefaultPaymentMethodAction(
     }
   }
 
-  let updated
   try {
-    updated = await stripe().subscriptions.update(sub.stripe_subscription_id, {
+    await stripe().subscriptions.update(sub.stripe_subscription_id, {
       default_payment_method: paymentMethodId,
       collection_method: 'charge_automatically',
     })
@@ -100,10 +99,13 @@ export async function setPropertyDefaultPaymentMethodAction(
     paymentMethodId,
   )
 
-  // Mirror immediately so the UI reflects the new card without waiting
-  // for the customer.subscription.updated webhook. The webhook will fire
-  // shortly and re-sync; both writes are idempotent.
-  await syncSubscriptionToDb(propertyId, sub.org_id, updated, {
+  // Re-fetch so the row reflects post-payment status (incomplete/past_due
+  // → active when the new card cleared the open invoice). The trailing
+  // subscription.updated webhook also fires; both writes are idempotent.
+  const fresh = await stripe().subscriptions.retrieve(
+    sub.stripe_subscription_id,
+  )
+  await syncSubscriptionToDb(propertyId, sub.org_id, fresh, {
     paymentMethodDueAt: null,
   })
 

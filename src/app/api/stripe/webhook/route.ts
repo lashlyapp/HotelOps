@@ -180,16 +180,23 @@ async function handleCheckoutCompleted(
   // Customer is shared across the org's per-property subscriptions and
   // touching its default payment method would change every property's
   // default. The pm only attaches to this one subscription.
-  const subscription = await stripe().subscriptions.update(subscriptionId, {
+  await stripe().subscriptions.update(subscriptionId, {
     default_payment_method: paymentMethodId,
     collection_method: 'charge_automatically',
   })
 
   await payOpenInvoiceForSubscription(subscriptionId, paymentMethodId)
 
+  // Re-fetch so the DB write reflects post-payment status (incomplete →
+  // active when the just-attached card cleared the open invoice). Without
+  // this we'd write the pre-pay snapshot and the customer would see a
+  // brief "incomplete" badge until the trailing subscription.updated
+  // webhook caught up.
+  const fresh = await stripe().subscriptions.retrieve(subscriptionId)
+
   // Card on file → grace period no longer applies. Clear the deadline so the
   // billing UI stops showing the "X days remaining" countdown.
-  await syncSubscriptionToDb(propertyId, orgId, subscription, {
+  await syncSubscriptionToDb(propertyId, orgId, fresh, {
     paymentMethodDueAt: null,
   })
 }

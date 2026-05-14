@@ -32,6 +32,7 @@ import { stripe } from '@/lib/stripe/client'
 import {
   getStripeCustomerForOrg,
   listOrgPaymentMethods,
+  type SavedCard,
 } from '@/lib/stripe/subscriptions'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { AppRole, Property } from '@/lib/supabase/types'
@@ -41,6 +42,13 @@ function roleLabel(role: AppRole): string {
   if (role === 'org_owner') return 'an owner'
   if (role === 'org_staff') return 'staff'
   return 'a platform admin'
+}
+
+function formatPmLabel(card: SavedCard): string {
+  const brand = card.brand
+    ? card.brand.charAt(0).toUpperCase() + card.brand.slice(1)
+    : 'Card'
+  return `${brand} ····${card.last4 ?? '••••'}`
 }
 
 /**
@@ -621,13 +629,13 @@ export async function ownerAddPropertyAction(
     .single()
   if (error) return { error: error.message }
 
-  // Create the per-property Stripe subscription. If the org has at least
-  // one saved card on its Customer, reuse it so this property starts
-  // active and paid immediately (matching the "first property" UX where
-  // Checkout charges the card on save). Otherwise fall back to
-  // send_invoice + 14-day grace so the customer can pay manually or
-  // attach a card from /billing. Best-effort — the property is created
-  // either way.
+  // Create the per-property Stripe subscription. If the org has any saved
+  // card on its Customer, reuse the most-recent one (Stripe lists newest
+  // first) so this property starts active and paid immediately. The
+  // customer can swap to a different card from /billing after the fact
+  // if they want. With no saved card, fall back to send_invoice + 14-day
+  // grace so the customer can pay manually or attach a card. Best-effort
+  // — the property is created either way.
   let billingMessage = ''
   if (inserted?.id) {
     try {
@@ -637,15 +645,13 @@ export async function ownerAddPropertyAction(
       const saved = customerId
         ? await listOrgPaymentMethods(session.organization.id)
         : []
-      // First saved card == most recent (Stripe lists newest first).
       const pmId = saved[0]?.id ?? null
-      const result = await startSubscriptionForProperty(inserted.id, {
+      await startSubscriptionForProperty(inserted.id, {
         defaultPaymentMethodId: pmId ?? undefined,
       })
-      billingMessage =
-        result.kind === 'created' && pmId
-          ? ' Charged your card on file for the first invoice.'
-          : ' An invoice was emailed — pay it within 14 days or add a card from Billing.'
+      billingMessage = pmId
+        ? ` Charged your card on file (${formatPmLabel(saved[0])}) for the first invoice.`
+        : ' An invoice was emailed — pay it within 14 days or add a card from Billing.'
     } catch (err) {
       console.warn(
         '[owner] addProperty: subscription start failed',
