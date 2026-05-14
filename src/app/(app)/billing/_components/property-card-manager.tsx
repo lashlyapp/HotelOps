@@ -7,6 +7,7 @@ import {
   cancelPropertySubscriptionAction,
   detachPaymentMethodAction,
   resumeSubscriptionAction,
+  setAutopayDefaultAction,
   setPropertyDefaultPaymentMethodAction,
   type ActionResult,
 } from '../actions'
@@ -34,6 +35,7 @@ export function PropertyCardManager({
   currentBrand,
   currentLast4,
   savedCards,
+  autopayDefaultPmId,
   cancelAtPeriodEnd,
   currentPeriodEnd,
 }: {
@@ -42,6 +44,9 @@ export function PropertyCardManager({
   currentBrand: string | null
   currentLast4: string | null
   savedCards: SavedCard[]
+  /** Card the customer has designated as the default for auto-paying
+   *  future property additions. Null when nothing is designated. */
+  autopayDefaultPmId: string | null
   cancelAtPeriodEnd: boolean
   currentPeriodEnd: string | null
 }) {
@@ -129,6 +134,17 @@ export function PropertyCardManager({
     })
   }
 
+  function runMakeAutopayDefault(paymentMethodId: string) {
+    setMessage(null)
+    const fd = new FormData()
+    fd.set('payment_method_id', paymentMethodId)
+    startTransition(async () => {
+      const res = await setAutopayDefaultAction({} as ActionResult, fd)
+      if (res.error) setMessage({ kind: 'error', text: res.error })
+      else if (res.success) setMessage({ kind: 'success', text: res.success })
+    })
+  }
+
   function runDetach(paymentMethodId: string) {
     if (
       !confirm(
@@ -176,6 +192,7 @@ export function PropertyCardManager({
             <ul className="max-h-72 overflow-auto divide-y divide-border-subtle">
               {savedCards.map((card) => {
                 const isCurrent = card.id === currentPaymentMethodId
+                const isAutopayDefault = card.id === autopayDefaultPmId
                 return (
                   <li key={card.id} className="px-3 py-2">
                     <div className="flex items-center justify-between gap-3">
@@ -185,7 +202,7 @@ export function PropertyCardManager({
                         disabled={pending || isCurrent}
                         onClick={() => runSelect(card.id)}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-medium text-fg">
                             {capitalize(card.brand)} ···· {card.last4 ?? '••••'}
                           </span>
@@ -194,19 +211,39 @@ export function PropertyCardManager({
                               In use
                             </span>
                           ) : null}
+                          {isAutopayDefault ? (
+                            <span
+                              className="text-xs text-fg bg-surface-muted rounded px-1.5 py-0.5"
+                              title="This card will auto-charge when you add a new property."
+                            >
+                              ★ Auto-pay default
+                            </span>
+                          ) : null}
                         </div>
                         <p className="text-xs text-subtle">
                           {formatExpiry(card.exp_month, card.exp_year)}
                         </p>
                       </button>
-                      <button
-                        type="button"
-                        className="text-xs text-danger-fg hover:underline disabled:opacity-50"
-                        disabled={pending}
-                        onClick={() => runDetach(card.id)}
-                      >
-                        Remove
-                      </button>
+                      <div className="flex flex-col items-end gap-1">
+                        {!isAutopayDefault ? (
+                          <button
+                            type="button"
+                            className="text-xs text-fg hover:underline disabled:opacity-50"
+                            disabled={pending}
+                            onClick={() => runMakeAutopayDefault(card.id)}
+                          >
+                            Make auto-pay default
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="text-xs text-danger-fg hover:underline disabled:opacity-50"
+                          disabled={pending}
+                          onClick={() => runDetach(card.id)}
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   </li>
                 )

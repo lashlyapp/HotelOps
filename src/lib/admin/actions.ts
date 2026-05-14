@@ -30,7 +30,7 @@ import {
 } from '@/lib/stripe/start-subscription'
 import { stripe } from '@/lib/stripe/client'
 import {
-  getStripeCustomerForOrg,
+  getOrgAutopayDefaultPaymentMethod,
   listOrgPaymentMethods,
   type SavedCard,
 } from '@/lib/stripe/subscriptions'
@@ -629,29 +629,33 @@ export async function ownerAddPropertyAction(
     .single()
   if (error) return { error: error.message }
 
-  // Create the per-property Stripe subscription. If the org has any saved
-  // card on its Customer, reuse the most-recent one (Stripe lists newest
-  // first) so this property starts active and paid immediately. The
-  // customer can swap to a different card from /billing after the fact
-  // if they want. With no saved card, fall back to send_invoice + 14-day
-  // grace so the customer can pay manually or attach a card. Best-effort
-  // — the property is created either way.
+  // Create the per-property Stripe subscription. Auto-charge ONLY when
+  // the customer has explicitly designated an auto-pay default card
+  // (Customer.invoice_settings.default_payment_method, set via the
+  // autopay_default opt-in on Checkout). Without that designation, fall
+  // back to send_invoice + 14-day grace so we never charge an
+  // unintended card. Best-effort — the property is created either way.
   let billingMessage = ''
   if (inserted?.id) {
     try {
-      const customerId = await getStripeCustomerForOrg(
+      const designatedPmId = await getOrgAutopayDefaultPaymentMethod(
         session.organization.id,
       )
-      const saved = customerId
-        ? await listOrgPaymentMethods(session.organization.id)
-        : []
-      const pmId = saved[0]?.id ?? null
       await startSubscriptionForProperty(inserted.id, {
-        defaultPaymentMethodId: pmId ?? undefined,
+        defaultPaymentMethodId: designatedPmId ?? undefined,
       })
-      billingMessage = pmId
-        ? ` Charged your card on file (${formatPmLabel(saved[0])}) for the first invoice.`
-        : ' An invoice was emailed — pay it within 14 days or add a card from Billing.'
+      if (designatedPmId) {
+        const saved = await listOrgPaymentMethods(session.organization.id)
+        const card = saved.find((c) => c.id === designatedPmId)
+        billingMessage = card
+          ? ` Charged your auto-pay default (${formatPmLabel(card)}) for the first invoice.`
+          : ' Charged your auto-pay default for the first invoice.'
+      } else {
+        billingMessage =
+          ' An invoice was emailed — pay it within 14 days or add a card ' +
+          'from Billing. To auto-charge future properties, mark a card as ' +
+          'the default for auto-pay during checkout.'
+      }
     } catch (err) {
       console.warn(
         '[owner] addProperty: subscription start failed',

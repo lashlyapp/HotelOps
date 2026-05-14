@@ -128,29 +128,106 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
 }
 
 /**
+ * Read the customer's response to our "make this the default for
+ * auto-pay?" custom_field on Checkout. Returns true only when the
+ * dropdown's value is exactly 'yes' — any other value (including
+ * absence of the field on a legacy Checkout session) is treated as
+ * no, so we never auto-elevate a card by accident.
+ */
+function shouldMakeAutopayDefault(
+  checkoutSession: Stripe.Checkout.Session,
+): boolean {
+  const field = checkoutSession.custom_fields?.find(
+    (f) => f.key === 'autopay_default',
+  )
+  return field?.dropdown?.value === 'yes'
+}
+
+/**
+ * Promote a payment method to the org's Customer-level default so
+ * subsequent property creations auto-charge it. Best-effort: failures
+ * are logged but don't break the surrounding flow.
+ */
+async function setCustomerAutopayDefault(
+  customerId: string,
+  paymentMethodId: string,
+): Promise<void> {
+  try {
+    await stripe().customers.update(customerId, {
+      invoice_settings: { default_payment_method: paymentMethodId },
+    })
+  } catch (err) {
+    console.warn(
+      '[stripe-webhook] setCustomerAutopayDefault failed',
+      err instanceof Error ? err.message : err,
+    )
+  }
+}
+
+/**
  * Setup-mode Checkout finishes with a Setup Intent that has a payment method
- * but no subscription attached. Attach the pm to this *property's*
- * subscription only — explicitly NOT to the org-level Customer's
- * invoice_settings.default_payment_method, because that's shared across all
- * of the org's per-property subscriptions and would silently flip every
- * other property's card too. Each property keeps its own card.
+ * but no subscription attached. Subscription-mode Checkout finishes with the
+ * subscription already created and the card already attached as that
+ * subscription's default — Stripe has charged the first invoice during the
+ * Checkout flow.
  *
- * Flip the subscription from `send_invoice` to `charge_automatically` so
- * future (recurring) invoices auto-charge. Then pay any open first invoice
- * with the just-attached card — if we skipped this the act of "adding a
- * card" wouldn't actually settle the outstanding charge and the customer
- * would silently slip into past_due 14 days later. Best-effort: a decline
- * leaves the invoice open and Stripe's normal dunning takes over.
+ * For setup-mode we:
+ *   - Attach the new card to this property's subscription specifically
+ *     (NOT to the Customer's invoice_settings by default — each property
+ *     keeps its own per-subscription default card).
+ *   - Flip the subscription from send_invoice to charge_automatically.
+ *   - Pay any open invoice with the new card so the act of "adding a card"
+ *     actually settles the outstanding charge instead of letting it slip
+ *     into past_due 14 days later.
+ *
+ * For BOTH modes, if the customer answered "yes" to the autopay_default
+ * custom_field, we promote the card to the Customer.invoice_settings
+ * default so subsequent property creations can auto-charge it. We never
+ * silently promote a card — the customer has to explicitly opt in via
+ * that prompt during Checkout.
  */
 async function handleCheckoutCompleted(
   checkoutSession: Stripe.Checkout.Session,
 ): Promise<void> {
   if (checkoutSession.mode === 'subscription') {
-    // The subscription.created event will sync DB state; nothing to do here.
+    await handleSubscriptionModeCompleted(checkoutSession)
     return
   }
   if (checkoutSession.mode !== 'setup') return
+  await handleSetupModeCompleted(checkoutSession)
+}
 
+async function handleSubscriptionModeCompleted(
+  checkoutSession: Stripe.Checkout.Session,
+): Promise<void> {
+  // The subscription.created event syncs DB state; the only thing we do
+  // here is honor the autopay-default opt-in by promoting the freshly
+  // attached card to the Customer's invoice_settings default.
+  if (!shouldMakeAutopayDefault(checkoutSession)) return
+  const customerId =
+    typeof checkoutSession.customer === 'string'
+      ? checkoutSession.customer
+      : checkoutSession.customer?.id
+  const subscriptionId =
+    typeof checkoutSession.subscription === 'string'
+      ? checkoutSession.subscription
+      : checkoutSession.subscription?.id
+  if (!customerId || !subscriptionId) return
+
+  // The subscription Stripe just created has the entered card as its
+  // default_payment_method. Pull that PM id and promote it.
+  const sub = await stripe().subscriptions.retrieve(subscriptionId)
+  const pmId =
+    typeof sub.default_payment_method === 'string'
+      ? sub.default_payment_method
+      : sub.default_payment_method?.id
+  if (!pmId) return
+  await setCustomerAutopayDefault(customerId, pmId)
+}
+
+async function handleSetupModeCompleted(
+  checkoutSession: Stripe.Checkout.Session,
+): Promise<void> {
   const subscriptionId = checkoutSession.metadata?.subscription_id
   const orgId = checkoutSession.metadata?.org_id
   let propertyId = checkoutSession.metadata?.property_id
@@ -176,16 +253,24 @@ async function handleCheckoutCompleted(
       : setupIntent.payment_method?.id
   if (!paymentMethodId) return
 
-  // Deliberately do NOT update the Customer's invoice_settings here — the
-  // Customer is shared across the org's per-property subscriptions and
-  // touching its default payment method would change every property's
-  // default. The pm only attaches to this one subscription.
+  // Attach the pm to THIS subscription only. Customer-level default is
+  // only touched below when the customer explicitly opted in via the
+  // autopay_default custom_field — otherwise the Customer's default
+  // stays as-is (so it doesn't silently flip out from under other subs).
   await stripe().subscriptions.update(subscriptionId, {
     default_payment_method: paymentMethodId,
     collection_method: 'charge_automatically',
   })
 
   await payOpenInvoiceForSubscription(subscriptionId, paymentMethodId)
+
+  if (shouldMakeAutopayDefault(checkoutSession)) {
+    const customerId =
+      typeof checkoutSession.customer === 'string'
+        ? checkoutSession.customer
+        : checkoutSession.customer?.id
+    if (customerId) await setCustomerAutopayDefault(customerId, paymentMethodId)
+  }
 
   // Re-fetch so the DB write reflects post-payment status (incomplete →
   // active when the just-attached card cleared the open invoice). Without

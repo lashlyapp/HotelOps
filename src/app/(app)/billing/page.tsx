@@ -9,6 +9,7 @@ import {
   type PriceSnapshot,
 } from '@/lib/stripe/prices'
 import {
+  getOrgAutopayDefaultPaymentMethod,
   getStripeCustomerForOrg,
   getSubscriptionsForOrg,
   listOrgPaymentMethods,
@@ -32,12 +33,14 @@ export default async function BillingPage() {
     subscriptions,
     customerId,
     savedCards,
+    autopayDefaultPmId,
     monthlyPrice,
     setupFeePrice,
   ] = await Promise.all([
     getSubscriptionsForOrg(session.organization.id),
     getStripeCustomerForOrg(session.organization.id),
     listOrgPaymentMethods(session.organization.id),
+    getOrgAutopayDefaultPaymentMethod(session.organization.id),
     resolvePriceSnapshotByLookupKey(
       stripeClient,
       HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
@@ -83,6 +86,7 @@ export default async function BillingPage() {
           rows={rows}
           canManage={isOwner}
           savedCards={savedCards}
+          autopayDefaultPmId={autopayDefaultPmId}
         />
       )}
 
@@ -158,10 +162,12 @@ function PropertyBillingTable({
   rows,
   canManage,
   savedCards,
+  autopayDefaultPmId,
 }: {
   rows: { property: Property; subscription: BillingSubscription | null }[]
   canManage: boolean
   savedCards: SavedCard[]
+  autopayDefaultPmId: string | null
 }) {
   return (
     <Card className="overflow-hidden">
@@ -189,6 +195,7 @@ function PropertyBillingTable({
               subscription={subscription}
               canManage={canManage}
               savedCards={savedCards}
+              autopayDefaultPmId={autopayDefaultPmId}
             />
           ))}
         </tbody>
@@ -202,11 +209,13 @@ function PropertyRow({
   subscription,
   canManage,
   savedCards,
+  autopayDefaultPmId,
 }: {
   property: Property
   subscription: BillingSubscription | null
   canManage: boolean
   savedCards: SavedCard[]
+  autopayDefaultPmId: string | null
 }) {
   const hasCard = Boolean(subscription?.default_payment_method_id)
   const daysLeft = daysUntil(subscription?.payment_method_due_at ?? null)
@@ -271,6 +280,7 @@ function PropertyRow({
               currentBrand={subscription.default_payment_brand ?? null}
               currentLast4={subscription.default_payment_last4 ?? null}
               savedCards={savedCards}
+              autopayDefaultPmId={autopayDefaultPmId}
               cancelAtPeriodEnd={subscription.cancel_at_period_end}
               currentPeriodEnd={subscription.current_period_end}
             />

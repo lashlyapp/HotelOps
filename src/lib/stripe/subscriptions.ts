@@ -352,6 +352,48 @@ export async function getSubscriptionsForOrg(
 }
 
 /**
+ * Resolve the org's designated auto-pay default payment method. The
+ * source of truth is the Stripe Customer's invoice_settings
+ * .default_payment_method — set only when the customer explicitly opts
+ * in via the autopay_default custom_field on Checkout. Returns null
+ * when nothing is designated (in which case callers should fall back to
+ * send_invoice rather than guessing which card to charge).
+ *
+ * Also returns null when the designated PM has been detached from the
+ * Customer wallet — that's the safe interpretation of "card is no
+ * longer available for auto-pay".
+ */
+export async function getOrgAutopayDefaultPaymentMethod(
+  orgId: string,
+): Promise<string | null> {
+  const customerId = await getStripeCustomerForOrg(orgId)
+  if (!customerId) return null
+  try {
+    const customer = await stripe().customers.retrieve(customerId)
+    if (customer.deleted) return null
+    const pm = customer.invoice_settings?.default_payment_method
+    const pmId = typeof pm === 'string' ? pm : (pm?.id ?? null)
+    if (!pmId) return null
+
+    // Validate the PM is still attached. customers.retrieve doesn't
+    // detect detached PMs, so we do a focused retrieve to be sure.
+    const pmObject = await stripe().paymentMethods.retrieve(pmId)
+    const pmCustomer =
+      typeof pmObject.customer === 'string'
+        ? pmObject.customer
+        : (pmObject.customer?.id ?? null)
+    if (pmCustomer !== customerId) return null
+    return pmId
+  } catch (err) {
+    console.warn(
+      '[stripe] getOrgAutopayDefaultPaymentMethod failed',
+      err instanceof Error ? err.message : err,
+    )
+    return null
+  }
+}
+
+/**
  * The single Stripe Customer for the org. Reads from organizations, which
  * is the source of truth (billing_subscriptions denormalizes it but only
  * once a subscription exists). Returns null when the org has never gone

@@ -118,6 +118,59 @@ export async function setPropertyDefaultPaymentMethodAction(
 }
 
 /**
+ * Mark a saved card as the org's default for auto-pay on FUTURE property
+ * additions. Stored on Stripe's Customer.invoice_settings, mirroring
+ * what the autopay_default opt-in on Checkout does.
+ *
+ * Per-property subscription defaults are unaffected — setting this only
+ * controls which card auto-charges when a new property is added without
+ * an explicit Checkout flow.
+ */
+export async function setAutopayDefaultAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await requireOrgOwner()
+  const paymentMethodId = String(formData.get('payment_method_id') ?? '')
+  if (!paymentMethodId) return { error: 'Missing payment method.' }
+
+  const customerId = await getStripeCustomerForOrg(session.organization.id)
+  if (!customerId) {
+    return { error: 'This org has no Stripe customer yet.' }
+  }
+
+  try {
+    const pm = await stripe().paymentMethods.retrieve(paymentMethodId)
+    const pmCustomer =
+      typeof pm.customer === 'string' ? pm.customer : (pm.customer?.id ?? null)
+    if (pmCustomer !== customerId) {
+      return { error: 'Payment method does not belong to this customer.' }
+    }
+  } catch (err) {
+    return {
+      error:
+        err instanceof Error ? err.message : 'Could not verify payment method.',
+    }
+  }
+
+  try {
+    await stripe().customers.update(customerId, {
+      invoice_settings: { default_payment_method: paymentMethodId },
+    })
+  } catch (err) {
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : 'Stripe rejected the update; try again.',
+    }
+  }
+
+  revalidatePath('/billing')
+  return { success: 'Set as default for auto-pay on new properties.' }
+}
+
+/**
  * Detach a saved card from the org's Customer. Refuses when the card is
  * still the default on any of the org's active subscriptions — the
  * customer must switch that property to a different card (or remove the

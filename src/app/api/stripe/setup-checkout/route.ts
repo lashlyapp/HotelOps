@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import type Stripe from 'stripe'
 import { requireOrgOwner } from '@/lib/auth/session'
 import { stripe } from '@/lib/stripe/client'
 import {
@@ -12,6 +13,32 @@ import {
   propertyHasBeenSubscribed,
 } from '@/lib/stripe/subscriptions'
 import { createAdminClient } from '@/lib/supabase/admin'
+
+/**
+ * Prompt the customer, inside Stripe's hosted Checkout form, whether the
+ * card they're entering should become the org's default for auto-paying
+ * future property invoices. The webhook reads this field's value on
+ * checkout.session.completed and, if 'yes', sets the Customer's
+ * invoice_settings.default_payment_method. Without this prompt we'd
+ * either silently auto-charge whatever card happened to be most recent
+ * (wrong on multi-card accounts) or never auto-charge new properties at
+ * all (annoying on single-card accounts).
+ */
+const AUTOPAY_CUSTOM_FIELD: Stripe.Checkout.SessionCreateParams.CustomField = {
+  key: 'autopay_default',
+  type: 'dropdown',
+  label: {
+    type: 'custom',
+    custom: 'Use this card as the default for auto-payment on new properties?',
+  },
+  dropdown: {
+    options: [
+      { label: 'Yes — use as default for auto-pay', value: 'yes' },
+      { label: 'No — only use it for this property', value: 'no' },
+    ],
+    default_value: 'yes',
+  },
+}
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -102,6 +129,7 @@ export async function POST(request: Request) {
       payment_method_types: ['card'],
       success_url: successUrl,
       cancel_url: cancelUrl,
+      custom_fields: [AUTOPAY_CUSTOM_FIELD],
       // The webhook reads these to know which subscription to attach the
       // new card to. property_id is the source of truth; subscription_id is
       // a convenience so the handler doesn't have to re-query.
@@ -142,6 +170,7 @@ export async function POST(request: Request) {
       { price: recurringPriceId, quantity: 1 },
       ...(setupFeePriceId ? [{ price: setupFeePriceId, quantity: 1 }] : []),
     ],
+    custom_fields: [AUTOPAY_CUSTOM_FIELD],
     subscription_data: {
       description: `HotelOps subscription — ${property.name}`,
       metadata: {
