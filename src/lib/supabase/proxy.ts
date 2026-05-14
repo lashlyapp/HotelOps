@@ -1,6 +1,20 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const LAST_ACTIVE_COOKIE = 'ho.last_active'
+const PLATFORM_ADMIN_TIMEOUT_MS = 30 * 60 * 1000
+const DEFAULT_TIMEOUT_MS = 60 * 60 * 1000
+
+// Auth-only routes; we don't enforce idle-out here so an expired session
+// doesn't redirect the login page back to itself.
+const AUTH_PATH_PREFIXES = [
+  '/login',
+  '/signup',
+  '/forgot-password',
+  '/set-password',
+  '/api/auth',
+]
+
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request })
 
@@ -25,7 +39,65 @@ export async function updateSession(request: NextRequest) {
     },
   )
 
-  await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
+  if (!user) {
+    if (request.cookies.has(LAST_ACTIVE_COOKIE)) {
+      response.cookies.delete(LAST_ACTIVE_COOKIE)
+    }
+    return response
+  }
+
+  const path = request.nextUrl.pathname
+  const onAuthRoute = AUTH_PATH_PREFIXES.some((p) => path.startsWith(p))
+
+  // Pull role to pick the right timeout. Platform admins get the tighter
+  // window because their session can reach every tenant. The role is
+  // looked up via the user's own RLS-scoped client, so the query is a
+  // single indexed read.
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  const timeoutMs =
+    profile?.role === 'platform_admin'
+      ? PLATFORM_ADMIN_TIMEOUT_MS
+      : DEFAULT_TIMEOUT_MS
+
+  const now = Date.now()
+  const lastActiveStr = request.cookies.get(LAST_ACTIVE_COOKIE)?.value
+  const lastActive = lastActiveStr ? Number(lastActiveStr) : NaN
+  const isIdleExpired =
+    Number.isFinite(lastActive) && now - lastActive > timeoutMs
+
+  if (isIdleExpired && !onAuthRoute) {
+    return signOutAndRedirect(request)
+  }
+
+  response.cookies.set(LAST_ACTIVE_COOKIE, String(now), {
+    path: '/',
+    sameSite: 'lax',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24,
+  })
   return response
+}
+
+function signOutAndRedirect(request: NextRequest): NextResponse {
+  const url = request.nextUrl.clone()
+  url.pathname = '/login'
+  url.search = '?error=session_expired'
+  const res = NextResponse.redirect(url)
+  // Clear every Supabase auth cookie (`sb-<ref>-auth-token`, plus any
+  // chunked variants) so the next request is treated as unauthenticated
+  // even before the redirect lands.
+  for (const c of request.cookies.getAll()) {
+    if (c.name.startsWith('sb-')) res.cookies.delete(c.name)
+  }
+  res.cookies.delete(LAST_ACTIVE_COOKIE)
+  return res
 }
