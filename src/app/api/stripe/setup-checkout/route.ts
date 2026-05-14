@@ -28,6 +28,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * characters, and Checkout.sessions.create throws before returning a URL
  * — which previously surfaced to the user as a bare 500.
  *
+ * The `label.custom` text is capped at 50 characters by Stripe; anything
+ * longer makes Checkout.sessions.create reject with "Invalid string …
+ * must be at most 50 characters" before returning a URL. Keep this terse.
+ *
  * Returned as a literal so TS infers the discriminated union exactly —
  * the Stripe SDK exposes Checkout.SessionCreateParams as a type alias
  * (not a namespace), so we can't directly type a const as
@@ -39,8 +43,7 @@ function autopayCustomField() {
     type: 'dropdown' as const,
     label: {
       type: 'custom' as const,
-      custom:
-        'Use this card as the default for auto-payment on new properties?',
+      custom: 'Use as auto-pay default for new properties?',
     },
     dropdown: {
       options: [
