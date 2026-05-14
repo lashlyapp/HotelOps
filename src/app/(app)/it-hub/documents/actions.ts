@@ -11,7 +11,7 @@ import {
 } from '@/lib/r2/upload'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { ItDocumentCategory } from '@/lib/supabase/types'
+import type { ItDocumentCategory, ItDocumentFolder } from '@/lib/supabase/types'
 
 // IT documents live under a hidden subprefix per scope. Per-property docs
 // nest under the property's R2 prefix; org-wide docs (no property selected)
@@ -58,6 +58,7 @@ const ALLOWED_MIME = new Set([
 const MAX_DOCUMENT_BYTES = 100 * 1024 * 1024 // 100 MB
 const MAX_TITLE_LENGTH = 200
 const MAX_NOTES_LENGTH = 1000
+const MAX_FOLDER_NAME_LENGTH = 80
 
 const PRESIGN_LIMIT = { limit: 30, windowMs: 60_000 } as const
 
@@ -113,6 +114,7 @@ export async function presignDocumentUploadAction(args: {
  */
 export async function saveDocumentAction(args: {
   propertyId: string | null
+  folderId: string | null
   key: string
   fileName: string
   contentType: string
@@ -142,6 +144,11 @@ export async function saveDocumentAction(args: {
     return { ok: false, error: "We couldn't find the upload in storage." }
   }
 
+  const folderId = await resolveFolderId(session.organization.id, args.folderId)
+  if (folderId === FOLDER_NOT_FOUND) {
+    return { ok: false, error: 'Folder not found.' }
+  }
+
   const expiresAt = args.expiresAt && /^\d{4}-\d{2}-\d{2}$/.test(args.expiresAt)
     ? args.expiresAt
     : null
@@ -151,6 +158,7 @@ export async function saveDocumentAction(args: {
   const { error } = await admin.from('it_documents').insert({
     org_id: session.organization.id,
     property_id: args.propertyId,
+    folder_id: folderId,
     title,
     category: args.category,
     r2_key: args.key,
@@ -233,6 +241,7 @@ export async function updateDocumentAction(
   const category = String(formData.get('category') ?? '').trim() as ItDocumentCategory
   const expiresAtRaw = String(formData.get('expires_at') ?? '').trim()
   const notes = String(formData.get('notes') ?? '').trim().slice(0, MAX_NOTES_LENGTH)
+  const folderIdRaw = String(formData.get('folder_id') ?? '').trim()
 
   if (!id) return { error: 'Missing document.' }
   if (!title) return { error: 'Title is required.' }
@@ -244,12 +253,19 @@ export async function updateDocumentAction(
       ? expiresAtRaw
       : null
 
+  const folderId = await resolveFolderId(
+    session.organization.id,
+    folderIdRaw === '' ? null : folderIdRaw,
+  )
+  if (folderId === FOLDER_NOT_FOUND) return { error: 'Folder not found.' }
+
   const admin = createAdminClient()
   const { error } = await admin
     .from('it_documents')
     .update({
       title,
       category,
+      folder_id: folderId,
       expires_at: expiresAt,
       notes: notes === '' ? null : notes,
       updated_at: new Date().toISOString(),
@@ -260,6 +276,107 @@ export async function updateDocumentAction(
 
   revalidatePath('/it-hub/documents')
   return { success: 'Saved.' }
+}
+
+// ----------------------------------------------------------------------------
+// Folder actions
+// ----------------------------------------------------------------------------
+
+export type FolderResult =
+  | { ok: true; folder: ItDocumentFolder }
+  | { ok: false; error: string }
+
+export async function createFolderAction(args: {
+  name: string
+  parentId: string | null
+}): Promise<FolderResult> {
+  const session = await requireOrgUser()
+  const name = args.name.trim().slice(0, MAX_FOLDER_NAME_LENGTH)
+  if (!name) return { ok: false, error: 'Folder name is required.' }
+  if (/[\\/]/.test(name)) {
+    return { ok: false, error: "Folder names can't contain slashes." }
+  }
+
+  const parentId = await resolveFolderId(session.organization.id, args.parentId)
+  if (parentId === FOLDER_NOT_FOUND) {
+    return { ok: false, error: 'Parent folder not found.' }
+  }
+
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('it_document_folders')
+    .insert({
+      org_id: session.organization.id,
+      parent_id: parentId,
+      name,
+      created_by: session.userId,
+    })
+    .select('*')
+    .single()
+  if (error) {
+    // Surface the unique-name conflict in human terms.
+    if (error.code === '23505') {
+      return {
+        ok: false,
+        error: 'A folder with that name already exists here.',
+      }
+    }
+    return { ok: false, error: error.message }
+  }
+
+  revalidatePath('/it-hub/documents')
+  return { ok: true, folder: data as ItDocumentFolder }
+}
+
+export async function renameFolderAction(args: {
+  id: string
+  name: string
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await requireOrgUser()
+  const name = args.name.trim().slice(0, MAX_FOLDER_NAME_LENGTH)
+  if (!name) return { ok: false, error: 'Folder name is required.' }
+  if (/[\\/]/.test(name)) {
+    return { ok: false, error: "Folder names can't contain slashes." }
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('it_document_folders')
+    .update({ name })
+    .eq('id', args.id)
+    .eq('org_id', session.organization.id)
+  if (error) {
+    if (error.code === '23505') {
+      return {
+        ok: false,
+        error: 'A folder with that name already exists here.',
+      }
+    }
+    return { ok: false, error: error.message }
+  }
+  revalidatePath('/it-hub/documents')
+  return { ok: true }
+}
+
+/**
+ * Delete a folder. Subfolders cascade away (FK on delete cascade), and any
+ * documents inside become unfiled (folder_id set null) rather than being
+ * deleted with their files — losing actual binaries on a UI misclick would be
+ * far worse than leaving a few documents at the root.
+ */
+export async function deleteFolderAction(formData: FormData) {
+  const session = await requireOrgUser()
+  const id = String(formData.get('id') ?? '').trim()
+  if (!id) return
+
+  const admin = createAdminClient()
+  await admin
+    .from('it_document_folders')
+    .delete()
+    .eq('id', id)
+    .eq('org_id', session.organization.id)
+
+  revalidatePath('/it-hub/documents')
 }
 
 // ----------------------------------------------------------------------------
@@ -293,6 +410,29 @@ function sanitizeFilename(raw: string): string | null {
     .slice(0, 200)
   if (!cleaned) return null
   return cleaned
+}
+
+const FOLDER_NOT_FOUND = Symbol('FOLDER_NOT_FOUND')
+
+/**
+ * Validates that a folder belongs to this org (callers pass IDs from the URL
+ * or form input, so we can't trust them). Returns null for the root, the
+ * verified id for a real folder, or FOLDER_NOT_FOUND if the id is bogus.
+ */
+async function resolveFolderId(
+  orgId: string,
+  folderId: string | null,
+): Promise<string | null | typeof FOLDER_NOT_FOUND> {
+  if (!folderId) return null
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('it_document_folders')
+    .select('id')
+    .eq('id', folderId)
+    .eq('org_id', orgId)
+    .maybeSingle()
+  if (!data) return FOLDER_NOT_FOUND
+  return data.id as string
 }
 
 async function uniqueKey(prefix: string, filename: string): Promise<string> {
