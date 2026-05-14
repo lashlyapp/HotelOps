@@ -633,7 +633,16 @@ export async function resyncSubscriptionsAction(): Promise<ActionResult> {
       mirrored += 1
       lines.push(`${label}: synced → ${resolved.name}`)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'sync failed'
+      // PostgrestError (and other thrown-but-not-`new Error`) loses its
+      // message under instanceof checks across module boundaries, so
+      // peek at the .message / .details / .code fields directly.
+      const message = extractErrorMessage(err)
+      console.warn(
+        '[billing] resync: syncSubscriptionToDb threw',
+        sub.id,
+        resolved.id,
+        err,
+      )
       lines.push(`${label}: skipped — ${message}`)
       skipped += 1
     }
@@ -647,6 +656,24 @@ export async function resyncSubscriptionsAction(): Promise<ActionResult> {
       lines.length > 0 ? ` ${lines.join(' · ')}` : ''
     }`,
   }
+}
+
+function extractErrorMessage(err: unknown): string {
+  if (!err) return 'unknown error'
+  if (err instanceof Error) return err.message
+  if (typeof err === 'string') return err
+  if (typeof err === 'object') {
+    const obj = err as Record<string, unknown>
+    // Supabase PostgrestError shape: { message, details, hint, code }
+    const message = typeof obj.message === 'string' ? obj.message : null
+    const details = typeof obj.details === 'string' ? obj.details : null
+    const code = typeof obj.code === 'string' ? obj.code : null
+    const parts = [code ? `[${code}]` : null, message, details].filter(
+      Boolean,
+    ) as string[]
+    if (parts.length > 0) return parts.join(' ')
+  }
+  return 'sync failed'
 }
 
 // ----------------------------------------------------------------------------
