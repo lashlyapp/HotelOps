@@ -58,7 +58,10 @@ already pay. We bundle it flat.
 
 ## 3. Pricing strategy
 
-### Recommended structure
+**Locked — May 2026.** Canonical: [`docs/pricing.md`](./pricing.md). The
+table below is kept for context only.
+
+### Structure
 
 | Plan tier (HotelOps) | Today                  | With signage                                    |
 | -------------------- | ---------------------- | ----------------------------------------------- |

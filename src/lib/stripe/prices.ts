@@ -9,8 +9,20 @@ import type Stripe from 'stripe'
  * the new one automatically.
  */
 export const HOTELOPS_PRICE_LOOKUP_KEYS = {
+  // Base — $100 / property / month. Required for every active tenant.
   perPropertyMonthly: 'hotelops_per_property_monthly',
+  // One-time onboarding fee, configured per tenant when needed.
   setupFee: 'hotelops_setup_fee',
+  // Add-on: unlimited signage screens beyond the 3 included in the base.
+  // $49 / property / month. See docs/pricing.md.
+  signageUnlimitedMonthly: 'hotelops_signage_unlimited_monthly',
+  // Per-screen overage charge for properties that don't take the
+  // signage_unlimited add-on. $5 / screen / month beyond the 3 included.
+  signageOveragePerScreenMonthly:
+    'hotelops_signage_overage_per_screen_monthly',
+  // Add-on: arrival pages + printable QR + guest issue intake.
+  // $39 / property / month. See docs/pricing.md.
+  guestExperienceMonthly: 'hotelops_guest_experience_monthly',
 } as const
 
 export type PriceSnapshot = {
