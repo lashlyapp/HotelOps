@@ -6,6 +6,11 @@ export type Organization = {
   name: string
   created_at: string
   stripe_customer_id: string | null
+  // Org-level add-on intent. When true, every property's subscription
+  // carries the matching SubscriptionItem. See docs/pricing.md +
+  // 20260514070000_org_addon_flags.sql for the data model.
+  signage_unlimited_addon_active: boolean
+  guest_experience_addon_active: boolean
 }
 
 export type Profile = {

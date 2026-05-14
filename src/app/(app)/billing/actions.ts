@@ -4,8 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { requireOrgOwner } from '@/lib/auth/session'
 import {
   ADDONS,
-  addAddonToProperty,
-  removeAddonFromProperty,
+  addAddonToOrg,
+  removeAddonFromOrg,
   type AddonKey,
 } from '@/lib/stripe/addons'
 import { stripe } from '@/lib/stripe/client'
@@ -524,11 +524,11 @@ export async function updateBillingDetailsAction(
 // ----------------------------------------------------------------------------
 // Add-on subscription items
 //
-// Operator-driven, no feature gates yet: every property can use signage and
-// arrival regardless of which line items are on the subscription. Toggling
-// here adds/removes the corresponding Stripe SubscriptionItem on the
-// per-property subscription so the next invoice picks it up (prorated).
-// See docs/pricing.md for the canonical pricing structure.
+// Org-level activation. Toggling on/off fans out the Stripe
+// SubscriptionItem to every property in the org so the customer is
+// billed for the feature on every property that has it (closing the
+// loophole where one $49 line item would unlock the feature for an
+// entire portfolio). See docs/pricing.md.
 // ----------------------------------------------------------------------------
 
 function isAddonKey(value: string): value is AddonKey {
@@ -540,30 +540,16 @@ export async function addAddonAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const session = await requireOrgOwner()
-  const propertyId = String(formData.get('property_id') ?? '')
   const addonKey = String(formData.get('addon_key') ?? '')
-  if (!propertyId || !isAddonKey(addonKey)) {
-    return { error: 'Missing property or add-on.' }
-  }
+  if (!isAddonKey(addonKey)) return { error: 'Unknown add-on.' }
 
-  // Defense-in-depth: confirm the property is in the caller's org. The
-  // Stripe helper will also fail to find a subscription if the row
-  // doesn't exist, but a wrong-org check here gives a friendlier error
-  // and avoids leaking the existence of another tenant's property.
-  const admin = createAdminClient()
-  const { data: property } = await admin
-    .from('properties')
-    .select('id')
-    .eq('id', propertyId)
-    .eq('org_id', session.organization.id)
-    .maybeSingle()
-  if (!property) return { error: 'Property not found in your organization.' }
-
-  const result = await addAddonToProperty(propertyId, addonKey)
+  const result = await addAddonToOrg(session.organization.id, addonKey)
   if (!result.ok) return { error: result.error }
 
   revalidatePath('/billing')
-  return { success: `${ADDONS[addonKey].label} added.` }
+  return {
+    success: `${ADDONS[addonKey].label} enabled for every property.`,
+  }
 }
 
 export async function removeAddonAction(
@@ -571,24 +557,14 @@ export async function removeAddonAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const session = await requireOrgOwner()
-  const propertyId = String(formData.get('property_id') ?? '')
   const addonKey = String(formData.get('addon_key') ?? '')
-  if (!propertyId || !isAddonKey(addonKey)) {
-    return { error: 'Missing property or add-on.' }
-  }
+  if (!isAddonKey(addonKey)) return { error: 'Unknown add-on.' }
 
-  const admin = createAdminClient()
-  const { data: property } = await admin
-    .from('properties')
-    .select('id')
-    .eq('id', propertyId)
-    .eq('org_id', session.organization.id)
-    .maybeSingle()
-  if (!property) return { error: 'Property not found in your organization.' }
-
-  const result = await removeAddonFromProperty(propertyId, addonKey)
+  const result = await removeAddonFromOrg(session.organization.id, addonKey)
   if (!result.ok) return { error: result.error }
 
   revalidatePath('/billing')
-  return { success: `${ADDONS[addonKey].label} removed.` }
+  return {
+    success: `${ADDONS[addonKey].label} disabled for every property.`,
+  }
 }

@@ -14,6 +14,14 @@ One base subscription plus two optional add-ons. All three line items
 bill **per property per month** — the same axis the rest of the platform
 already uses. No per-screen, per-room, or per-seat metering.
 
+**Add-ons activate at the organization level**, not per-property. When
+an owner toggles an add-on on, every property in the org receives the
+matching Stripe SubscriptionItem and every property's monthly invoice
+includes that line. New properties added later inherit the active
+add-ons automatically. This closes the loophole where attaching the
+add-on to a single property would unlock the feature across the
+portfolio while billing for only one.
+
 | Line item | Price | Stripe lookup key | What it unlocks |
 | --- | --- | --- | --- |
 | **Base** | **$100 / property / month** | `hotelops_per_property_monthly` | Everything not listed below |

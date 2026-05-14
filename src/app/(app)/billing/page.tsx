@@ -21,14 +21,15 @@ import {
 import type {
   BillingSubscription,
   BillingSubscriptionStatus,
+  Organization,
   Profile,
   Property,
 } from '@/lib/supabase/types'
+import { AddonToggle } from './_components/addon-toggle'
 import { StripeRedirectButton } from './_components/billing-actions'
 import { BillingDetailsForm } from './_components/billing-details-form'
 import { PropertyCardManager } from './_components/property-card-manager'
 import { ResubscribeButton } from './_components/resubscribe-button'
-import { RowActionsMenu } from './_components/row-actions-menu'
 
 export default async function BillingPage() {
   const session = await requireSession()
@@ -102,6 +103,13 @@ export default async function BillingPage() {
           autopayDefaultPmId={autopayDefaultPmId}
         />
       )}
+
+      {isOwner && rows.length > 0 ? (
+        <AddonsCard
+          organization={session.organization}
+          propertyCount={session.properties.length}
+        />
+      ) : null}
 
       <StripeInvoicesCard
         invoices={stripeInvoices}
@@ -292,6 +300,12 @@ function PropertyRow({
   // visible-when-on so the operator sees what they're paying for, but
   // not occupying space when off. Toggle UI lives behind the row's …
   // menu → Manage add-ons.
+  // Active add-on chips next to the property name. The activation
+  // decision is org-level (toggled from the Add-ons card above), but
+  // surfacing the per-property state here gives the operator visible
+  // confirmation that every property is being billed for what the
+  // toggle said — and catches any drift the reconciler hasn't healed
+  // yet (chip missing on one row would tell us something's wrong).
   const activeAddons: Array<{ label: string }> = []
   if (subscription?.signage_unlimited_active) {
     activeAddons.push({ label: 'Signage Unlimited' })
@@ -299,10 +313,6 @@ function PropertyRow({
   if (subscription?.guest_experience_active) {
     activeAddons.push({ label: 'Guest Experience' })
   }
-  const canShowAddonsMenu =
-    canManage &&
-    subscription &&
-    !['canceled', 'incomplete_expired'].includes(subscription.status)
 
   return (
     <tr>
@@ -373,9 +383,6 @@ function PropertyRow({
                 currentPeriodEnd={subscription.current_period_end}
               />
             )
-          ) : null}
-          {canShowAddonsMenu ? (
-            <RowActionsMenu propertyId={property.id} />
           ) : null}
         </div>
       </td>
@@ -555,3 +562,52 @@ function capitalize(s: string | null | undefined): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+
+
+/**
+ * Org-level Add-ons card. One toggle per add-on; flipping affects every
+ * property in the org (closes the per-property loophole). The card
+ * surfaces the total monthly cost up front (price × property count) so
+ * the operator sees the real impact before clicking.
+ */
+function AddonsCard({
+  organization,
+  propertyCount,
+}: {
+  organization: Organization
+  propertyCount: number
+}) {
+  return (
+    <Card>
+      <div className="px-5 py-4 border-b border-border-subtle">
+        <h2 className="text-sm font-semibold text-fg">Add-ons</h2>
+        <p className="mt-1 text-xs text-muted">
+          Enabled once for the whole organization. Each property is billed
+          for what&rsquo;s active.
+        </p>
+      </div>
+      <div className="divide-y divide-border-subtle">
+        <div className="p-5">
+          <AddonToggle
+            addonKey="signage_unlimited"
+            label="Signage Unlimited"
+            priceCents={4900}
+            propertyCount={propertyCount}
+            active={organization.signage_unlimited_addon_active}
+            description="Unlimited TV screens per property. Base subscription includes 3 per property; this add-on lifts the cap."
+          />
+        </div>
+        <div className="p-5">
+          <AddonToggle
+            addonKey="guest_experience"
+            label="Guest Experience"
+            priceCents={3900}
+            propertyCount={propertyCount}
+            active={organization.guest_experience_addon_active}
+            description="Arrival pages, printable QR cards, and guest room-issue intake."
+          />
+        </div>
+      </div>
+    </Card>
+  )
+}

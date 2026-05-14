@@ -6,6 +6,7 @@ import {
   requirePriceIdByLookupKey,
   resolvePriceIdByLookupKey,
 } from '@/lib/stripe/prices'
+import { resolveActiveOrgAddonPriceIds } from '@/lib/stripe/start-subscription'
 import {
   ensureStripeCustomer,
   getSubscriptionForProperty,
@@ -183,6 +184,15 @@ export async function POST(request: Request) {
       )
     }
 
+    // Inherit any org-level add-ons the customer has already enabled so
+    // a property started via Checkout is billed correctly from day one.
+    // Without this, a new property would skip add-on charges until the
+    // reconciler attached the items on the next pass.
+    const orgAddons = await resolveActiveOrgAddonPriceIds(
+      stripeClient,
+      session.organization.id,
+    )
+
     const checkout = await stripeClient.checkout.sessions.create(
       {
         mode: 'subscription',
@@ -190,6 +200,7 @@ export async function POST(request: Request) {
         line_items: [
           { price: recurringPriceId, quantity: 1 },
           ...(setupFeePriceId ? [{ price: setupFeePriceId, quantity: 1 }] : []),
+          ...orgAddons.map((a) => ({ price: a.priceId, quantity: 1 })),
         ],
         custom_fields: [autopayCustomField()],
         subscription_data: {
