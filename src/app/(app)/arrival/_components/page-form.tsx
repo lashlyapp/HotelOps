@@ -20,9 +20,13 @@ export function PageForm({
     savePageAction,
     {},
   )
+  // Defensive: the schema declares quick_info NOT NULL with default '[]',
+  // but if a hand-edited row ever sneaks through as null we still want
+  // the form to render.
+  const initialQuickInfo = Array.isArray(page.quick_info) ? page.quick_info : []
   const [entries, setEntries] = useState(() =>
-    page.quick_info.length > 0
-      ? page.quick_info
+    initialQuickInfo.length > 0
+      ? initialQuickInfo
       : [{ label: '', value: '' }],
   )
 
@@ -34,7 +38,9 @@ export function PageForm({
     setEntries((e) => e.filter((_, i) => i !== idx))
   }
 
-  const hiddenSet = new Set(page.hidden_network_ids)
+  const hiddenSet = new Set(
+    Array.isArray(page.hidden_network_ids) ? page.hidden_network_ids : [],
+  )
 
   return (
     <form action={action} className="space-y-5">

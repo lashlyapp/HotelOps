@@ -5,14 +5,12 @@ import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requireOrgUser } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type {
-  ArrivalPage,
   ArrivalSection,
   ItNetwork,
 } from '@/lib/supabase/types'
 import {
   deletePageAction,
   deleteSectionAction,
-  ensureArrivalPageAction,
   reorderSectionAction,
 } from '../actions'
 import { SECTION_KIND_LABELS } from '../_lib/labels'
@@ -20,6 +18,7 @@ import { AddSectionForm } from '../_components/add-section-form'
 import { arrivalPublicUrl } from '../_components/arrival-url'
 import { PageForm } from '../_components/page-form'
 import { PublishBar } from '../_components/publish-bar'
+import { ensureArrivalPage } from '../_lib/ensure'
 
 export default async function ArrivalBuilderPage({
   params,
@@ -33,9 +32,9 @@ export default async function ArrivalBuilderPage({
   const isOwner = session.profile.role === 'org_owner'
 
   // Auto-create the arrival_pages row on first visit so we don't make
-  // operators click through a separate "Create" button. The action is
-  // idempotent — returns the existing page id on subsequent visits.
-  const ensured = await ensureArrivalPageAction({ propertyId })
+  // operators click through a separate "Create" button. Idempotent on
+  // subsequent visits — returns the existing row.
+  const ensured = await ensureArrivalPage(session, property)
   if (!ensured.ok) {
     return (
       <div className="p-4 sm:p-8">
@@ -45,19 +44,15 @@ export default async function ArrivalBuilderPage({
       </div>
     )
   }
+  const page = ensured.page
 
   const admin = createAdminClient()
-  const [{ data: pageRow }, { data: sectionRows }, { data: networkRows }] =
+  const [{ data: sectionRows }, { data: networkRows }] =
     await Promise.all([
-      admin
-        .from('arrival_pages')
-        .select('*')
-        .eq('id', ensured.pageId)
-        .maybeSingle(),
       admin
         .from('arrival_sections')
         .select('*')
-        .eq('page_id', ensured.pageId)
+        .eq('page_id', page.id)
         .order('sort_order', { ascending: true }),
       admin
         .from('it_networks')
@@ -66,8 +61,6 @@ export default async function ArrivalBuilderPage({
         .eq('is_shareable', true)
         .order('label', { ascending: true }),
     ])
-  if (!pageRow) notFound()
-  const page = pageRow as ArrivalPage
   const sections = (sectionRows ?? []) as ArrivalSection[]
   const networks = (networkRows ?? []) as ItNetwork[]
 

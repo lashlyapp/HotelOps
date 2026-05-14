@@ -67,34 +67,10 @@ function busts(slug: string | null) {
   revalidatePath('/arrival')
 }
 
-// ----------------------------------------------------------------------------
-// Create / upsert page
-// ----------------------------------------------------------------------------
-export async function ensureArrivalPageAction(args: {
-  propertyId: string
-}): Promise<{ ok: true; pageId: string } | { ok: false; error: string }> {
-  const session = await requireOrgUser({ write: true })
-  const property = await ensurePropertyInOrg(
-    session.organization.id,
-    args.propertyId,
-  )
-  if (!property) return { ok: false, error: 'Property not found.' }
-  const existing = await loadPage(session.organization.id, property.id)
-  if (existing) return { ok: true, pageId: existing.id }
-  const admin = createAdminClient()
-  const { data, error } = await admin
-    .from('arrival_pages')
-    .insert({
-      org_id: session.organization.id,
-      property_id: property.id,
-      public_slug: property.slug,
-    })
-    .select('id')
-    .single()
-  if (error) return { ok: false, error: error.message }
-  busts(property.slug)
-  return { ok: true, pageId: data.id }
-}
+// Note: the row is created lazily on first visit to /arrival/<propertyId>
+// via the plain server helper `_lib/ensure.ts:ensureArrivalPage` — not a
+// 'use server' action — so the page renderer doesn't have to call across
+// the server-action boundary just to read its own row.
 
 // ----------------------------------------------------------------------------
 // Save page-level fields (welcome, quick info, brand color, …)
