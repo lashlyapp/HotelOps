@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 
-type Endpoint = '/api/stripe/setup-checkout' | '/api/stripe/portal'
+type Endpoint = '/api/stripe/setup-checkout'
 
 export function StripeRedirectButton({
   endpoint,

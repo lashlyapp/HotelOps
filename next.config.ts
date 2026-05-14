@@ -3,7 +3,9 @@ import type { NextConfig } from 'next'
 const cdnUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
 const cdn = cdnUrl ? new URL(cdnUrl) : null
 
-// Stripe Checkout / Customer Portal that we redirect customers to.
+// Stripe Checkout that we redirect customers to (used by setup-checkout
+// for adding/swapping payment methods). Billing details are now edited
+// in-app, so the Customer Portal is no longer in this list.
 const STRIPE_HOSTS = ['https://js.stripe.com', 'https://checkout.stripe.com']
 
 // Build a Content-Security-Policy that's strict but permissive of the

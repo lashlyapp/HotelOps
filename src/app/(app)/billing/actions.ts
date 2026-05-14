@@ -419,3 +419,97 @@ export async function resubscribePropertyAction(
       : 'Resubscribed. An invoice was emailed — pay it within 14 days or attach a card from the row above to auto-charge.',
   }
 }
+
+const NAME_MAX = 200
+const ADDRESS_FIELD_MAX = 200
+// Stripe stores the address on the Customer; we mirror its field names
+// (line1/line2/city/state/postal_code/country) so the wire format is
+// transparent and the form posts straight through.
+const ADDRESS_FIELDS = [
+  'line1',
+  'line2',
+  'city',
+  'state',
+  'postal_code',
+  'country',
+] as const
+
+/**
+ * Save the org's billing identity on the Stripe Customer (the same data
+ * that Stripe prints on invoices and uses to send receipts and dunning
+ * emails). Replaces the old "Open Stripe billing portal" entry point so
+ * customers can edit their billing email/address without leaving the
+ * app.
+ *
+ * Owner-only. Email is required because Stripe sends payment failure
+ * notices there; everything else can be cleared by submitting an empty
+ * value (we send `null` for cleared fields so Stripe drops them rather
+ * than storing the empty string).
+ *
+ * Note: this only updates the Stripe Customer. The user's app-account
+ * email lives in Supabase auth and is changed from /account; the two
+ * are deliberately separate so a manager can use a personal login while
+ * billing receipts go to accounting@.
+ */
+export async function updateBillingDetailsAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await requireOrgOwner()
+  const customerId = await getStripeCustomerForOrg(session.organization.id)
+  if (!customerId) {
+    return {
+      error:
+        'No Stripe customer for this org yet. Start a property subscription first.',
+    }
+  }
+
+  const email = String(formData.get('email') ?? '').trim()
+  const name = String(formData.get('name') ?? '').trim()
+  if (!email) return { error: 'Billing email is required.' }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: 'Enter a valid billing email address.' }
+  }
+  if (name.length > NAME_MAX) {
+    return { error: `Company name is too long (${NAME_MAX} characters max).` }
+  }
+
+  const address: Record<string, string | null> = {}
+  for (const field of ADDRESS_FIELDS) {
+    const value = String(formData.get(`address.${field}`) ?? '').trim()
+    if (value.length > ADDRESS_FIELD_MAX) {
+      return {
+        error: `${field.replace('_', ' ')} is too long (${ADDRESS_FIELD_MAX} characters max).`,
+      }
+    }
+    address[field] = value || null
+  }
+  if (address.country) {
+    if (!/^[A-Za-z]{2}$/.test(address.country)) {
+      return { error: 'Country must be a 2-letter ISO code (e.g. US).' }
+    }
+    address.country = address.country.toUpperCase()
+  }
+
+  try {
+    await stripe().customers.update(customerId, {
+      email,
+      name: name || undefined,
+      // When every address field is null, send `address: null` so Stripe
+      // clears the prior address rather than complaining about an empty
+      // object.
+      address: Object.values(address).some((v) => v) ? address : null,
+    })
+  } catch (err) {
+    console.error('[billing] customers.update failed', err)
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : "Couldn't save billing details. Try again.",
+    }
+  }
+
+  revalidatePath('/billing')
+  return { success: 'Billing details updated.' }
+}
