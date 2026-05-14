@@ -146,7 +146,15 @@ function shouldMakeAutopayDefault(
 /**
  * Promote a payment method to the org's Customer-level default so
  * subsequent property creations auto-charge it. Best-effort: failures
- * are logged but don't break the surrounding flow.
+ * don't break the surrounding card-attach flow, but they ARE logged at
+ * error level (not warn) because the customer just opted in via the
+ * autopaydefault dropdown — silently dropping that promise is a
+ * disappointment we want operators to notice and investigate.
+ *
+ * Includes the Stripe-side context (customer + PM ids, error type) so
+ * the log is actionable: a deleted/detached PM is benign retry noise,
+ * an invalid_request on customer.update points at a Stripe-side state
+ * mismatch worth fixing.
  */
 async function setCustomerAutopayDefault(
   customerId: string,
@@ -157,9 +165,16 @@ async function setCustomerAutopayDefault(
       invoice_settings: { default_payment_method: paymentMethodId },
     })
   } catch (err) {
-    console.warn(
+    const message = err instanceof Error ? err.message : String(err)
+    const stripeType = (err as { type?: string } | null)?.type ?? 'unknown'
+    console.error(
       '[stripe-webhook] setCustomerAutopayDefault failed',
-      err instanceof Error ? err.message : err,
+      {
+        customerId,
+        paymentMethodId,
+        stripeErrorType: stripeType,
+        message,
+      },
     )
   }
 }

@@ -134,70 +134,96 @@ export async function POST(request: Request) {
     Boolean(existing?.stripe_subscription_id) &&
     existing?.status !== 'canceled' &&
     existing?.status !== 'incomplete_expired'
-  if (hasLiveSubscription && existing?.stripe_subscription_id) {
-    const checkout = await stripe().checkout.sessions.create({
-      mode: 'setup',
-      customer: customerId,
-      payment_method_types: ['card'],
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      custom_fields: [autopayCustomField()],
-      // The webhook reads these to know which subscription to attach the
-      // new card to. property_id is the source of truth; subscription_id is
-      // a convenience so the handler doesn't have to re-query.
-      metadata: {
-        org_id: session.organization.id,
-        property_id: property.id,
-        subscription_id: existing.stripe_subscription_id,
-      },
-    })
-    return NextResponse.json({ url: checkout.url })
-  }
+  // Stripe rejections (no active price for our lookup key, customer
+  // deleted on the Stripe side, line_items mismatch) used to surface as a
+  // bare 500 with no body. Catch and translate so the UI can show
+  // something actionable instead.
+  try {
+    if (hasLiveSubscription && existing?.stripe_subscription_id) {
+      const checkout = await stripe().checkout.sessions.create({
+        mode: 'setup',
+        customer: customerId,
+        payment_method_types: ['card'],
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        custom_fields: [autopayCustomField()],
+        // The webhook reads these to know which subscription to attach the
+        // new card to. property_id is the source of truth; subscription_id is
+        // a convenience so the handler doesn't have to re-query.
+        metadata: {
+          org_id: session.organization.id,
+          property_id: property.id,
+          subscription_id: existing.stripe_subscription_id,
+        },
+      })
+      return NextResponse.json({ url: checkout.url })
+    }
 
-  // Self-serve creation path. quantity is fixed at 1 because the billing
-  // unit is a property. The setup fee is included on this property's
-  // FIRST subscription only — a resubscribe after cancellation does
-  // not re-charge. To waive setup fees entirely (e.g. as a promotion),
-  // deactivate the hotelops_setup_fee Price in Stripe; the resolver
-  // returns null and the fee is silently omitted.
-  const stripeClient = stripe()
-  const recurringPriceId = await requirePriceIdByLookupKey(
-    stripeClient,
-    HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
-  )
-
-  let setupFeePriceId: string | null = null
-  const alreadySubscribed = await propertyHasBeenSubscribed(property.id)
-  if (!alreadySubscribed) {
-    setupFeePriceId = await resolvePriceIdByLookupKey(
+    // Self-serve creation path. quantity is fixed at 1 because the billing
+    // unit is a property. The setup fee is included on this property's
+    // FIRST subscription only — a resubscribe after cancellation does
+    // not re-charge. To waive setup fees entirely (e.g. as a promotion),
+    // deactivate the hotelops_setup_fee Price in Stripe; the resolver
+    // returns null and the fee is silently omitted.
+    const stripeClient = stripe()
+    const recurringPriceId = await requirePriceIdByLookupKey(
       stripeClient,
-      HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
+      HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
     )
-  }
 
-  const checkout = await stripeClient.checkout.sessions.create({
-    mode: 'subscription',
-    customer: customerId,
-    line_items: [
-      { price: recurringPriceId, quantity: 1 },
-      ...(setupFeePriceId ? [{ price: setupFeePriceId, quantity: 1 }] : []),
-    ],
-    custom_fields: [autopayCustomField()],
-    subscription_data: {
-      description: `HotelOps subscription — ${property.name}`,
-      metadata: {
-        org_id: session.organization.id,
-        property_id: property.id,
-        property_slug: property.slug,
-        app: 'hotelops',
+    let setupFeePriceId: string | null = null
+    const alreadySubscribed = await propertyHasBeenSubscribed(property.id)
+    if (!alreadySubscribed) {
+      setupFeePriceId = await resolvePriceIdByLookupKey(
+        stripeClient,
+        HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
+      )
+    }
+
+    const checkout = await stripeClient.checkout.sessions.create(
+      {
+        mode: 'subscription',
+        customer: customerId,
+        line_items: [
+          { price: recurringPriceId, quantity: 1 },
+          ...(setupFeePriceId ? [{ price: setupFeePriceId, quantity: 1 }] : []),
+        ],
+        custom_fields: [autopayCustomField()],
+        subscription_data: {
+          // Stripe caps Subscription.description at 500 chars; property.name
+          // is a free-form text column so truncate defensively.
+          description:
+            `HotelOps subscription — ${property.name}`.slice(0, 500),
+          metadata: {
+            org_id: session.organization.id,
+            property_id: property.id,
+            property_slug: property.slug,
+            app: 'hotelops',
+          },
+        },
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        metadata: {
+          org_id: session.organization.id,
+          property_id: property.id,
+        },
       },
-    },
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-    metadata: {
-      org_id: session.organization.id,
-      property_id: property.id,
-    },
-  })
-  return NextResponse.json({ url: checkout.url })
+      {
+        // A double-click on "Start & add card" must not mint two distinct
+        // Checkout sessions — if the user paid in both browser tabs Stripe
+        // would create two subscriptions and charge two setup fees while
+        // our webhook (upserting on property_id) would silently drop one.
+        // Same property_id + same monthly price = same Checkout session for
+        // the lifetime of Stripe's idempotency window (24h), which exceeds
+        // a Checkout session's own expiry, so a stale URL is never returned.
+        idempotencyKey: `setup-checkout:${property.id}:${recurringPriceId}`,
+      },
+    )
+    return NextResponse.json({ url: checkout.url })
+  } catch (err) {
+    console.error('[stripe] setup-checkout failed', err)
+    const message =
+      err instanceof Error ? err.message : 'Stripe checkout unavailable.'
+    return NextResponse.json({ error: message }, { status: 502 })
+  }
 }

@@ -143,7 +143,9 @@ export async function startSubscriptionForProperty(
     ownerEmail,
   )
 
-  const description = `HotelOps subscription — ${property.name}`
+  // Stripe caps Subscription.description at 500 chars; property.name is a
+  // free-form text column so truncate defensively.
+  const description = `HotelOps subscription — ${property.name}`.slice(0, 500)
   const useChargeAutomatically = Boolean(opts.defaultPaymentMethodId)
   const params: Stripe.SubscriptionCreateParams = {
     customer: customerId,
@@ -170,8 +172,11 @@ export async function startSubscriptionForProperty(
   }
 
   // Stripe's idempotency key is scoped per property_id + price, so a
-  // retry replays the same intent rather than double-billing. The setup
-  // fee is part of the same call, so it inherits that protection.
+  // retry replays the same intent rather than double-billing. This also
+  // closes the (rare) race where two concurrent callers both pass the
+  // `propertyHasBeenSubscribed === false` check before either persists —
+  // Stripe returns the same Subscription on the second call rather than
+  // creating a duplicate (and double-charging the setup fee).
   const subscription = await s.subscriptions.create(params, {
     idempotencyKey: `subscription:${property.id}:${priceId}`,
   })

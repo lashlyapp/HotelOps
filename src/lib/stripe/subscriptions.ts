@@ -223,10 +223,18 @@ export async function syncSubscriptionToDb(
     .maybeSingle()
   if (propErr) throw propErr
   if (!propertyRow) {
-    console.warn(
-      `[billing] syncSubscriptionToDb: property ${propertyId} no longer ` +
-        `exists; dropping event for subscription ${subscription.id}.`,
-    )
+    // Expected after a property delete races with an in-flight Stripe
+    // event (we cancel the sub server-side, then Stripe fires deleted/
+    // updated). Logged as info so it stops looking like a bug in
+    // dashboards filtering on warn/error, but kept structured so
+    // operators can still grep by subscription_id when correlating with
+    // a customer's "where did my subscription go" question.
+    console.info('[billing] syncSubscriptionToDb dropped event', {
+      reason: 'property_deleted',
+      propertyId,
+      subscriptionId: subscription.id,
+      stripeStatus: subscription.status,
+    })
     return
   }
 

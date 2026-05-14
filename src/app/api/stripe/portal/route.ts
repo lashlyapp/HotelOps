@@ -25,10 +25,20 @@ export async function POST() {
     process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
   ).replace(/\/+$/, '')
 
-  const portal = await stripe().billingPortal.sessions.create({
-    customer: customerId,
-    return_url: `${siteUrl}/billing`,
-  })
-
-  return NextResponse.json({ url: portal.url })
+  // Stripe rejections (suspended account, deleted customer in Stripe but
+  // stale id in our DB, no Portal config in dashboard) used to surface as
+  // a bare 500 here. Catch and translate so the UI can show something
+  // actionable instead of "Request failed (500)".
+  try {
+    const portal = await stripe().billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${siteUrl}/billing`,
+    })
+    return NextResponse.json({ url: portal.url })
+  } catch (err) {
+    console.error('[stripe] billingPortal.sessions.create failed', err)
+    const message =
+      err instanceof Error ? err.message : 'Stripe billing portal unavailable.'
+    return NextResponse.json({ error: message }, { status: 502 })
+  }
 }
