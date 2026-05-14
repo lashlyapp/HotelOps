@@ -498,3 +498,71 @@ export type TaskTag = {
   tag: string
   created_at: string
 }
+
+// ----------------------------------------------------------------------------
+// Digital signage — see docs/signage-spec.md
+// ----------------------------------------------------------------------------
+export type SignageItemKind = 'image' | 'video' | 'web' | 'text'
+
+export type SignageScreen = {
+  id: string
+  org_id: string
+  property_id: string
+  nickname: string
+  player_token: string
+  pairing_code: string | null
+  pairing_code_expires_at: string | null
+  last_heartbeat_at: string | null
+  last_user_agent: string | null
+  current_item_id: string | null
+  emergency_message: string | null
+  emergency_until: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type SignagePlaylist = {
+  id: string
+  org_id: string
+  property_id: string
+  name: string
+  is_default: boolean
+  created_at: string
+  updated_at: string
+}
+
+// payload shapes by kind. Keep these loose at the type level — the server
+// actions validate the contents before persisting.
+export type SignageItemPayload =
+  | { r2_key: string; poster_key?: string | null }     // image / video
+  | { url: string }                                     // web
+  | {                                                   // text
+      heading: string
+      subheading?: string | null
+      background?: string | null
+      color?: string | null
+    }
+
+export type SignagePlaylistItem = {
+  id: string
+  playlist_id: string
+  org_id: string
+  kind: SignageItemKind
+  payload: SignageItemPayload
+  duration_seconds: number
+  sort_order: number
+  created_at: string
+}
+
+export type SignageSchedule = {
+  id: string
+  screen_id: string
+  playlist_id: string
+  org_id: string
+  starts_on: string | null
+  ends_on: string | null
+  start_time: string | null
+  end_time: string | null
+  priority: number
+  created_at: string
+}

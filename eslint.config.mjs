@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     // Worker has its own tsconfig + @cloudflare/workers-types; it's not a
     // Next.js source. Lint it via `cd workers/cdn-gate && tsc --noEmit`.
     "workers/**",
+    // Signage is a separate Next.js app with its own deploy lifecycle and
+    // its own lint config. Lint it via `cd signage && npm run lint`.
+    "signage/**",
   ]),
 ]);
 
