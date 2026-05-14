@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import type Stripe from 'stripe'
 import { requireOrgOwner } from '@/lib/auth/session'
 import { stripe } from '@/lib/stripe/client'
 import {
@@ -23,21 +22,29 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * either silently auto-charge whatever card happened to be most recent
  * (wrong on multi-card accounts) or never auto-charge new properties at
  * all (annoying on single-card accounts).
+ *
+ * Returned as a literal so TS infers the discriminated union exactly —
+ * the Stripe SDK exposes Checkout.SessionCreateParams as a type alias
+ * (not a namespace), so we can't directly type a const as
+ * SessionCreateParams.CustomField.
  */
-const AUTOPAY_CUSTOM_FIELD: Stripe.Checkout.SessionCreateParams.CustomField = {
-  key: 'autopay_default',
-  type: 'dropdown',
-  label: {
-    type: 'custom',
-    custom: 'Use this card as the default for auto-payment on new properties?',
-  },
-  dropdown: {
-    options: [
-      { label: 'Yes — use as default for auto-pay', value: 'yes' },
-      { label: 'No — only use it for this property', value: 'no' },
-    ],
-    default_value: 'yes',
-  },
+function autopayCustomField() {
+  return {
+    key: 'autopay_default',
+    type: 'dropdown' as const,
+    label: {
+      type: 'custom' as const,
+      custom:
+        'Use this card as the default for auto-payment on new properties?',
+    },
+    dropdown: {
+      options: [
+        { label: 'Yes — use as default for auto-pay', value: 'yes' },
+        { label: 'No — only use it for this property', value: 'no' },
+      ],
+      default_value: 'yes',
+    },
+  }
 }
 
 export const runtime = 'nodejs'
@@ -129,7 +136,7 @@ export async function POST(request: Request) {
       payment_method_types: ['card'],
       success_url: successUrl,
       cancel_url: cancelUrl,
-      custom_fields: [AUTOPAY_CUSTOM_FIELD],
+      custom_fields: [autopayCustomField()],
       // The webhook reads these to know which subscription to attach the
       // new card to. property_id is the source of truth; subscription_id is
       // a convenience so the handler doesn't have to re-query.
@@ -170,7 +177,7 @@ export async function POST(request: Request) {
       { price: recurringPriceId, quantity: 1 },
       ...(setupFeePriceId ? [{ price: setupFeePriceId, quantity: 1 }] : []),
     ],
-    custom_fields: [AUTOPAY_CUSTOM_FIELD],
+    custom_fields: [autopayCustomField()],
     subscription_data: {
       description: `HotelOps subscription — ${property.name}`,
       metadata: {
