@@ -10,7 +10,6 @@ import {
   sendSignupVerificationEmail,
 } from '@/lib/email/send'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
 
 export type SignupActionResult = { error?: string }
 
