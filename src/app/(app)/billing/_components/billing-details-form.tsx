@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useState } from 'react'
+import { useActionState, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,17 +11,17 @@ const initial: ActionResult = {}
 
 export function BillingDetailsForm({ details }: { details: BillingDetails }) {
   const [editing, setEditing] = useState(false)
+  // Wrap the server action so a successful save also flips us back to the
+  // read-only summary. Doing it here (inside the transition that
+  // useActionState already opens) avoids a follow-up setState-in-effect.
   const [state, action, pending] = useActionState(
-    updateBillingDetailsAction,
+    async (prev: ActionResult, fd: FormData): Promise<ActionResult> => {
+      const result = await updateBillingDetailsAction(prev, fd)
+      if (result.success) setEditing(false)
+      return result
+    },
     initial,
   )
-
-  // Collapse back to read-only after a successful save. The details prop
-  // is refreshed via revalidatePath, so the summary will reflect the new
-  // values.
-  useEffect(() => {
-    if (state.success) setEditing(false)
-  }, [state.success])
 
   if (!editing) {
     return (
