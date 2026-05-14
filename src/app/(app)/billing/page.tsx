@@ -29,6 +29,7 @@ import { AddonToggle } from './_components/addon-toggle'
 import { BillingDetailsForm } from './_components/billing-details-form'
 import { PropertyCardManager } from './_components/property-card-manager'
 import { ResubscribeButton } from './_components/resubscribe-button'
+import { ResyncButton } from './_components/resync-button'
 
 export default async function BillingPage() {
   const session = await requireSession()
@@ -228,10 +229,11 @@ function PropertyBillingTable({
     // The Saved-cards popover uses position:fixed (see property-card-manager)
     // so the outer scroll wrapper here does not clip it.
     <Card className="overflow-hidden">
-      <div className="px-5 py-4 border-b border-border-subtle">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-border-subtle">
         <h2 className="text-sm font-semibold text-fg">
           Property subscriptions
         </h2>
+        {canManage ? <ResyncButton /> : null}
       </div>
       <div className="overflow-x-auto">
       <table className="w-full text-sm">

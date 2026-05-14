@@ -521,6 +521,68 @@ export async function updateBillingDetailsAction(
 }
 
 // ----------------------------------------------------------------------------
+// Re-sync from Stripe — recovery path when a billing row is out of date
+//
+// Walks every Subscription on the org's Stripe Customer and re-mirrors
+// each one through syncSubscriptionToDb. Use when a property shows
+// "Not Started" but Stripe has it active (webhook missed an event,
+// migration race, etc.). Owner-only.
+// ----------------------------------------------------------------------------
+export async function resyncSubscriptionsAction(): Promise<ActionResult> {
+  const session = await requireOrgOwner()
+  const customerId = await getStripeCustomerForOrg(session.organization.id)
+  if (!customerId) {
+    return { error: 'This org has no Stripe customer yet.' }
+  }
+
+  const stripeClient = stripe()
+  let mirrored = 0
+  let skipped = 0
+  // List every Subscription on the customer (any status). We rely on the
+  // metadata.property_id stamped on subscription_data when
+  // /api/stripe/setup-checkout created them.
+  for await (const sub of stripeClient.subscriptions.list({
+    customer: customerId,
+    status: 'all',
+    limit: 100,
+  })) {
+    const propertyIdFromMeta =
+      (sub.metadata?.property_id as string | undefined) ?? null
+    const orgIdFromMeta =
+      (sub.metadata?.org_id as string | undefined) ?? null
+    // Refuse to mirror subscriptions whose org metadata doesn't match
+    // the caller's org — defense in depth in case a Stripe customer
+    // somehow ended up shared across HotelOps tenants.
+    if (orgIdFromMeta && orgIdFromMeta !== session.organization.id) {
+      skipped += 1
+      continue
+    }
+    if (!propertyIdFromMeta) {
+      skipped += 1
+      continue
+    }
+    try {
+      await syncSubscriptionToDb(propertyIdFromMeta, session.organization.id, sub)
+      mirrored += 1
+    } catch (err) {
+      console.warn(
+        '[billing] resyncSubscriptionsAction failed for sub',
+        sub.id,
+        err instanceof Error ? err.message : err,
+      )
+      skipped += 1
+    }
+  }
+
+  revalidatePath('/billing')
+  return {
+    success: `Re-synced ${mirrored} subscription${mirrored === 1 ? '' : 's'}${
+      skipped > 0 ? ` (${skipped} skipped)` : ''
+    }.`,
+  }
+}
+
+// ----------------------------------------------------------------------------
 // Add-on subscription items
 //
 // Operator-driven, no feature gates yet: every property can use signage and

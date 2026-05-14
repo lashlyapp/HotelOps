@@ -306,10 +306,6 @@ export async function syncSubscriptionToDb(
     default_payment_method_id: defaultPmId,
     default_payment_brand: pmBrand,
     default_payment_last4: pmLast4,
-    signage_unlimited_active: addons.signage_unlimited.active,
-    signage_unlimited_item_id: addons.signage_unlimited.itemId,
-    guest_experience_active: addons.guest_experience.active,
-    guest_experience_item_id: addons.guest_experience.itemId,
     updated_at: new Date().toISOString(),
   }
   if (Object.prototype.hasOwnProperty.call(options, 'paymentMethodDueAt')) {
@@ -318,10 +314,49 @@ export async function syncSubscriptionToDb(
       : null
   }
 
+  // Add-on columns were introduced in migration 20260514050000. We write
+  // them in a separate, best-effort statement so that a deployment that
+  // outpaces the migration apply doesn't fail the main subscription
+  // mirror — the base columns above are what /billing relies on to know
+  // a property is "Active" at all. Without this split, a missing column
+  // turned every customer.subscription.* event into a 500 and the row
+  // never got created (which is exactly how Grand Hotel ended up showing
+  // "Not Started" while Stripe had it Active).
+  const addonUpdate = {
+    signage_unlimited_active: addons.signage_unlimited.active,
+    signage_unlimited_item_id: addons.signage_unlimited.itemId,
+    guest_experience_active: addons.guest_experience.active,
+    guest_experience_item_id: addons.guest_experience.itemId,
+  }
+
   const { error } = await admin
     .from('billing_subscriptions')
     .upsert(update, { onConflict: 'property_id' })
   if (error) throw error
+
+  // Best-effort add-on column update. Swallow "column does not exist"
+  // (Postgres SQLSTATE 42703) so the webhook stays green during the
+  // migration-apply window. Once the migration runs, this becomes a
+  // normal no-op-when-unchanged update.
+  try {
+    const { error: addonErr } = await admin
+      .from('billing_subscriptions')
+      .update(addonUpdate)
+      .eq('property_id', propertyId)
+    if (addonErr) {
+      const code = (addonErr as { code?: string }).code
+      if (code !== '42703') throw addonErr
+      console.warn(
+        '[billing] addon columns not present yet (migration pending?)',
+        addonErr.message,
+      )
+    }
+  } catch (err) {
+    console.warn(
+      '[billing] addon column write failed; main mirror is still committed',
+      err instanceof Error ? err.message : err,
+    )
+  }
 
   // Propagate the (possibly new) gate state to Cloudflare KV so the
   // cdn-gate Worker enforces it on incoming media requests. The CDN gate
