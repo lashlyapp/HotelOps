@@ -1,7 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isInternalEmail } from '@/lib/admin/policy'
 
 const LAST_ACTIVE_COOKIE = 'ho.last_active'
+// Internal (platform-admin-domain) accounts get a tighter window because
+// their session reaches across tenants. Picking by email domain keeps
+// the proxy off the database — every authed request would otherwise
+// pay for a `profiles` lookup. `isInternalEmail` already gates real
+// platform-admin promotion (see requirePlatformAdmin), so it's the same
+// surface area in practice.
 const PLATFORM_ADMIN_TIMEOUT_MS = 30 * 60 * 1000
 const DEFAULT_TIMEOUT_MS = 60 * 60 * 1000
 
@@ -53,19 +60,9 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname
   const onAuthRoute = AUTH_PATH_PREFIXES.some((p) => path.startsWith(p))
 
-  // Pull role to pick the right timeout. Platform admins get the tighter
-  // window because their session can reach every tenant. The role is
-  // looked up via the user's own RLS-scoped client, so the query is a
-  // single indexed read.
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle()
-  const timeoutMs =
-    profile?.role === 'platform_admin'
-      ? PLATFORM_ADMIN_TIMEOUT_MS
-      : DEFAULT_TIMEOUT_MS
+  const timeoutMs = isInternalEmail(user.email)
+    ? PLATFORM_ADMIN_TIMEOUT_MS
+    : DEFAULT_TIMEOUT_MS
 
   const now = Date.now()
   const lastActiveStr = request.cookies.get(LAST_ACTIVE_COOKIE)?.value

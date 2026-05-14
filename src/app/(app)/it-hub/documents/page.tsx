@@ -110,7 +110,7 @@ export default async function DocumentsPage({
   soon.setDate(today.getDate() + 30)
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-5xl">
       <div>
         <h2 className="text-lg font-semibold tracking-tight text-fg">
           Documents

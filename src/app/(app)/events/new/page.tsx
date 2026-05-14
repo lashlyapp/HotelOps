@@ -7,7 +7,7 @@ export default async function NewEventPage() {
   const session = await requireOrgUser()
 
   return (
-    <div className="p-8 space-y-5 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-5 max-w-3xl">
       <div>
         <Link
           href="/events"

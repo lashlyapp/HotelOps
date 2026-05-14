@@ -43,7 +43,7 @@ export default async function PropertiesPage() {
   ])
 
   return (
-    <div className="p-8 max-w-3xl space-y-6">
+    <div className="p-4 sm:p-8 max-w-3xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-fg">
           Properties
@@ -57,7 +57,7 @@ export default async function PropertiesPage() {
       <Card className="overflow-hidden">
         <ul className="divide-y divide-border-subtle">
           {rows.length === 0 ? (
-            <li className="p-8 text-center text-sm text-muted">
+            <li className="p-4 sm:p-8 text-center text-sm text-muted">
               No properties yet.{' '}
               {subscriptionRequired
                 ? 'Start your subscription below to add the first one.'

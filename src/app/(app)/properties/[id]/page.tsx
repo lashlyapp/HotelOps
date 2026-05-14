@@ -25,7 +25,7 @@ export default async function PropertyEditPage({
   const property = data as Property
 
   return (
-    <div className="p-8 max-w-3xl space-y-6">
+    <div className="p-4 sm:p-8 max-w-3xl space-y-6">
       <div>
         <Link
           href="/properties"

@@ -1,8 +1,11 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { Wordmark } from '@/components/brand/wordmark'
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 /**
  * Mobile-only top bar with a hamburger that toggles a slide-in drawer
@@ -22,18 +25,47 @@ export function MobileNav({ children }: { children: ReactNode }) {
     setOpen(false)
   }
 
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
+  const drawerRef = useRef<HTMLElement | null>(null)
+  const firstFocusRef = useRef<HTMLButtonElement | null>(null)
+
   useEffect(() => {
     if (!open) return
+    const trigger = triggerRef.current
+
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') {
+        setOpen(false)
+        return
+      }
+      if (e.key !== 'Tab') return
+      const drawer = drawerRef.current
+      if (!drawer) return
+      const focusable = drawer.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      const active = document.activeElement as HTMLElement | null
+      if (e.shiftKey && (active === first || !drawer.contains(active))) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault()
+        first.focus()
+      }
     }
     document.addEventListener('keydown', onKey)
     // Lock background scroll while the drawer is open.
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    // Move focus into the drawer (the close button) so screen readers
+    // announce it and Tab cycles inside the trap.
+    firstFocusRef.current?.focus()
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prevOverflow
+      // Return focus to the hamburger that opened the drawer.
+      trigger?.focus()
     }
   }, [open])
 
@@ -41,6 +73,7 @@ export function MobileNav({ children }: { children: ReactNode }) {
     <>
       <header className="md:hidden flex items-center justify-between gap-3 border-b border-border-subtle bg-surface px-4 h-14">
         <button
+          ref={triggerRef}
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Open navigation"
@@ -64,9 +97,13 @@ export function MobileNav({ children }: { children: ReactNode }) {
             className="absolute inset-0 bg-black/50"
             onClick={() => setOpen(false)}
           />
-          <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] flex flex-col bg-surface-muted border-r border-border-subtle shadow-xl">
+          <aside
+            ref={drawerRef}
+            className="absolute inset-y-0 left-0 w-72 max-w-[85vw] flex flex-col bg-surface-muted border-r border-border-subtle shadow-xl"
+          >
             <div className="flex justify-end px-2 py-2 border-b border-border-subtle">
               <button
+                ref={firstFocusRef}
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close navigation"

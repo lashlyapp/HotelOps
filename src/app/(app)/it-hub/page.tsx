@@ -76,7 +76,7 @@ export default async function ItHubOverviewPage() {
   const recentDocs = allDocuments.slice(0, 5)
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <section
         aria-label="At a glance"
         className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"

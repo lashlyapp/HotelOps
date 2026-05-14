@@ -16,6 +16,12 @@ export default async function AppLayout({
 
   return (
     <div className="flex flex-1 min-h-0">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-fg focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
       <aside className="hidden md:flex w-64 flex-col border-r border-border-subtle bg-surface-muted">
         {nav}
       </aside>
@@ -23,7 +29,13 @@ export default async function AppLayout({
       <div className="flex flex-1 min-h-0 flex-col">
         <MobileNav>{nav}</MobileNav>
         <BillingBanner gate={session.gate} />
-        <main className="flex-1 min-h-0 overflow-auto">{children}</main>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex-1 min-h-0 overflow-auto"
+        >
+          {children}
+        </main>
         <Footer variant="app" />
       </div>
     </div>

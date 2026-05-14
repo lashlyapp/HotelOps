@@ -92,7 +92,7 @@ export default async function EventDetailPage({
   const balance = event.total_cents - paid
 
   return (
-    <div className="p-8 space-y-6 max-w-6xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-6xl">
       <div>
         <Link
           href="/events"

@@ -70,7 +70,7 @@ export default async function BillingPage() {
   }))
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-fg">
           Billing
@@ -224,14 +224,15 @@ function PropertyBillingTable({
   autopayDefaultPmId: string | null
 }) {
   return (
-    // No `overflow-hidden` here: the Saved-cards popover lives inside the
-    // last cell and needs to escape the card bounds.
-    <Card>
+    // The Saved-cards popover uses position:fixed (see property-card-manager)
+    // so the outer scroll wrapper here does not clip it.
+    <Card className="overflow-hidden">
       <div className="px-5 py-4 border-b border-border-subtle">
         <h2 className="text-sm font-semibold text-fg">
           Property subscriptions
         </h2>
       </div>
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
           <tr>
@@ -256,6 +257,7 @@ function PropertyBillingTable({
           ))}
         </tbody>
       </table>
+      </div>
     </Card>
   )
 }

@@ -25,7 +25,7 @@ export default async function MediaPage({
 
   if (session.gate.restrictMedia) {
     return (
-      <div className="p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <PageHeader title="Media catalog" />
         <Card>
           <div className="p-6 space-y-3">
@@ -50,7 +50,7 @@ export default async function MediaPage({
 
   if (session.properties.length === 0) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <PageHeader title="Media catalog" />
         <p className="mt-4 text-sm text-muted">
           No properties yet. Contact your admin to add one.
@@ -74,7 +74,7 @@ export default async function MediaPage({
   const stats = computeLibraryStats(files)
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <PageHeader
         title="Media catalog"
         subtitle={`Centralized library for ${session.organization.name}. Upload, tag, and share photos and videos across your properties.`}

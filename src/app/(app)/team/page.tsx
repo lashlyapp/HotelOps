@@ -18,7 +18,7 @@ export default async function TeamPage() {
   const team = await loadTeam(session.organization.id)
 
   return (
-    <div className="p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-fg">
           Team
