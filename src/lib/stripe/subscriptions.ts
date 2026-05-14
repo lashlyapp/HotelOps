@@ -529,6 +529,58 @@ function extractSubscriptionId(inv: Stripe.Invoice): string | null {
   return null
 }
 
+export type BillingDetails = {
+  email: string | null
+  name: string | null
+  address: {
+    line1: string | null
+    line2: string | null
+    city: string | null
+    state: string | null
+    postal_code: string | null
+    country: string | null
+  }
+}
+
+/**
+ * Read the org's Stripe Customer billing identity (email, company name,
+ * postal address). This is the data Stripe prints on invoices and uses
+ * for receipts / dunning emails. Returned shape is friendly for an
+ * in-app form so we can edit it without sending users out to the Stripe
+ * Customer Portal.
+ *
+ * Returns null when the org has no Stripe Customer yet (pre-checkout) or
+ * when the Customer was deleted Stripe-side. Falls back to a blank shape
+ * on transient Stripe errors so the form still renders rather than 500.
+ */
+export async function getBillingDetails(
+  customerId: string,
+): Promise<BillingDetails | null> {
+  try {
+    const customer = await stripe().customers.retrieve(customerId)
+    if (customer.deleted) return null
+    const addr = customer.address
+    return {
+      email: customer.email ?? null,
+      name: customer.name ?? null,
+      address: {
+        line1: addr?.line1 ?? null,
+        line2: addr?.line2 ?? null,
+        city: addr?.city ?? null,
+        state: addr?.state ?? null,
+        postal_code: addr?.postal_code ?? null,
+        country: addr?.country ?? null,
+      },
+    }
+  } catch (err) {
+    console.warn(
+      '[stripe] customers.retrieve failed',
+      err instanceof Error ? err.message : err,
+    )
+    return null
+  }
+}
+
 export type SavedCard = {
   id: string
   brand: string | null

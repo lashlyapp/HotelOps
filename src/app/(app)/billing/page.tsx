@@ -9,6 +9,7 @@ import {
   type PriceSnapshot,
 } from '@/lib/stripe/prices'
 import {
+  getBillingDetails,
   getOrgAutopayDefaultPaymentMethod,
   getStripeCustomerForOrg,
   getSubscriptionsForOrg,
@@ -24,6 +25,7 @@ import type {
   Property,
 } from '@/lib/supabase/types'
 import { StripeRedirectButton } from './_components/billing-actions'
+import { BillingDetailsForm } from './_components/billing-details-form'
 import { PropertyCardManager } from './_components/property-card-manager'
 import { ResubscribeButton } from './_components/resubscribe-button'
 
@@ -51,7 +53,10 @@ export default async function BillingPage() {
       HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
     ),
   ])
-  const stripeInvoices = customerId ? await listStripeInvoices(customerId) : []
+  const [stripeInvoices, billingDetails] = await Promise.all([
+    customerId ? listStripeInvoices(customerId) : Promise.resolve([]),
+    customerId ? getBillingDetails(customerId) : Promise.resolve(null),
+  ])
   const isOwner = session.profile.role === 'org_owner'
 
   // Pair every property with its subscription (or null if it doesn't have
@@ -102,25 +107,20 @@ export default async function BillingPage() {
         propertyBySubscriptionId={propertyBySubscriptionId(rows)}
       />
 
-      {customerId && isOwner ? (
+      {customerId && isOwner && billingDetails ? (
         <Card>
-          <div className="p-5 space-y-3">
-            <h2 className="text-sm font-semibold text-fg">
-              Customer-level billing
-            </h2>
-            <p className="text-sm text-muted leading-relaxed">
-              View and update your billing email, address, and saved payment
-              methods. Per-property card selection is managed in the table
-              above.
-            </p>
-            <div className="pt-1">
-              <StripeRedirectButton
-                endpoint="/api/stripe/portal"
-                variant="secondary"
-              >
-                Open Stripe billing portal
-              </StripeRedirectButton>
+          <div className="p-5 space-y-4">
+            <div className="space-y-1">
+              <h2 className="text-sm font-semibold text-fg">
+                Billing contact &amp; address
+              </h2>
+              <p className="text-sm text-muted leading-relaxed">
+                Where invoices, receipts, and payment-failure notices are
+                sent, and the address printed on every invoice. Per-property
+                card selection is managed in the table above.
+              </p>
             </div>
+            <BillingDetailsForm details={billingDetails} />
           </div>
         </Card>
       ) : null}
