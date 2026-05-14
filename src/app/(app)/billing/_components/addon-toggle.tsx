@@ -45,27 +45,31 @@ export function AddonToggle({
   const action = active ? removeAction : addAction
   const verb = active ? 'Remove' : 'Add'
 
+  const tooltip = active
+    ? 'Active. Prorated credit if removed mid-cycle.'
+    : 'Adds a line item to this property’s next invoice (prorated).'
+
   return (
-    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p className="text-sm font-medium text-fg">
-          {label}{' '}
-          <span className="text-xs text-subtle">
-            · {formatPrice(priceCents)} / month
+    <div className="flex items-center justify-between gap-3 py-1">
+      <div className="min-w-0">
+        <p className="text-sm text-fg" title={tooltip}>
+          <span className="font-medium">{label}</span>
+          <span className="ml-1 text-xs text-subtle">
+            {formatPrice(priceCents)}/mo
           </span>
-        </p>
-        <p className="text-xs text-muted">
-          {active
-            ? 'Active. Prorated credit applied if removed mid-cycle.'
-            : 'Adds a line item to this property’s next invoice (prorated).'}
+          {active ? (
+            <span className="ml-2 inline-flex items-center rounded-full bg-success-bg px-1.5 text-[10px] font-medium text-success-fg">
+              On
+            </span>
+          ) : null}
         </p>
         {message ? (
-          <p className="mt-1 text-xs text-danger-fg" role="alert">
+          <p className="mt-0.5 text-[11px] text-danger-fg" role="alert">
             {message}
           </p>
         ) : null}
         {serverEcho && !message ? (
-          <p className="mt-1 text-xs text-success-fg">{serverEcho}</p>
+          <p className="mt-0.5 text-[11px] text-success-fg">{serverEcho}</p>
         ) : null}
       </div>
       <form action={action}>
@@ -74,7 +78,7 @@ export function AddonToggle({
         <Button
           type="submit"
           size="sm"
-          variant={active ? 'secondary' : 'primary'}
+          variant={active ? 'ghost' : 'secondary'}
           disabled={pending}
         >
           {pending ? '…' : verb}

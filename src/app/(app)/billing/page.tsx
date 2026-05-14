@@ -547,8 +547,10 @@ function capitalize(s: string | null | undefined): string {
 
 /**
  * Renders below the property row when the property has an active
- * subscription. Lists the two add-ons with their current state — the
- * operator toggles each independently. See docs/pricing.md.
+ * subscription. Visually nests under its parent — no top border, indented
+ * with a left accent rule, compact inline layout — so it reads as "these
+ * add-ons belong to the property above" rather than a peer row. See
+ * docs/pricing.md.
  */
 function AddonsRow({
   propertyId,
@@ -558,13 +560,13 @@ function AddonsRow({
   subscription: BillingSubscription
 }) {
   return (
-    <tr className="bg-surface-muted/40">
-      <td colSpan={6} className="px-4 py-3">
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-wider text-subtle">
+    <tr className="!border-t-0">
+      <td colSpan={6} className="px-4 pt-0 pb-3">
+        <div className="ml-4 border-l-2 border-border-subtle pl-4">
+          <p className="mb-1.5 text-[10px] uppercase tracking-[0.18em] text-subtle">
             Add-ons
           </p>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
             <AddonToggle
               propertyId={propertyId}
               addonKey="signage_unlimited"
