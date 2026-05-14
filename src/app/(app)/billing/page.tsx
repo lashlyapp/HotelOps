@@ -224,7 +224,9 @@ function PropertyBillingTable({
   autopayDefaultPmId: string | null
 }) {
   return (
-    <Card className="overflow-hidden">
+    // No `overflow-hidden` here: the Saved-cards popover lives inside the
+    // last cell and needs to escape the card bounds.
+    <Card>
       <div className="px-5 py-4 border-b border-border-subtle">
         <h2 className="text-sm font-semibold text-fg">
           Property subscriptions

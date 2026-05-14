@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,10 +10,36 @@ import { updateBillingDetailsAction, type ActionResult } from '../actions'
 const initial: ActionResult = {}
 
 export function BillingDetailsForm({ details }: { details: BillingDetails }) {
+  const [editing, setEditing] = useState(false)
   const [state, action, pending] = useActionState(
     updateBillingDetailsAction,
     initial,
   )
+
+  // Collapse back to read-only after a successful save. The details prop
+  // is refreshed via revalidatePath, so the summary will reflect the new
+  // values.
+  useEffect(() => {
+    if (state.success) setEditing(false)
+  }, [state.success])
+
+  if (!editing) {
+    return (
+      <div className="space-y-4">
+        <BillingDetailsSummary details={details} />
+        {state.success ? (
+          <p className="text-sm text-success-fg">{state.success}</p>
+        ) : null}
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => setEditing(true)}
+        >
+          Edit billing details
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <form action={action} className="space-y-4">
@@ -125,13 +151,78 @@ export function BillingDetailsForm({ details }: { details: BillingDetails }) {
       {state.error ? (
         <p className="text-sm text-danger-fg">{state.error}</p>
       ) : null}
-      {state.success ? (
-        <p className="text-sm text-success-fg">{state.success}</p>
-      ) : null}
 
-      <Button type="submit" disabled={pending}>
-        {pending ? 'Saving…' : 'Save billing details'}
-      </Button>
+      <div className="flex gap-2">
+        <Button type="submit" disabled={pending}>
+          {pending ? 'Saving…' : 'Save billing details'}
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={pending}
+          onClick={() => setEditing(false)}
+        >
+          Cancel
+        </Button>
+      </div>
     </form>
   )
+}
+
+function BillingDetailsSummary({ details }: { details: BillingDetails }) {
+  const addressLines = formatAddressLines(details.address)
+  return (
+    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+      <SummaryRow label="Billing email">
+        {details.email ?? <span className="text-subtle">Not set</span>}
+      </SummaryRow>
+      <SummaryRow label="Company name">
+        {details.name ?? <span className="text-subtle">Not set</span>}
+      </SummaryRow>
+      <SummaryRow label="Address" className="sm:col-span-2">
+        {addressLines.length === 0 ? (
+          <span className="text-subtle">Not set</span>
+        ) : (
+          <div className="space-y-0.5">
+            {addressLines.map((line, i) => (
+              <div key={i}>{line}</div>
+            ))}
+          </div>
+        )}
+      </SummaryRow>
+    </dl>
+  )
+}
+
+function SummaryRow({
+  label,
+  children,
+  className,
+}: {
+  label: string
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={className}>
+      <dt className="text-xs uppercase tracking-wider text-subtle">{label}</dt>
+      <dd className="mt-1 text-fg">{children}</dd>
+    </div>
+  )
+}
+
+function formatAddressLines(address: BillingDetails['address']): string[] {
+  const lines: string[] = []
+  if (address.line1) lines.push(address.line1)
+  if (address.line2) lines.push(address.line2)
+  const cityStatePostal = [
+    address.city,
+    address.state,
+    address.postal_code,
+  ]
+    .filter(Boolean)
+    .join(', ')
+  if (cityStatePostal) lines.push(cityStatePostal)
+  if (address.country) lines.push(address.country)
+  return lines
 }
