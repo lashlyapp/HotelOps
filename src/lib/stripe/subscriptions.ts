@@ -86,6 +86,78 @@ export async function ensureStripeCustomer({
 }
 
 /**
+ * Resolve the payment method id we should reuse when starting a fresh
+ * subscription for a property whose previous sub has ended (resubscribe
+ * flow). Strategy: take the default_payment_method_id stamped on the
+ * most-recent billing_subscriptions row for the property, but only after
+ * confirming the PM is still attached to this org's Stripe Customer —
+ * the customer might have detached it from the wallet in the interim.
+ *
+ * Returns null when no prior PM is recoverable. Callers that get null
+ * should fall back to send_invoice + grace days so the customer can pay
+ * the first invoice manually or attach a fresh card.
+ */
+export async function resolveResubscribePaymentMethod(
+  propertyId: string,
+  customerId: string,
+): Promise<string | null> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('billing_subscriptions')
+    .select('default_payment_method_id')
+    .eq('property_id', propertyId)
+    .maybeSingle()
+  if (error) throw error
+  const pmId = data?.default_payment_method_id ?? null
+  if (!pmId) return null
+
+  try {
+    const pm = await stripe().paymentMethods.retrieve(pmId)
+    const pmCustomer =
+      typeof pm.customer === 'string' ? pm.customer : (pm.customer?.id ?? null)
+    if (pmCustomer !== customerId) return null
+    return pmId
+  } catch {
+    // Detached / deleted PM — can't reuse.
+    return null
+  }
+}
+
+/**
+ * Best-effort: pay the most-recent open invoice for a subscription using
+ * the provided payment method. Used after a card is attached/swapped so
+ * the customer isn't left with a still-open first invoice that they
+ * didn't realize wasn't paid by the act of putting the card on file.
+ *
+ * Swallows decline / "no open invoice" / network failures so the caller
+ * isn't forced to error out the surrounding UX flow — if the charge
+ * fails, the invoice stays open and Stripe's normal dunning takes over.
+ */
+export async function payOpenInvoiceForSubscription(
+  subscriptionId: string,
+  paymentMethodId: string,
+): Promise<{ paid: boolean; reason?: string }> {
+  const s = stripe()
+  try {
+    const subscription = await s.subscriptions.retrieve(subscriptionId, {
+      expand: ['latest_invoice'],
+    })
+    const latest = subscription.latest_invoice
+    if (!latest || typeof latest === 'string') return { paid: false, reason: 'no-invoice' }
+    if (latest.status !== 'open') return { paid: false, reason: 'not-open' }
+    if (!latest.id) return { paid: false, reason: 'no-id' }
+    if ((latest.amount_due ?? 0) <= 0) return { paid: false, reason: 'zero-due' }
+
+    await s.invoices.pay(latest.id, { payment_method: paymentMethodId })
+    return { paid: true }
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : 'unknown'
+    console.warn('[stripe] payOpenInvoiceForSubscription failed', reason)
+    return { paid: false, reason }
+  }
+}
+
+/**
  * Has this property ever had a Stripe subscription? Used to decide
  * whether to include the one-time setup fee in a new property
  * subscription: charge it on a property's first-ever sub, but not on
@@ -277,6 +349,48 @@ export async function getSubscriptionsForOrg(
     .order('created_at', { ascending: true })
   if (error) throw error
   return (data as BillingSubscription[] | null) ?? []
+}
+
+/**
+ * Resolve the org's designated auto-pay default payment method. The
+ * source of truth is the Stripe Customer's invoice_settings
+ * .default_payment_method — set only when the customer explicitly opts
+ * in via the autopay_default custom_field on Checkout. Returns null
+ * when nothing is designated (in which case callers should fall back to
+ * send_invoice rather than guessing which card to charge).
+ *
+ * Also returns null when the designated PM has been detached from the
+ * Customer wallet — that's the safe interpretation of "card is no
+ * longer available for auto-pay".
+ */
+export async function getOrgAutopayDefaultPaymentMethod(
+  orgId: string,
+): Promise<string | null> {
+  const customerId = await getStripeCustomerForOrg(orgId)
+  if (!customerId) return null
+  try {
+    const customer = await stripe().customers.retrieve(customerId)
+    if (customer.deleted) return null
+    const pm = customer.invoice_settings?.default_payment_method
+    const pmId = typeof pm === 'string' ? pm : (pm?.id ?? null)
+    if (!pmId) return null
+
+    // Validate the PM is still attached. customers.retrieve doesn't
+    // detect detached PMs, so we do a focused retrieve to be sure.
+    const pmObject = await stripe().paymentMethods.retrieve(pmId)
+    const pmCustomer =
+      typeof pmObject.customer === 'string'
+        ? pmObject.customer
+        : (pmObject.customer?.id ?? null)
+    if (pmCustomer !== customerId) return null
+    return pmId
+  } catch (err) {
+    console.warn(
+      '[stripe] getOrgAutopayDefaultPaymentMethod failed',
+      err instanceof Error ? err.message : err,
+    )
+    return null
+  }
 }
 
 /**

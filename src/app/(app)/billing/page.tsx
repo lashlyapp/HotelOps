@@ -2,7 +2,14 @@ import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requireSession } from '@/lib/auth/session'
 import { BRAND } from '@/lib/brand'
+import { stripe } from '@/lib/stripe/client'
 import {
+  HOTELOPS_PRICE_LOOKUP_KEYS,
+  resolvePriceSnapshotByLookupKey,
+  type PriceSnapshot,
+} from '@/lib/stripe/prices'
+import {
+  getOrgAutopayDefaultPaymentMethod,
   getStripeCustomerForOrg,
   getSubscriptionsForOrg,
   listOrgPaymentMethods,
@@ -21,10 +28,27 @@ import { ResubscribeButton } from './_components/resubscribe-button'
 
 export default async function BillingPage() {
   const session = await requireSession()
-  const [subscriptions, customerId, savedCards] = await Promise.all([
+  const stripeClient = stripe()
+  const [
+    subscriptions,
+    customerId,
+    savedCards,
+    autopayDefaultPmId,
+    monthlyPrice,
+    setupFeePrice,
+  ] = await Promise.all([
     getSubscriptionsForOrg(session.organization.id),
     getStripeCustomerForOrg(session.organization.id),
     listOrgPaymentMethods(session.organization.id),
+    getOrgAutopayDefaultPaymentMethod(session.organization.id),
+    resolvePriceSnapshotByLookupKey(
+      stripeClient,
+      HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
+    ),
+    resolvePriceSnapshotByLookupKey(
+      stripeClient,
+      HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
+    ),
   ])
   const stripeInvoices = customerId ? await listStripeInvoices(customerId) : []
   const isOwner = session.profile.role === 'org_owner'
@@ -53,12 +77,16 @@ export default async function BillingPage() {
       </div>
 
       {rows.length === 0 ? (
-        <NoPropertiesCard />
+        <NoPropertiesCard
+          monthlyPrice={monthlyPrice}
+          setupFeePrice={setupFeePrice}
+        />
       ) : (
         <PropertyBillingTable
           rows={rows}
           canManage={isOwner}
           savedCards={savedCards}
+          autopayDefaultPmId={autopayDefaultPmId}
         />
       )}
 
@@ -90,32 +118,56 @@ export default async function BillingPage() {
   )
 }
 
-function NoPropertiesCard() {
+function NoPropertiesCard({
+  monthlyPrice,
+  setupFeePrice,
+}: {
+  monthlyPrice: PriceSnapshot | null
+  setupFeePrice: PriceSnapshot | null
+}) {
   return (
     <Card>
       <div className="p-5 space-y-3">
         <h2 className="text-sm font-semibold text-fg">No properties yet</h2>
         <p className="text-sm text-muted leading-relaxed">
           {BRAND.name} bills{' '}
-          <strong className="text-fg">$100 / month per property</strong> plus a
-          one-time <strong className="text-fg">$250 setup fee</strong> on your
-          first property&apos;s invoice. Add your first property from the
-          Properties page; each property gets its own subscription with its
-          own credit card.
+          <strong className="text-fg">
+            {formatRecurringPrice(monthlyPrice)} per property
+          </strong>{' '}
+          plus a one-time{' '}
+          <strong className="text-fg">
+            {formatOneTimePrice(setupFeePrice)} setup fee
+          </strong>{' '}
+          on each property&apos;s first invoice. Add your first property from
+          the Properties page; each property gets its own subscription with
+          its own credit card.
         </p>
       </div>
     </Card>
   )
 }
 
+function formatRecurringPrice(price: PriceSnapshot | null): string {
+  if (!price?.unitAmountCents) return 'standard pricing'
+  const amount = formatMoney(price.unitAmountCents, price.currency)
+  return price.interval ? `${amount} / ${price.interval}` : amount
+}
+
+function formatOneTimePrice(price: PriceSnapshot | null): string {
+  if (!price?.unitAmountCents) return 'no'
+  return formatMoney(price.unitAmountCents, price.currency)
+}
+
 function PropertyBillingTable({
   rows,
   canManage,
   savedCards,
+  autopayDefaultPmId,
 }: {
   rows: { property: Property; subscription: BillingSubscription | null }[]
   canManage: boolean
   savedCards: SavedCard[]
+  autopayDefaultPmId: string | null
 }) {
   return (
     <Card className="overflow-hidden">
@@ -143,6 +195,7 @@ function PropertyBillingTable({
               subscription={subscription}
               canManage={canManage}
               savedCards={savedCards}
+              autopayDefaultPmId={autopayDefaultPmId}
             />
           ))}
         </tbody>
@@ -156,11 +209,13 @@ function PropertyRow({
   subscription,
   canManage,
   savedCards,
+  autopayDefaultPmId,
 }: {
   property: Property
   subscription: BillingSubscription | null
   canManage: boolean
   savedCards: SavedCard[]
+  autopayDefaultPmId: string | null
 }) {
   const hasCard = Boolean(subscription?.default_payment_method_id)
   const daysLeft = daysUntil(subscription?.payment_method_due_at ?? null)
@@ -225,6 +280,7 @@ function PropertyRow({
               currentBrand={subscription.default_payment_brand ?? null}
               currentLast4={subscription.default_payment_last4 ?? null}
               savedCards={savedCards}
+              autopayDefaultPmId={autopayDefaultPmId}
               cancelAtPeriodEnd={subscription.cancel_at_period_end}
               currentPeriodEnd={subscription.current_period_end}
             />

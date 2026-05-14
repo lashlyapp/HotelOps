@@ -13,8 +13,17 @@ export const HOTELOPS_PRICE_LOOKUP_KEYS = {
   setupFee: 'hotelops_setup_fee',
 } as const
 
-type CacheEntry = { id: string | null; expiresAt: number }
-const cache = new Map<string, CacheEntry>()
+export type PriceSnapshot = {
+  id: string
+  unitAmountCents: number | null
+  currency: string
+  interval: Stripe.Price.Recurring.Interval | null
+}
+
+type IdCacheEntry = { id: string | null; expiresAt: number }
+type SnapshotCacheEntry = { snapshot: PriceSnapshot | null; expiresAt: number }
+const cache = new Map<string, IdCacheEntry>()
+const snapshotCache = new Map<string, SnapshotCacheEntry>()
 const TTL_MS = 5 * 60 * 1000
 
 /**
@@ -56,7 +65,45 @@ export async function requirePriceIdByLookupKey(
   return id
 }
 
+/**
+ * Resolve the full Price object (id + unit_amount + currency) for a
+ * lookup key. Used by the marketing/UI copy on /billing and /properties
+ * so the displayed amounts always match what Stripe will actually
+ * charge — no more hardcoded "$100 / month" strings going stale when
+ * pricing changes. Cached process-locally for the same TTL as the id
+ * resolver.
+ */
+export async function resolvePriceSnapshotByLookupKey(
+  stripeClient: Stripe,
+  lookupKey: string,
+): Promise<PriceSnapshot | null> {
+  const now = Date.now()
+  const cached = snapshotCache.get(lookupKey)
+  if (cached && cached.expiresAt > now) return cached.snapshot
+
+  const prices = await stripeClient.prices.list({
+    lookup_keys: [lookupKey],
+    active: true,
+    limit: 1,
+  })
+  const price = prices.data[0]
+  const snapshot: PriceSnapshot | null = price
+    ? {
+        id: price.id,
+        unitAmountCents: price.unit_amount,
+        currency: price.currency,
+        interval: price.recurring?.interval ?? null,
+      }
+    : null
+  snapshotCache.set(lookupKey, { snapshot, expiresAt: now + TTL_MS })
+  // Keep the id cache populated too so a later resolvePriceIdByLookupKey
+  // call doesn't double-fetch.
+  cache.set(lookupKey, { id: snapshot?.id ?? null, expiresAt: now + TTL_MS })
+  return snapshot
+}
+
 /** Test/script affordance — clears the in-memory cache. */
 export function _clearPriceCache(): void {
   cache.clear()
+  snapshotCache.clear()
 }

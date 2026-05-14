@@ -29,8 +29,9 @@ export function StartSubscriptionButton({
           `Start Stripe subscriptions for ${orgName}?\n\n` +
           `Creates one subscription per property (${n} total), each with ` +
           `quantity 1, using the hotelops_per_property_monthly price. The ` +
-          `one-time setup fee is added to the first property's invoice only. ` +
-          `Each customer gets 14 days to attach a card per subscription.`
+          `one-time setup fee is added to each property's first invoice ` +
+          `(skipped on resubscribe). Each customer gets 14 days to attach a ` +
+          `card per subscription.`
         if (!confirm(msg)) e.preventDefault()
       }}
       className="space-y-2"

@@ -13,6 +13,40 @@ import {
 } from '@/lib/stripe/subscriptions'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+/**
+ * Prompt the customer, inside Stripe's hosted Checkout form, whether the
+ * card they're entering should become the org's default for auto-paying
+ * future property invoices. The webhook reads this field's value on
+ * checkout.session.completed and, if 'yes', sets the Customer's
+ * invoice_settings.default_payment_method. Without this prompt we'd
+ * either silently auto-charge whatever card happened to be most recent
+ * (wrong on multi-card accounts) or never auto-charge new properties at
+ * all (annoying on single-card accounts).
+ *
+ * Returned as a literal so TS infers the discriminated union exactly —
+ * the Stripe SDK exposes Checkout.SessionCreateParams as a type alias
+ * (not a namespace), so we can't directly type a const as
+ * SessionCreateParams.CustomField.
+ */
+function autopayCustomField() {
+  return {
+    key: 'autopay_default',
+    type: 'dropdown' as const,
+    label: {
+      type: 'custom' as const,
+      custom:
+        'Use this card as the default for auto-payment on new properties?',
+    },
+    dropdown: {
+      options: [
+        { label: 'Yes — use as default for auto-pay', value: 'yes' },
+        { label: 'No — only use it for this property', value: 'no' },
+      ],
+      default_value: 'yes',
+    },
+  }
+}
+
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -86,13 +120,23 @@ export async function POST(request: Request) {
   })
 
   const existing = await getSubscriptionForProperty(property.id)
-  if (existing?.stripe_subscription_id) {
+  // Treat terminal-state rows as "no subscription" so a stale UI race
+  // (clicking "Add card" on a canceled sub before the page revalidates)
+  // doesn't try to attach a card to a dead subscription — Stripe would
+  // reject the update and the customer would see a raw error. Falling
+  // through here creates a fresh subscription instead.
+  const hasLiveSubscription =
+    Boolean(existing?.stripe_subscription_id) &&
+    existing?.status !== 'canceled' &&
+    existing?.status !== 'incomplete_expired'
+  if (hasLiveSubscription && existing?.stripe_subscription_id) {
     const checkout = await stripe().checkout.sessions.create({
       mode: 'setup',
       customer: customerId,
       payment_method_types: ['card'],
       success_url: successUrl,
       cancel_url: cancelUrl,
+      custom_fields: [autopayCustomField()],
       // The webhook reads these to know which subscription to attach the
       // new card to. property_id is the source of truth; subscription_id is
       // a convenience so the handler doesn't have to re-query.
@@ -133,6 +177,7 @@ export async function POST(request: Request) {
       { price: recurringPriceId, quantity: 1 },
       ...(setupFeePriceId ? [{ price: setupFeePriceId, quantity: 1 }] : []),
     ],
+    custom_fields: [autopayCustomField()],
     subscription_data: {
       description: `HotelOps subscription — ${property.name}`,
       metadata: {

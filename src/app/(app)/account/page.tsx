@@ -1,8 +1,9 @@
-import Link from 'next/link'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
-import { signOut } from '@/app/login/actions'
 import { requireSession } from '@/lib/auth/session'
+import { ChangeEmailForm } from './_components/change-email-form'
+import { ChangePasswordForm } from './_components/change-password-form'
 import { DeleteAccountSection } from './_components/delete-account-section'
+import { ProfileForm } from './_components/profile-form'
 
 export default async function AccountPage() {
   const session = await requireSession()
@@ -20,7 +21,7 @@ export default async function AccountPage() {
           Account
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Your profile and session.
+          Manage your personal profile and account security.
         </p>
       </div>
 
@@ -28,19 +29,17 @@ export default async function AccountPage() {
         <CardHeader>
           <CardTitle>Profile</CardTitle>
         </CardHeader>
-        <CardBody className="space-y-4">
-          <Field label="Email">{session.email}</Field>
-          <Field label="Role">
-            <span className="capitalize">
-              {session.profile.role.replace('_', ' ')}
-            </span>
-          </Field>
-          <Field label="Organization">{session.organization.name}</Field>
-          <Field label="Properties">
-            {session.properties.length === 0
-              ? '—'
-              : session.properties.map((p) => p.name).join(', ')}
-          </Field>
+        <CardBody>
+          <ProfileForm profile={session.profile} />
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Email</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <ChangeEmailForm currentEmail={session.email} />
         </CardBody>
       </Card>
 
@@ -48,30 +47,27 @@ export default async function AccountPage() {
         <CardHeader>
           <CardTitle>Security</CardTitle>
         </CardHeader>
-        <CardBody className="space-y-4">
-          <p className="text-sm text-muted">
-            Need to change your password?{' '}
-            <Link href="/set-password" className="text-fg underline">
-              Set a new one
-            </Link>
-            .
-          </p>
+        <CardBody>
+          <ChangePasswordForm />
         </CardBody>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Session</CardTitle>
+          <CardTitle>Organization</CardTitle>
         </CardHeader>
-        <CardBody>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="focus-ring rounded-md bg-danger-bg px-4 py-2 text-sm font-medium text-danger-fg hover:brightness-95 transition"
-            >
-              Sign out
-            </button>
-          </form>
+        <CardBody className="space-y-4">
+          <Field label="Name">{session.organization.name}</Field>
+          <Field label="Your role">
+            <span className="capitalize">
+              {session.profile.role.replace('_', ' ')}
+            </span>
+          </Field>
+          <Field label="Properties">
+            {session.properties.length === 0
+              ? '—'
+              : session.properties.map((p) => p.name).join(', ')}
+          </Field>
         </CardBody>
       </Card>
 

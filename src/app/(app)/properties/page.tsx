@@ -4,6 +4,12 @@ import { requireOrgOwner } from '@/lib/auth/session'
 import { listMediaForPropertyCached } from '@/lib/r2/list'
 import { computeLibraryStats, formatBytes } from '@/lib/r2/stats'
 import { r2PublicUrl } from '@/lib/r2/client'
+import { stripe } from '@/lib/stripe/client'
+import {
+  HOTELOPS_PRICE_LOOKUP_KEYS,
+  resolvePriceSnapshotByLookupKey,
+  type PriceSnapshot,
+} from '@/lib/stripe/prices'
 import { AddPropertyForm } from './_components/add-property-form'
 import { RemovePropertyButton } from './_components/remove-property-button'
 
@@ -14,12 +20,27 @@ export default async function PropertiesPage() {
   // for a billing CTA when no sub is on file.
   const subscriptionRequired = session.gate.status === 'no_subscription'
 
-  const rows = await Promise.all(
-    session.properties.map(async (p) => {
-      const files = await listMediaForPropertyCached(p.id, p.r2_prefix)
-      return { property: p, stats: computeLibraryStats(files) }
-    }),
-  )
+  const stripeClient = stripe()
+  const [rows, monthlyPrice, setupFeePrice] = await Promise.all([
+    Promise.all(
+      session.properties.map(async (p) => {
+        const files = await listMediaForPropertyCached(p.id, p.r2_prefix)
+        return { property: p, stats: computeLibraryStats(files) }
+      }),
+    ),
+    subscriptionRequired
+      ? resolvePriceSnapshotByLookupKey(
+          stripeClient,
+          HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
+        )
+      : Promise.resolve(null),
+    subscriptionRequired
+      ? resolvePriceSnapshotByLookupKey(
+          stripeClient,
+          HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
+        )
+      : Promise.resolve(null),
+  ])
 
   return (
     <div className="p-8 max-w-3xl space-y-6">
@@ -94,11 +115,16 @@ export default async function PropertiesPage() {
           {subscriptionRequired ? (
             <div className="space-y-3">
               <p className="text-sm text-muted leading-relaxed">
-                Pricing is per property: <strong className="text-fg">$100 / month</strong>{' '}
+                Pricing is per property:{' '}
+                <strong className="text-fg">
+                  {formatRecurringPrice(monthlyPrice)}
+                </strong>{' '}
                 per property plus a one-time{' '}
-                <strong className="text-fg">$250 setup fee</strong> on the first
-                invoice. We&apos;ll add your card and your first property in one
-                step.
+                <strong className="text-fg">
+                  {formatOneTimePrice(setupFeePrice)} setup fee
+                </strong>{' '}
+                charged on each property&apos;s first invoice. We&apos;ll add
+                your card and your first property in one step.
               </p>
               <Link
                 href="/billing"
@@ -157,4 +183,23 @@ function formatLocation(p: {
   if (parts.length === 0) return null
   const main = parts.join(', ')
   return p.country && p.country !== 'US' ? `${main} · ${p.country}` : main
+}
+
+function formatRecurringPrice(price: PriceSnapshot | null): string {
+  if (!price?.unitAmountCents) return 'standard pricing'
+  const amount = formatMoney(price.unitAmountCents, price.currency)
+  return price.interval ? `${amount} / ${price.interval}` : amount
+}
+
+function formatOneTimePrice(price: PriceSnapshot | null): string {
+  if (!price?.unitAmountCents) return 'no'
+  return formatMoney(price.unitAmountCents, price.currency)
+}
+
+function formatMoney(cents: number, currency: string): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: (currency || 'USD').toUpperCase(),
+    maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
+  }).format(cents / 100)
 }

@@ -6,6 +6,8 @@ import { stripe } from '@/lib/stripe/client'
 import { startSubscriptionForProperty } from '@/lib/stripe/start-subscription'
 import {
   getStripeCustomerForOrg,
+  payOpenInvoiceForSubscription,
+  resolveResubscribePaymentMethod,
   syncSubscriptionToDb,
 } from '@/lib/stripe/subscriptions'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -72,9 +74,8 @@ export async function setPropertyDefaultPaymentMethodAction(
     }
   }
 
-  let updated
   try {
-    updated = await stripe().subscriptions.update(sub.stripe_subscription_id, {
+    await stripe().subscriptions.update(sub.stripe_subscription_id, {
       default_payment_method: paymentMethodId,
       collection_method: 'charge_automatically',
     })
@@ -87,15 +88,86 @@ export async function setPropertyDefaultPaymentMethodAction(
     }
   }
 
-  // Mirror immediately so the UI reflects the new card without waiting
-  // for the customer.subscription.updated webhook. The webhook will fire
-  // shortly and re-sync; both writes are idempotent.
-  await syncSubscriptionToDb(propertyId, sub.org_id, updated, {
+  // Try to pay any open invoice on this subscription with the newly-set
+  // card — without this, a subscription started via send_invoice (admin
+  // path or owner add-property path) keeps its first invoice OPEN even
+  // after the customer "attaches a card", silently slipping into
+  // past_due 14 days later. Best-effort: a decline just leaves the
+  // invoice open and Stripe's dunning takes over.
+  const payResult = await payOpenInvoiceForSubscription(
+    sub.stripe_subscription_id,
+    paymentMethodId,
+  )
+
+  // Re-fetch so the row reflects post-payment status (incomplete/past_due
+  // → active when the new card cleared the open invoice). The trailing
+  // subscription.updated webhook also fires; both writes are idempotent.
+  const fresh = await stripe().subscriptions.retrieve(
+    sub.stripe_subscription_id,
+  )
+  await syncSubscriptionToDb(propertyId, sub.org_id, fresh, {
     paymentMethodDueAt: null,
   })
 
   revalidatePath('/billing')
-  return { success: 'Card updated.' }
+  return {
+    success: payResult.paid
+      ? 'Card updated and outstanding invoice paid.'
+      : 'Card updated.',
+  }
+}
+
+/**
+ * Mark a saved card as the org's default for auto-pay on FUTURE property
+ * additions. Stored on Stripe's Customer.invoice_settings, mirroring
+ * what the autopay_default opt-in on Checkout does.
+ *
+ * Per-property subscription defaults are unaffected — setting this only
+ * controls which card auto-charges when a new property is added without
+ * an explicit Checkout flow.
+ */
+export async function setAutopayDefaultAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await requireOrgOwner()
+  const paymentMethodId = String(formData.get('payment_method_id') ?? '')
+  if (!paymentMethodId) return { error: 'Missing payment method.' }
+
+  const customerId = await getStripeCustomerForOrg(session.organization.id)
+  if (!customerId) {
+    return { error: 'This org has no Stripe customer yet.' }
+  }
+
+  try {
+    const pm = await stripe().paymentMethods.retrieve(paymentMethodId)
+    const pmCustomer =
+      typeof pm.customer === 'string' ? pm.customer : (pm.customer?.id ?? null)
+    if (pmCustomer !== customerId) {
+      return { error: 'Payment method does not belong to this customer.' }
+    }
+  } catch (err) {
+    return {
+      error:
+        err instanceof Error ? err.message : 'Could not verify payment method.',
+    }
+  }
+
+  try {
+    await stripe().customers.update(customerId, {
+      invoice_settings: { default_payment_method: paymentMethodId },
+    })
+  } catch (err) {
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : 'Stripe rejected the update; try again.',
+    }
+  }
+
+  revalidatePath('/billing')
+  return { success: 'Set as default for auto-pay on new properties.' }
 }
 
 /**
@@ -315,9 +387,20 @@ export async function resubscribePropertyAction(
     return { error: 'Property not found.' }
   }
 
+  // Prefer reusing the card that was on the property's PREVIOUS sub so
+  // the customer doesn't have to re-pick. resolveResubscribePaymentMethod
+  // validates that the PM is still attached to the org's Customer; if
+  // it's been detached we fall back to send_invoice + 14-day grace.
+  const customerId = await getStripeCustomerForOrg(property.org_id)
+  const priorPmId = customerId
+    ? await resolveResubscribePaymentMethod(propertyId, customerId)
+    : null
+
   let result
   try {
-    result = await startSubscriptionForProperty(propertyId)
+    result = await startSubscriptionForProperty(propertyId, {
+      defaultPaymentMethodId: priorPmId ?? undefined,
+    })
   } catch (err) {
     return {
       error: err instanceof Error ? err.message : 'Failed to resubscribe.',
@@ -331,7 +414,8 @@ export async function resubscribePropertyAction(
     }
   }
   return {
-    success:
-      'Resubscribed. If a card is on file the next invoice will auto-charge; otherwise add one from the row above.',
+    success: priorPmId
+      ? 'Resubscribed. Your previous card has been charged for the new period.'
+      : 'Resubscribed. An invoice was emailed — pay it within 14 days or attach a card from the row above to auto-charge.',
   }
 }

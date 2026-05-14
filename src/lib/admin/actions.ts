@@ -29,6 +29,11 @@ import {
   type StartSubscriptionForOrgResult,
 } from '@/lib/stripe/start-subscription'
 import { stripe } from '@/lib/stripe/client'
+import {
+  getOrgAutopayDefaultPaymentMethod,
+  listOrgPaymentMethods,
+  type SavedCard,
+} from '@/lib/stripe/subscriptions'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { AppRole, Property } from '@/lib/supabase/types'
 import { slugify, uniqueSlug } from '@/lib/utils/slugify'
@@ -37,6 +42,13 @@ function roleLabel(role: AppRole): string {
   if (role === 'org_owner') return 'an owner'
   if (role === 'org_staff') return 'staff'
   return 'a platform admin'
+}
+
+function formatPmLabel(card: SavedCard): string {
+  const brand = card.brand
+    ? card.brand.charAt(0).toUpperCase() + card.brand.slice(1)
+    : 'Card'
+  return `${brand} ····${card.last4 ?? '••••'}`
 }
 
 /**
@@ -379,9 +391,9 @@ export async function addPropertyAction(
 
   // Start the property's subscription on Stripe (best-effort — the property
   // is created even if Stripe is unreachable; admin can retry from the
-  // Billing page). Setup fee is suppressed because the org has at least
-  // one prior subscription if it had any properties before this one — and
-  // startSubscriptionForProperty's own check confirms that.
+  // Billing page). The setup fee IS charged on this property's first
+  // subscription regardless of whether the org has other paid properties —
+  // propertyHasBeenSubscribed is keyed per property_id, not org-wide.
   if (inserted?.id) {
     try {
       await startSubscriptionForProperty(inserted.id)
@@ -617,23 +629,46 @@ export async function ownerAddPropertyAction(
     .single()
   if (error) return { error: error.message }
 
-  // Create the per-property Stripe subscription so this property starts
-  // billing on its own card. Best-effort — owner can also kick this off
-  // from /billing if Stripe is unreachable.
+  // Create the per-property Stripe subscription. Auto-charge ONLY when
+  // the customer has explicitly designated an auto-pay default card
+  // (Customer.invoice_settings.default_payment_method, set via the
+  // autopay_default opt-in on Checkout). Without that designation, fall
+  // back to send_invoice + 14-day grace so we never charge an
+  // unintended card. Best-effort — the property is created either way.
+  let billingMessage = ''
   if (inserted?.id) {
     try {
-      await startSubscriptionForProperty(inserted.id)
+      const designatedPmId = await getOrgAutopayDefaultPaymentMethod(
+        session.organization.id,
+      )
+      await startSubscriptionForProperty(inserted.id, {
+        defaultPaymentMethodId: designatedPmId ?? undefined,
+      })
+      if (designatedPmId) {
+        const saved = await listOrgPaymentMethods(session.organization.id)
+        const card = saved.find((c) => c.id === designatedPmId)
+        billingMessage = card
+          ? ` Charged your auto-pay default (${formatPmLabel(card)}) for the first invoice.`
+          : ' Charged your auto-pay default for the first invoice.'
+      } else {
+        billingMessage =
+          ' An invoice was emailed — pay it within 14 days or add a card ' +
+          'from Billing. To auto-charge future properties, mark a card as ' +
+          'the default for auto-pay during checkout.'
+      }
     } catch (err) {
       console.warn(
         '[owner] addProperty: subscription start failed',
         err instanceof Error ? err.message : err,
       )
+      billingMessage = ' Billing setup failed — start it manually from /billing.'
     }
   }
 
   revalidatePath('/properties')
   revalidatePath('/dashboard')
-  return { success: `Added ${name}.` }
+  revalidatePath('/billing')
+  return { success: `Added ${name}.${billingMessage}` }
 }
 
 export async function ownerRemovePropertyAction(formData: FormData) {

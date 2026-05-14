@@ -13,6 +13,9 @@ export type Profile = {
   org_id: string | null
   role: AppRole
   full_name: string | null
+  phone: string | null
+  title: string | null
+  bio: string | null
   created_at: string
 }
 
