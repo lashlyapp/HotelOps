@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/orphan-posters",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/billing-reconcile",
+      "schedule": "0 * * * *"
     }
   ]
 }
