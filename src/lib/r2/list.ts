@@ -76,11 +76,13 @@ export async function listMediaForPrefix(prefix: string): Promise<MediaFile[]> {
       //   _meta/    — logos and per-property metadata
       //   _posters/ — generated still-frame thumbnails for videos
       //   _it-docs/ — IT Hub document repository (contracts, runbooks, etc.)
+      //   _tasks/   — task evidence (photos/videos attached to maintenance tasks)
       const rel = obj.Key!.slice(normalizedPrefix.length)
       return (
         !rel.startsWith('_meta/') &&
         !rel.startsWith('_posters/') &&
-        !rel.startsWith('_it-docs/')
+        !rel.startsWith('_it-docs/') &&
+        !rel.startsWith('_tasks/')
       )
     })
 

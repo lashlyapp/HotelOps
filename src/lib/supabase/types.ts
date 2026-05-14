@@ -387,3 +387,114 @@ export type TenantSignupRequest = {
   email_verification_sent_at: string | null
   created_at: string
 }
+
+// ----------------------------------------------------------------------------
+// Maintenance & service tasks (Kanban) — see docs/tasks-spec.md
+// ----------------------------------------------------------------------------
+export type TaskStatus = 'open' | 'in_progress' | 'waiting' | 'done'
+export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent'
+export type TaskCategory =
+  | 'plumbing'
+  | 'electrical'
+  | 'hvac'
+  | 'appliance'
+  | 'furniture'
+  | 'fixtures'
+  | 'flooring'
+  | 'paint_wall'
+  | 'door_lock'
+  | 'window'
+  | 'lighting'
+  | 'tv_av'
+  | 'pool_spa'
+  | 'landscaping'
+  | 'pest'
+  | 'housekeeping'
+  | 'lost_found'
+  | 'amenities'
+  | 'cleanliness'
+  | 'guest_request'
+  | 'safety'
+  | 'it'
+  | 'other'
+
+export type TaskAttachmentKind = 'photo' | 'video'
+export type TaskAttachmentPhase = 'before' | 'progress' | 'after'
+
+export type Task = {
+  id: string
+  org_id: string
+  property_id: string
+  reference: string
+  title: string
+  description: string | null
+  status: TaskStatus
+  priority: TaskPriority
+  category: TaskCategory
+  location: string | null
+  assignee_id: string | null
+  created_by: string | null
+  created_by_email: string | null
+  resolved_at: string | null
+  resolved_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type TaskAttachment = {
+  id: string
+  task_id: string
+  org_id: string
+  kind: TaskAttachmentKind
+  r2_key: string
+  poster_key: string | null
+  filename: string
+  content_type: string | null
+  size_bytes: number
+  caption: string | null
+  phase: TaskAttachmentPhase
+  uploaded_by: string | null
+  created_at: string
+}
+
+export type TaskComment = {
+  id: string
+  task_id: string
+  org_id: string
+  body: string
+  author_id: string | null
+  author_email: string | null
+  created_at: string
+}
+
+export type TaskActivityKind =
+  | 'created'
+  | 'assigned'
+  | 'unassigned'
+  | 'status'
+  | 'priority'
+  | 'attachment'
+  | 'comment'
+  | 'forced_done'
+  | 'deleted'
+
+export type TaskActivity = {
+  id: string
+  task_id: string
+  org_id: string
+  kind: TaskActivityKind
+  from_value: string | null
+  to_value: string | null
+  note: string | null
+  actor_id: string | null
+  actor_email: string | null
+  created_at: string
+}
+
+export type TaskTag = {
+  id: string
+  task_id: string
+  org_id: string
+  tag: string
+  created_at: string
+}
