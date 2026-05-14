@@ -86,7 +86,16 @@ export async function POST(request: Request) {
   })
 
   const existing = await getSubscriptionForProperty(property.id)
-  if (existing?.stripe_subscription_id) {
+  // Treat terminal-state rows as "no subscription" so a stale UI race
+  // (clicking "Add card" on a canceled sub before the page revalidates)
+  // doesn't try to attach a card to a dead subscription — Stripe would
+  // reject the update and the customer would see a raw error. Falling
+  // through here creates a fresh subscription instead.
+  const hasLiveSubscription =
+    Boolean(existing?.stripe_subscription_id) &&
+    existing?.status !== 'canceled' &&
+    existing?.status !== 'incomplete_expired'
+  if (hasLiveSubscription && existing?.stripe_subscription_id) {
     const checkout = await stripe().checkout.sessions.create({
       mode: 'setup',
       customer: customerId,

@@ -21,6 +21,12 @@ export type StartSubscriptionOptions = {
    *  configured. Useful for ops/migration scripts that re-create a sub
    *  for a property that's already paid setup historically. */
   skipSetupFee?: boolean
+  /** When set, create the subscription with `charge_automatically` +
+   *  this payment method instead of the default `send_invoice` flow.
+   *  Stripe will immediately attempt to pay the first invoice. Used by
+   *  the resubscribe + add-property flows when a saved card is on
+   *  file. graceDays is ignored when this is provided. */
+  defaultPaymentMethodId?: string
 }
 
 export type StartSubscriptionForPropertyResult =
@@ -33,7 +39,10 @@ export type StartSubscriptionForPropertyResult =
       status: Stripe.Subscription.Status
       priceId: string
       setupFeePriceId: string | null
-      paymentMethodDueAt: Date
+      /** Null when the subscription was created with a payment method
+       *  on file (charge_automatically) — there's no grace deadline in
+       *  that case because Stripe pays the first invoice immediately. */
+      paymentMethodDueAt: Date | null
     }
   | {
       kind: 'existing'
@@ -135,11 +144,10 @@ export async function startSubscriptionForProperty(
   )
 
   const description = `HotelOps subscription — ${property.name}`
+  const useChargeAutomatically = Boolean(opts.defaultPaymentMethodId)
   const params: Stripe.SubscriptionCreateParams = {
     customer: customerId,
     items: [{ price: priceId, quantity: 1 }],
-    collection_method: 'send_invoice',
-    days_until_due: graceDays,
     description,
     metadata: {
       org_id: org.id,
@@ -147,6 +155,15 @@ export async function startSubscriptionForProperty(
       property_slug: property.slug,
       app: 'hotelops',
     },
+    ...(useChargeAutomatically
+      ? {
+          collection_method: 'charge_automatically',
+          default_payment_method: opts.defaultPaymentMethodId,
+        }
+      : {
+          collection_method: 'send_invoice',
+          days_until_due: graceDays,
+        }),
   }
   if (setupFeePriceId) {
     params.add_invoice_items = [{ price: setupFeePriceId, quantity: 1 }]
@@ -159,7 +176,12 @@ export async function startSubscriptionForProperty(
     idempotencyKey: `subscription:${property.id}:${priceId}`,
   })
 
-  const dueAt = new Date(Date.now() + graceDays * 24 * 60 * 60 * 1000)
+  // When charging automatically with a card on file the grace deadline
+  // is meaningless — Stripe attempts payment immediately and the gate
+  // is driven by subscription.status (active vs. past_due) from then on.
+  const dueAt = useChargeAutomatically
+    ? null
+    : new Date(Date.now() + graceDays * 24 * 60 * 60 * 1000)
   await syncToDb(admin, property.id, org.id, customerId, subscription, dueAt)
 
   return {
@@ -282,7 +304,7 @@ async function syncToDb(
   orgId: string,
   customerId: string,
   subscription: Stripe.Subscription,
-  dueAt: Date,
+  dueAt: Date | null,
 ) {
   const item = subscription.items.data[0]
   const price = item?.price
@@ -294,7 +316,7 @@ async function syncToDb(
       stripe_subscription_id: subscription.id,
       stripe_price_id: price?.id ?? null,
       status: subscription.status,
-      payment_method_due_at: dueAt.toISOString(),
+      payment_method_due_at: dueAt ? dueAt.toISOString() : null,
       current_period_start: item?.current_period_start
         ? new Date(item.current_period_start * 1000).toISOString()
         : null,

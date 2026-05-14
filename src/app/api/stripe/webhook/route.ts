@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import type Stripe from 'stripe'
 import { stripe } from '@/lib/stripe/client'
-import { syncSubscriptionToDb } from '@/lib/stripe/subscriptions'
+import {
+  payOpenInvoiceForSubscription,
+  syncSubscriptionToDb,
+} from '@/lib/stripe/subscriptions'
 import {
   orgIdFromMetadata,
   parseStripeEvent,
@@ -133,9 +136,11 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
  * other property's card too. Each property keeps its own card.
  *
  * Flip the subscription from `send_invoice` to `charge_automatically` so
- * future (recurring) invoices auto-charge. The currently-open first invoice
- * is left alone — it's already listed in the billing UI for the customer to
- * pay through their preferred channel.
+ * future (recurring) invoices auto-charge. Then pay any open first invoice
+ * with the just-attached card — if we skipped this the act of "adding a
+ * card" wouldn't actually settle the outstanding charge and the customer
+ * would silently slip into past_due 14 days later. Best-effort: a decline
+ * leaves the invoice open and Stripe's normal dunning takes over.
  */
 async function handleCheckoutCompleted(
   checkoutSession: Stripe.Checkout.Session,
@@ -179,6 +184,8 @@ async function handleCheckoutCompleted(
     default_payment_method: paymentMethodId,
     collection_method: 'charge_automatically',
   })
+
+  await payOpenInvoiceForSubscription(subscriptionId, paymentMethodId)
 
   // Card on file → grace period no longer applies. Clear the deadline so the
   // billing UI stops showing the "X days remaining" countdown.

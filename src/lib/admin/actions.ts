@@ -29,6 +29,10 @@ import {
   type StartSubscriptionForOrgResult,
 } from '@/lib/stripe/start-subscription'
 import { stripe } from '@/lib/stripe/client'
+import {
+  getStripeCustomerForOrg,
+  listOrgPaymentMethods,
+} from '@/lib/stripe/subscriptions'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { AppRole, Property } from '@/lib/supabase/types'
 import { slugify, uniqueSlug } from '@/lib/utils/slugify'
@@ -379,9 +383,9 @@ export async function addPropertyAction(
 
   // Start the property's subscription on Stripe (best-effort — the property
   // is created even if Stripe is unreachable; admin can retry from the
-  // Billing page). Setup fee is suppressed because the org has at least
-  // one prior subscription if it had any properties before this one — and
-  // startSubscriptionForProperty's own check confirms that.
+  // Billing page). The setup fee IS charged on this property's first
+  // subscription regardless of whether the org has other paid properties —
+  // propertyHasBeenSubscribed is keyed per property_id, not org-wide.
   if (inserted?.id) {
     try {
       await startSubscriptionForProperty(inserted.id)
@@ -617,23 +621,44 @@ export async function ownerAddPropertyAction(
     .single()
   if (error) return { error: error.message }
 
-  // Create the per-property Stripe subscription so this property starts
-  // billing on its own card. Best-effort — owner can also kick this off
-  // from /billing if Stripe is unreachable.
+  // Create the per-property Stripe subscription. If the org has at least
+  // one saved card on its Customer, reuse it so this property starts
+  // active and paid immediately (matching the "first property" UX where
+  // Checkout charges the card on save). Otherwise fall back to
+  // send_invoice + 14-day grace so the customer can pay manually or
+  // attach a card from /billing. Best-effort — the property is created
+  // either way.
+  let billingMessage = ''
   if (inserted?.id) {
     try {
-      await startSubscriptionForProperty(inserted.id)
+      const customerId = await getStripeCustomerForOrg(
+        session.organization.id,
+      )
+      const saved = customerId
+        ? await listOrgPaymentMethods(session.organization.id)
+        : []
+      // First saved card == most recent (Stripe lists newest first).
+      const pmId = saved[0]?.id ?? null
+      const result = await startSubscriptionForProperty(inserted.id, {
+        defaultPaymentMethodId: pmId ?? undefined,
+      })
+      billingMessage =
+        result.kind === 'created' && pmId
+          ? ' Charged your card on file for the first invoice.'
+          : ' An invoice was emailed — pay it within 14 days or add a card from Billing.'
     } catch (err) {
       console.warn(
         '[owner] addProperty: subscription start failed',
         err instanceof Error ? err.message : err,
       )
+      billingMessage = ' Billing setup failed — start it manually from /billing.'
     }
   }
 
   revalidatePath('/properties')
   revalidatePath('/dashboard')
-  return { success: `Added ${name}.` }
+  revalidatePath('/billing')
+  return { success: `Added ${name}.${billingMessage}` }
 }
 
 export async function ownerRemovePropertyAction(formData: FormData) {

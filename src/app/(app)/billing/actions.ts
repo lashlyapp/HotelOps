@@ -6,6 +6,8 @@ import { stripe } from '@/lib/stripe/client'
 import { startSubscriptionForProperty } from '@/lib/stripe/start-subscription'
 import {
   getStripeCustomerForOrg,
+  payOpenInvoiceForSubscription,
+  resolveResubscribePaymentMethod,
   syncSubscriptionToDb,
 } from '@/lib/stripe/subscriptions'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -87,6 +89,17 @@ export async function setPropertyDefaultPaymentMethodAction(
     }
   }
 
+  // Try to pay any open invoice on this subscription with the newly-set
+  // card — without this, a subscription started via send_invoice (admin
+  // path or owner add-property path) keeps its first invoice OPEN even
+  // after the customer "attaches a card", silently slipping into
+  // past_due 14 days later. Best-effort: a decline just leaves the
+  // invoice open and Stripe's dunning takes over.
+  const payResult = await payOpenInvoiceForSubscription(
+    sub.stripe_subscription_id,
+    paymentMethodId,
+  )
+
   // Mirror immediately so the UI reflects the new card without waiting
   // for the customer.subscription.updated webhook. The webhook will fire
   // shortly and re-sync; both writes are idempotent.
@@ -95,7 +108,11 @@ export async function setPropertyDefaultPaymentMethodAction(
   })
 
   revalidatePath('/billing')
-  return { success: 'Card updated.' }
+  return {
+    success: payResult.paid
+      ? 'Card updated and outstanding invoice paid.'
+      : 'Card updated.',
+  }
 }
 
 /**
@@ -315,9 +332,20 @@ export async function resubscribePropertyAction(
     return { error: 'Property not found.' }
   }
 
+  // Prefer reusing the card that was on the property's PREVIOUS sub so
+  // the customer doesn't have to re-pick. resolveResubscribePaymentMethod
+  // validates that the PM is still attached to the org's Customer; if
+  // it's been detached we fall back to send_invoice + 14-day grace.
+  const customerId = await getStripeCustomerForOrg(property.org_id)
+  const priorPmId = customerId
+    ? await resolveResubscribePaymentMethod(propertyId, customerId)
+    : null
+
   let result
   try {
-    result = await startSubscriptionForProperty(propertyId)
+    result = await startSubscriptionForProperty(propertyId, {
+      defaultPaymentMethodId: priorPmId ?? undefined,
+    })
   } catch (err) {
     return {
       error: err instanceof Error ? err.message : 'Failed to resubscribe.',
@@ -331,7 +359,8 @@ export async function resubscribePropertyAction(
     }
   }
   return {
-    success:
-      'Resubscribed. If a card is on file the next invoice will auto-charge; otherwise add one from the row above.',
+    success: priorPmId
+      ? 'Resubscribed. Your previous card has been charged for the new period.'
+      : 'Resubscribed. An invoice was emailed — pay it within 14 days or attach a card from the row above to auto-charge.',
   }
 }
