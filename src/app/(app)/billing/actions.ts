@@ -535,12 +535,26 @@ export async function resyncSubscriptionsAction(): Promise<ActionResult> {
     return { error: 'This org has no Stripe customer yet.' }
   }
 
+  // Preload the org's properties once so we can do name-based recovery
+  // for subscriptions whose metadata.property_id is missing or stale.
+  const admin = createAdminClient()
+  const { data: propertyRows } = await admin
+    .from('properties')
+    .select('id, slug, name')
+    .eq('org_id', session.organization.id)
+  type PropertyRow = { id: string; slug: string; name: string }
+  const properties = (propertyRows ?? []) as PropertyRow[]
+  const propertyIds = new Set(properties.map((p) => p.id))
+  const propertyBySlug = new Map(properties.map((p) => [p.slug, p]))
+  const propertyByLowerName = new Map(
+    properties.map((p) => [p.name.toLowerCase(), p]),
+  )
+
   const stripeClient = stripe()
+  const lines: string[] = []
   let mirrored = 0
   let skipped = 0
-  // List every Subscription on the customer (any status). We rely on the
-  // metadata.property_id stamped on subscription_data when
-  // /api/stripe/setup-checkout created them.
+
   for await (const sub of stripeClient.subscriptions.list({
     customer: customerId,
     status: 'all',
@@ -548,37 +562,90 @@ export async function resyncSubscriptionsAction(): Promise<ActionResult> {
   })) {
     const propertyIdFromMeta =
       (sub.metadata?.property_id as string | undefined) ?? null
+    const propertySlugFromMeta =
+      (sub.metadata?.property_slug as string | undefined) ?? null
     const orgIdFromMeta =
       (sub.metadata?.org_id as string | undefined) ?? null
-    // Refuse to mirror subscriptions whose org metadata doesn't match
-    // the caller's org — defense in depth in case a Stripe customer
-    // somehow ended up shared across HotelOps tenants.
+    const description = sub.description ?? ''
+    const label = description || sub.id
+
     if (orgIdFromMeta && orgIdFromMeta !== session.organization.id) {
+      lines.push(`${label}: skipped — belongs to a different org`)
       skipped += 1
       continue
     }
-    if (!propertyIdFromMeta) {
+
+    // Resolution order:
+    //  1. metadata.property_id, if it matches one of our properties
+    //  2. metadata.property_slug → property lookup
+    //  3. description-based match: "HotelOps subscription — <Property name>"
+    //     This covers the case where a Stripe sub was created without
+    //     metadata (older flow) or had its property_id stripped.
+    let resolved =
+      propertyIdFromMeta && propertyIds.has(propertyIdFromMeta)
+        ? properties.find((p) => p.id === propertyIdFromMeta) ?? null
+        : null
+    if (!resolved && propertySlugFromMeta) {
+      resolved = propertyBySlug.get(propertySlugFromMeta) ?? null
+    }
+    if (!resolved && description.startsWith('HotelOps subscription — ')) {
+      const name = description
+        .slice('HotelOps subscription — '.length)
+        .trim()
+        .toLowerCase()
+      resolved = propertyByLowerName.get(name) ?? null
+    }
+
+    if (!resolved) {
+      const reason = propertyIdFromMeta
+        ? `metadata.property_id ${propertyIdFromMeta} doesn't match any property`
+        : 'no property_id in metadata and description didn’t match a property name'
+      lines.push(`${label}: skipped — ${reason}`)
       skipped += 1
       continue
     }
+
+    // If we resolved by slug or name (not metadata.property_id), patch
+    // the Stripe sub's metadata so the next webhook event arrives
+    // routable without falling through this recovery path again.
+    if (!propertyIdFromMeta || propertyIdFromMeta !== resolved.id) {
+      try {
+        await stripeClient.subscriptions.update(sub.id, {
+          metadata: {
+            ...sub.metadata,
+            property_id: resolved.id,
+            property_slug: resolved.slug,
+            org_id: session.organization.id,
+            app: 'hotelops',
+          },
+        })
+      } catch (err) {
+        console.warn(
+          '[billing] resync: metadata heal failed',
+          sub.id,
+          err instanceof Error ? err.message : err,
+        )
+      }
+    }
+
     try {
-      await syncSubscriptionToDb(propertyIdFromMeta, session.organization.id, sub)
+      await syncSubscriptionToDb(resolved.id, session.organization.id, sub)
       mirrored += 1
+      lines.push(`${label}: synced → ${resolved.name}`)
     } catch (err) {
-      console.warn(
-        '[billing] resyncSubscriptionsAction failed for sub',
-        sub.id,
-        err instanceof Error ? err.message : err,
-      )
+      const message = err instanceof Error ? err.message : 'sync failed'
+      lines.push(`${label}: skipped — ${message}`)
       skipped += 1
     }
   }
 
   revalidatePath('/billing')
   return {
-    success: `Re-synced ${mirrored} subscription${mirrored === 1 ? '' : 's'}${
-      skipped > 0 ? ` (${skipped} skipped)` : ''
-    }.`,
+    success: `Re-synced ${mirrored} subscription${
+      mirrored === 1 ? '' : 's'
+    }${skipped > 0 ? ` (${skipped} skipped)` : ''}.${
+      lines.length > 0 ? ` ${lines.join(' · ')}` : ''
+    }`,
   }
 }
 
