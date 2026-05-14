@@ -4,6 +4,10 @@ import { syncGateToCdn } from '@/lib/billing/cdn-gate'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { BillingSubscription, BillingSubscriptionStatus } from '@/lib/supabase/types'
 import { stripe } from './client'
+import {
+  HOTELOPS_PRICE_LOOKUP_KEYS,
+  resolvePriceIdByLookupKey,
+} from './prices'
 
 /**
  * Days the customer has, after a subscription starts, to attach a payment
@@ -432,6 +436,7 @@ export type StripeInvoiceSummary = {
   hosted_url: string | null
   pdf_url: string | null
   subscription_id: string | null
+  setup_fee_cents: number
 }
 
 /**
@@ -439,13 +444,23 @@ export type StripeInvoiceSummary = {
  * only and tolerant of network failures — the page should still render the
  * subscription cards even if Stripe is unreachable. subscription_id is kept
  * on the result so the billing page can group invoices by property.
+ *
+ * The setup fee is added as an extra line on the property's first
+ * subscription invoice (see /api/stripe/setup-checkout), so we sum any
+ * matching lines into setup_fee_cents to let the UI explain why that
+ * first invoice is larger than the recurring monthly charge.
  */
 export async function listStripeInvoices(
   customerId: string,
   limit = 24,
 ): Promise<StripeInvoiceSummary[]> {
   try {
-    const result = await stripe().invoices.list({
+    const stripeClient = stripe()
+    const setupFeePriceId = await resolvePriceIdByLookupKey(
+      stripeClient,
+      HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
+    )
+    const result = await stripeClient.invoices.list({
       customer: customerId,
       limit,
     })
@@ -461,6 +476,9 @@ export async function listStripeInvoices(
       hosted_url: inv.hosted_invoice_url ?? null,
       pdf_url: inv.invoice_pdf ?? null,
       subscription_id: extractSubscriptionId(inv),
+      setup_fee_cents: setupFeePriceId
+        ? sumLinesForPrice(inv, setupFeePriceId)
+        : 0,
     }))
   } catch (err) {
     console.warn(
@@ -469,6 +487,29 @@ export async function listStripeInvoices(
     )
     return []
   }
+}
+
+/**
+ * Total the line items on `inv` that were billed against `priceId`. We
+ * tolerate both the legacy `line.price.id` shape and the newer
+ * `line.pricing.price_details.price` shape so this keeps working across
+ * SDK upgrades. invoices.list returns the first 10 lines inline, which is
+ * enough for our case (a property's first invoice has 2 lines: monthly +
+ * setup fee).
+ */
+function sumLinesForPrice(inv: Stripe.Invoice, priceId: string): number {
+  const lines = inv.lines?.data
+  if (!lines?.length) return 0
+  let total = 0
+  for (const line of lines) {
+    const legacyId = (line as unknown as { price?: { id?: string } | null })
+      .price?.id
+    const modernId = line.pricing?.price_details?.price
+    if (legacyId === priceId || modernId === priceId) {
+      total += line.amount ?? 0
+    }
+  }
+  return total
 }
 
 /**

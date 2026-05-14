@@ -97,7 +97,10 @@ export default async function BillingPage() {
         />
       )}
 
-      <StripeInvoicesCard invoices={stripeInvoices} />
+      <StripeInvoicesCard
+        invoices={stripeInvoices}
+        propertyBySubscriptionId={propertyBySubscriptionId(rows)}
+      />
 
       {customerId && isOwner ? (
         <Card>
@@ -342,7 +345,13 @@ function PropertyRow({
   )
 }
 
-function StripeInvoicesCard({ invoices }: { invoices: StripeInvoiceSummary[] }) {
+function StripeInvoicesCard({
+  invoices,
+  propertyBySubscriptionId,
+}: {
+  invoices: StripeInvoiceSummary[]
+  propertyBySubscriptionId: Map<string, string>
+}) {
   if (invoices.length === 0) {
     return (
       <Card>
@@ -362,6 +371,7 @@ function StripeInvoicesCard({ invoices }: { invoices: StripeInvoiceSummary[] }) 
         <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
           <tr>
             <th className="px-4 py-3 font-medium">Number</th>
+            <th className="px-4 py-3 font-medium">Property</th>
             <th className="px-4 py-3 font-medium">Issued</th>
             <th className="px-4 py-3 font-medium">Due</th>
             <th className="px-4 py-3 font-medium">Amount</th>
@@ -376,6 +386,9 @@ function StripeInvoicesCard({ invoices }: { invoices: StripeInvoiceSummary[] }) 
                 {invoice.number ?? '—'}
               </td>
               <td className="px-4 py-3 text-muted">
+                {invoicePropertyLabel(invoice, propertyBySubscriptionId)}
+              </td>
+              <td className="px-4 py-3 text-muted">
                 {formatDate(invoice.created_at)}
               </td>
               <td className="px-4 py-3 text-muted">
@@ -383,6 +396,13 @@ function StripeInvoicesCard({ invoices }: { invoices: StripeInvoiceSummary[] }) 
               </td>
               <td className="px-4 py-3 font-medium text-fg tabular-nums">
                 {formatMoney(invoice.amount_due_cents, invoice.currency)}
+                {invoice.setup_fee_cents > 0 ? (
+                  <p className="mt-0.5 text-xs font-normal text-subtle">
+                    Includes{' '}
+                    {formatMoney(invoice.setup_fee_cents, invoice.currency)}{' '}
+                    setup fee
+                  </p>
+                ) : null}
               </td>
               <td className="px-4 py-3">
                 <StripeInvoiceStatusBadge status={invoice.status} />
@@ -404,6 +424,28 @@ function StripeInvoicesCard({ invoices }: { invoices: StripeInvoiceSummary[] }) 
         </tbody>
       </table>
     </Card>
+  )
+}
+
+function propertyBySubscriptionId(
+  rows: { property: Property; subscription: BillingSubscription | null }[],
+): Map<string, string> {
+  const map = new Map<string, string>()
+  for (const { property, subscription } of rows) {
+    if (subscription?.stripe_subscription_id) {
+      map.set(subscription.stripe_subscription_id, property.name)
+    }
+  }
+  return map
+}
+
+function invoicePropertyLabel(
+  invoice: StripeInvoiceSummary,
+  propertyBySubscriptionId: Map<string, string>,
+): string {
+  if (!invoice.subscription_id) return '—'
+  return (
+    propertyBySubscriptionId.get(invoice.subscription_id) ?? 'Deleted property'
   )
 }
 
