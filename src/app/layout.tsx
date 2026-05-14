@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import { BRAND } from '@/lib/brand'
 import './globals.css'
@@ -21,6 +21,11 @@ export const metadata: Metadata = {
     template: `%s — ${BRAND.name}`,
   },
   description: BRAND.productTagline,
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({

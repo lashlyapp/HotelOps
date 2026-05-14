@@ -70,6 +70,7 @@ export default async function DashboardPage() {
           </Link>
         </CardHeader>
         <CardBody className="p-0">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
               <tr>
@@ -102,6 +103,7 @@ export default async function DashboardPage() {
               })}
             </tbody>
           </table>
+          </div>
         </CardBody>
       </Card>
     </div>

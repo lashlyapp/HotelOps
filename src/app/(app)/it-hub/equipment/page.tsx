@@ -66,6 +66,7 @@ export default async function EquipmentPage() {
         </Card>
       ) : (
         <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
               <tr>
@@ -162,6 +163,7 @@ export default async function EquipmentPage() {
               })}
             </tbody>
           </table>
+          </div>
         </Card>
       )}
 

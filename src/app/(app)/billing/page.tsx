@@ -369,6 +369,7 @@ function StripeInvoicesCard({
       <div className="px-5 py-4 border-b border-border-subtle">
         <h2 className="text-sm font-semibold text-fg">Invoices</h2>
       </div>
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-surface-muted text-left text-xs uppercase tracking-wider text-subtle">
           <tr>
@@ -425,6 +426,7 @@ function StripeInvoicesCard({
           ))}
         </tbody>
       </table>
+      </div>
     </Card>
   )
 }
