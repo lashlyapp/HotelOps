@@ -52,25 +52,6 @@ export default async function AccountPage() {
         </CardBody>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Organization</CardTitle>
-        </CardHeader>
-        <CardBody className="space-y-4">
-          <Field label="Name">{session.organization.name}</Field>
-          <Field label="Your role">
-            <span className="capitalize">
-              {session.profile.role.replace('_', ' ')}
-            </span>
-          </Field>
-          <Field label="Properties">
-            {session.properties.length === 0
-              ? '—'
-              : session.properties.map((p) => p.name).join(', ')}
-          </Field>
-        </CardBody>
-      </Card>
-
       {deletableRole ? (
         <Card>
           <CardHeader>
@@ -90,22 +71,6 @@ export default async function AccountPage() {
           </CardBody>
         </Card>
       ) : null}
-    </div>
-  )
-}
-
-
-function Field({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="grid grid-cols-3 gap-4 text-sm">
-      <dt className="text-muted">{label}</dt>
-      <dd className="col-span-2 text-fg">{children}</dd>
     </div>
   )
 }

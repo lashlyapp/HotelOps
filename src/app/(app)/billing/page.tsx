@@ -20,6 +20,7 @@ import {
 import type {
   BillingSubscription,
   BillingSubscriptionStatus,
+  Profile,
   Property,
 } from '@/lib/supabase/types'
 import { StripeRedirectButton } from './_components/billing-actions'
@@ -76,6 +77,12 @@ export default async function BillingPage() {
         </p>
       </div>
 
+      <OrganizationCard
+        orgName={session.organization.name}
+        role={session.profile.role}
+        properties={session.properties}
+      />
+
       {rows.length === 0 ? (
         <NoPropertiesCard
           monthlyPrice={monthlyPrice}
@@ -114,6 +121,50 @@ export default async function BillingPage() {
           </div>
         </Card>
       ) : null}
+    </div>
+  )
+}
+
+function OrganizationCard({
+  orgName,
+  role,
+  properties,
+}: {
+  orgName: string
+  role: Profile['role']
+  properties: Property[]
+}) {
+  return (
+    <Card>
+      <div className="p-5 space-y-3">
+        <h2 className="text-sm font-semibold text-fg">Organization</h2>
+        <dl className="space-y-2">
+          <OrgRow label="Name">{orgName}</OrgRow>
+          <OrgRow label="Your role">
+            <span className="capitalize">{role.replace('_', ' ')}</span>
+          </OrgRow>
+          <OrgRow label="Properties">
+            {properties.length === 0
+              ? '—'
+              : properties.map((p) => p.name).join(', ')}
+          </OrgRow>
+        </dl>
+      </div>
+    </Card>
+  )
+}
+
+function OrgRow({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-4 text-sm">
+      <dt className="text-muted">{label}</dt>
+      <dd className="col-span-2 text-fg">{children}</dd>
     </div>
   )
 }

@@ -31,11 +31,54 @@ export const MIN_PASSWORD_LENGTH = 8
 // any printable non-alphanumeric character.
 const SYMBOL_RE = /[^A-Za-z0-9]/
 
-const RULES = [
-  { test: /[a-z]/, label: 'one lowercase letter' },
-  { test: /[A-Z]/, label: 'one uppercase letter' },
-  { test: /[0-9]/, label: 'one number' },
-  { test: SYMBOL_RE, label: 'one symbol (e.g. !@#$%)' },
+/**
+ * Single source of truth for the password policy. Used by both the
+ * server-side validator and the client-side live checklist UI on the
+ * password forms — keeping them in one array means the UI checklist
+ * can never drift from the validator's actual rules.
+ *
+ * `id` is a stable key for React lists. `label` is the short form used
+ * in the live checklist; `validatorLabel` is the partial-clause form
+ * spliced into the "Password must include at least X" error message.
+ */
+export type PasswordRule = {
+  id: 'length' | 'lowercase' | 'uppercase' | 'number' | 'symbol'
+  label: string
+  validatorLabel: string
+  test: (password: string) => boolean
+}
+
+export const PASSWORD_RULES: readonly PasswordRule[] = [
+  {
+    id: 'length',
+    label: `At least ${MIN_PASSWORD_LENGTH} characters`,
+    validatorLabel: `${MIN_PASSWORD_LENGTH} characters`,
+    test: (p) => p.length >= MIN_PASSWORD_LENGTH,
+  },
+  {
+    id: 'lowercase',
+    label: 'One lowercase letter',
+    validatorLabel: 'one lowercase letter',
+    test: (p) => /[a-z]/.test(p),
+  },
+  {
+    id: 'uppercase',
+    label: 'One uppercase letter',
+    validatorLabel: 'one uppercase letter',
+    test: (p) => /[A-Z]/.test(p),
+  },
+  {
+    id: 'number',
+    label: 'One number',
+    validatorLabel: 'one number',
+    test: (p) => /[0-9]/.test(p),
+  },
+  {
+    id: 'symbol',
+    label: 'One symbol (e.g. !@#$%)',
+    validatorLabel: 'one symbol (e.g. !@#$%)',
+    test: (p) => SYMBOL_RE.test(p),
+  },
 ] as const
 
 export const PASSWORD_REQUIREMENTS_HINT =
@@ -51,17 +94,22 @@ export type PasswordValidationResult =
  * as a human-readable message so call sites can surface it as-is.
  */
 export function validatePassword(password: string): PasswordValidationResult {
-  if (password.length < MIN_PASSWORD_LENGTH) {
+  // Length first so its dedicated message is preserved verbatim ("must be
+  // at least N characters" reads better than the generic "must include").
+  const lengthRule = PASSWORD_RULES.find((r) => r.id === 'length')!
+  if (!lengthRule.test(password)) {
     return {
       ok: false,
       error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
     }
   }
-  const missing = RULES.filter((r) => !r.test.test(password))
+  const missing = PASSWORD_RULES.filter(
+    (r) => r.id !== 'length' && !r.test(password),
+  )
   if (missing.length > 0) {
     return {
       ok: false,
-      error: `Password must include at least ${missing.map((m) => m.label).join(', ')}.`,
+      error: `Password must include at least ${missing.map((m) => m.validatorLabel).join(', ')}.`,
     }
   }
   return { ok: true }
