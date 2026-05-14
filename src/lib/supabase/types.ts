@@ -566,3 +566,72 @@ export type SignageSchedule = {
   priority: number
   created_at: string
 }
+
+// ----------------------------------------------------------------------------
+// Arrival experience — see docs/arrival-spec.md
+// ----------------------------------------------------------------------------
+export type ArrivalSectionKind = 'info' | 'menu' | 'event' | 'marketing'
+
+export type ArrivalQuickInfoEntry = { label: string; value: string }
+
+export type ArrivalPage = {
+  id: string
+  org_id: string
+  property_id: string
+  public_slug: string
+  brand_color: string | null
+  welcome_heading: string | null
+  welcome_body: string | null
+  quick_info: ArrivalQuickInfoEntry[]
+  checkout_time: string | null
+  parking: string | null
+  pet_policy: string | null
+  smoking_policy: string | null
+  contact_phone: string | null
+  hidden_network_ids: string[]
+  published_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ArrivalInfoItem = {
+  id: string
+  title: string
+  subtitle?: string | null
+  body?: string | null
+  hours?: string | null
+  image_key?: string | null
+  url?: string | null
+}
+
+export type ArrivalMenuItem = {
+  id: string
+  name: string
+  description?: string | null
+  price?: string | null
+  image_key?: string | null
+  diet?: string[]
+}
+
+export type ArrivalMenuGroup = {
+  id: string
+  name: string
+  items: ArrivalMenuItem[]
+}
+
+export type ArrivalSectionBody =
+  | { items: ArrivalInfoItem[] }            // info / event / marketing
+  | { groups: ArrivalMenuGroup[] }          // menu
+
+export type ArrivalSection = {
+  id: string
+  page_id: string
+  org_id: string
+  kind: ArrivalSectionKind
+  title: string
+  body: ArrivalSectionBody
+  sort_order: number
+  is_published: boolean
+  created_at: string
+  updated_at: string
+}

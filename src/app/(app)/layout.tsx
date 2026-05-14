@@ -62,6 +62,7 @@ function SidebarBody({ session }: { session: Session }) {
         <NavLink href="/events">Events</NavLink>
         <NavLink href="/tasks">Tasks</NavLink>
         <NavLink href="/signage">Signage</NavLink>
+        <NavLink href="/arrival">Arrival</NavLink>
         <NavLink href="/media">Media catalog</NavLink>
         <NavLink href="/it-hub">IT Hub</NavLink>
         {session.profile.role === 'org_owner' ? (
