@@ -161,6 +161,7 @@ export type ItDocument = {
   id: string
   org_id: string
   property_id: string | null
+  folder_id: string | null
   title: string
   category: ItDocumentCategory
   r2_key: string
@@ -173,6 +174,15 @@ export type ItDocument = {
   uploaded_by_email: string | null
   created_at: string
   updated_at: string
+}
+
+export type ItDocumentFolder = {
+  id: string
+  org_id: string
+  parent_id: string | null
+  name: string
+  created_at: string
+  created_by: string | null
 }
 
 // ----------------------------------------------------------------------------

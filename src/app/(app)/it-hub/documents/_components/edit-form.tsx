@@ -4,18 +4,26 @@ import { useActionState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import type { ItDocument } from '@/lib/supabase/types'
+import type { ItDocument, ItDocumentFolder } from '@/lib/supabase/types'
 import { updateDocumentAction, type UpdateResult } from '../actions'
 import {
   DOCUMENT_CATEGORY_LABELS,
   asOptions,
 } from '../../_lib/labels'
+import { flattenFolderOptions } from '../_lib/folder-options'
 
 const initial: UpdateResult = {}
 
-export function EditDocumentForm({ document }: { document: ItDocument }) {
+export function EditDocumentForm({
+  document,
+  folders,
+}: {
+  document: ItDocument
+  folders: ItDocumentFolder[]
+}) {
   const [state, action, pending] = useActionState(updateDocumentAction, initial)
   const options = asOptions(DOCUMENT_CATEGORY_LABELS)
+  const folderOptions = flattenFolderOptions(folders)
 
   return (
     <form action={action} className="space-y-4">
@@ -45,6 +53,22 @@ export function EditDocumentForm({ document }: { document: ItDocument }) {
           </select>
         </Field>
       </div>
+
+      <Field label="Folder" htmlFor={`doc-folder-${document.id}`}>
+        <select
+          id={`doc-folder-${document.id}`}
+          name="folder_id"
+          defaultValue={document.folder_id ?? ''}
+          className="h-9 w-full rounded-md border border-border-default bg-surface px-3 text-sm text-fg shadow-xs focus-ring"
+        >
+          <option value="">Documents (root)</option>
+          {folderOptions.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </Field>
 
       <Field label="Expires" htmlFor={`doc-exp-${document.id}`}>
         <Input
