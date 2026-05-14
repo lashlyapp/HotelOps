@@ -23,6 +23,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * (wrong on multi-card accounts) or never auto-charge new properties at
  * all (annoying on single-card accounts).
  *
+ * The `key` is intentionally alphanumeric-only ("autopaydefault", no
+ * underscore): Stripe rejects custom_field keys with non-alphanumeric
+ * characters, and Checkout.sessions.create throws before returning a URL
+ * — which previously surfaced to the user as a bare 500.
+ *
  * Returned as a literal so TS infers the discriminated union exactly —
  * the Stripe SDK exposes Checkout.SessionCreateParams as a type alias
  * (not a namespace), so we can't directly type a const as
@@ -30,7 +35,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
  */
 function autopayCustomField() {
   return {
-    key: 'autopay_default',
+    key: 'autopaydefault',
     type: 'dropdown' as const,
     label: {
       type: 'custom' as const,

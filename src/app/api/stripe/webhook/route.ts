@@ -138,7 +138,7 @@ function shouldMakeAutopayDefault(
   checkoutSession: Stripe.Checkout.Session,
 ): boolean {
   const field = checkoutSession.custom_fields?.find(
-    (f) => f.key === 'autopay_default',
+    (f) => f.key === 'autopaydefault',
   )
   return field?.dropdown?.value === 'yes'
 }
