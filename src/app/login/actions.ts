@@ -1,14 +1,52 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
+// Per-IP / per-email throttle on failed login attempts, mirroring the
+// signup-form approach so credential stuffing can't quietly brute-force
+// passwords against a handful of accounts. Successes wipe the failure
+// history for the same email so a normal session that started with a
+// typo doesn't accumulate toward the cap.
+const RATE_WINDOW_MINUTES = 15
+const RATE_LIMIT_PER_IP = 10
+const RATE_LIMIT_PER_EMAIL = 5
+
 export async function signIn(formData: FormData) {
-  const email = String(formData.get('email') ?? '').trim()
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const password = String(formData.get('password') ?? '')
 
   if (!email || !password) {
     redirect('/login?error=missing')
+  }
+
+  const ipAddress = await getClientIp()
+  const admin = createAdminClient()
+  const since = new Date(
+    Date.now() - RATE_WINDOW_MINUTES * 60 * 1000,
+  ).toISOString()
+
+  if (ipAddress) {
+    const { count: ipCount } = await admin
+      .from('login_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('ip_address', ipAddress)
+      .eq('succeeded', false)
+      .gte('created_at', since)
+    if ((ipCount ?? 0) >= RATE_LIMIT_PER_IP) {
+      redirect('/login?error=rate_limited')
+    }
+  }
+  const { count: emailCount } = await admin
+    .from('login_attempts')
+    .select('id', { count: 'exact', head: true })
+    .ilike('email', email)
+    .eq('succeeded', false)
+    .gte('created_at', since)
+  if ((emailCount ?? 0) >= RATE_LIMIT_PER_EMAIL) {
+    redirect('/login?error=rate_limited')
   }
 
   const supabase = await createClient()
@@ -18,8 +56,23 @@ export async function signIn(formData: FormData) {
   })
 
   if (error || !data.user) {
+    await admin.from('login_attempts').insert({
+      email,
+      ip_address: ipAddress,
+      succeeded: false,
+    })
     redirect('/login?error=invalid')
   }
+
+  // Wipe the recent-failure history for this email so a successful
+  // sign-in resets the counter. (Per-IP failures from unrelated emails
+  // are left alone — they're still legitimate signal.)
+  await admin
+    .from('login_attempts')
+    .delete()
+    .ilike('email', email)
+    .eq('succeeded', false)
+    .gte('created_at', since)
 
   // Route to the role-appropriate landing page.
   const { data: profile } = await supabase
@@ -38,4 +91,17 @@ export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
   redirect('/login')
+}
+
+async function getClientIp(): Promise<string | null> {
+  // Vercel / Cloudflare both set x-forwarded-for with the client IP
+  // as the first comma-separated entry. Trust the first hop only.
+  const h = await headers()
+  const forwarded = h.get('x-forwarded-for')
+  if (forwarded) {
+    const first = forwarded.split(',')[0]?.trim()
+    if (first) return first
+  }
+  const real = h.get('x-real-ip')
+  return real ?? null
 }

@@ -21,8 +21,10 @@ const variantStyles: Record<Variant, string> = {
 }
 
 const sizeStyles: Record<Size, string> = {
-  sm: 'h-8 px-3 text-xs rounded-sm',
-  md: 'h-9 px-4 text-sm rounded-md',
+  // Mobile bumps `sm` and `md` up to a 44px-tall hit target (iOS HIG
+  // minimum). Desktop keeps the denser sizing via the sm: prefix.
+  sm: 'h-11 sm:h-8 px-3 text-xs rounded-sm',
+  md: 'h-11 sm:h-9 px-4 text-sm rounded-md',
   lg: 'h-11 px-5 text-base rounded-md',
 }
 
