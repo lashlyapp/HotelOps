@@ -3,6 +3,7 @@ import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requireOrgUser } from '@/lib/auth/session'
 import { listMediaForPropertyCached } from '@/lib/r2/list'
 import { computeLibraryStats, formatBytes, formatRelative } from '@/lib/r2/stats'
+import { UploadsChartCard } from './_components/uploads-chart-card'
 
 export default async function DashboardPage() {
   const session = await requireOrgUser()
@@ -34,15 +35,11 @@ export default async function DashboardPage() {
         aria-label="Library overview"
         className="grid grid-cols-1 gap-3 sm:grid-cols-3"
       >
-        <KpiCard
-          label="Total files"
-          value={stats.fileCount}
-          hint={`Across ${session.properties.length} ${session.properties.length === 1 ? 'property' : 'properties'}`}
-        />
+        <UploadsChartCard files={allFiles} />
         <KpiCard
           label="Storage used"
           value={formatBytes(stats.totalBytes)}
-          hint="Cloudflare R2"
+          hint={`${stats.fileCount} files · Cloudflare R2`}
         />
         <KpiCard
           label="Last upload"
