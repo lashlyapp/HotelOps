@@ -43,6 +43,10 @@ export type Property = {
   description: string | null
   logo_key: string | null
   logo_uploaded_at: string | null
+  // Storage accounting — see 20260514090000_storage_quota.sql.
+  storage_used_bytes: number
+  storage_used_at: string | null
+  storage_quota_bytes: number
 }
 
 export type ItNetworkType = 'guest' | 'staff' | 'boh' | 'event' | 'iot' | 'other'
@@ -229,6 +233,11 @@ export type BillingSubscription = {
   signage_unlimited_item_id: string | null
   guest_experience_active: boolean
   guest_experience_item_id: string | null
+  // Storage overage. quantity = number of 25 GB blocks active beyond
+  // the property's storage_quota_bytes. item_id is the Stripe
+  // SubscriptionItem id for the overage Price; null when quantity = 0.
+  storage_blocks_quantity: number
+  storage_blocks_item_id: string | null
   created_at: string
   updated_at: string
 }

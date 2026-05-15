@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { requireOrgUser } from '@/lib/auth/session'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { r2DeleteObject, r2PresignPutUrl } from '@/lib/r2/upload'
+import { checkStorageGuardrails } from '@/lib/storage/guardrails'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type {
   WorkOrder,
@@ -134,6 +135,7 @@ export type PresignAttachmentResult =
       url: string
       kind: WorkOrderAttachmentKind
       filename: string
+      warning?: { kind: 'storage_block_added'; message: string }
     }
   | { ok: false; error: string }
 
@@ -183,6 +185,12 @@ export async function presignWorkOrderAttachmentAction(args: {
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return { ok: false, error: 'Property not found.' }
 
+  // Storage quota — same shared guardrail as the /media upload path so
+  // each property has one ceiling regardless of which module the file
+  // came in through.
+  const quotaCheck = checkStorageGuardrails(property, args.size)
+  if (!quotaCheck.ok) return quotaCheck
+
   // UUID shape only; we don't bind to a row yet.
   if (!/^[0-9a-fA-F-]{32,40}$/.test(args.workOrderId)) {
     return { ok: false, error: 'Invalid work order id.' }
@@ -193,7 +201,16 @@ export async function presignWorkOrderAttachmentAction(args: {
 
   const key = `${property.r2_prefix}_work-orders/${args.workOrderId}/${randomToken()}-${safe}`
   const url = await r2PresignPutUrl(key, args.contentType)
-  return { ok: true, key, url, kind: args.kind, filename: safe }
+  return quotaCheck.warning
+    ? {
+        ok: true,
+        key,
+        url,
+        kind: args.kind,
+        filename: safe,
+        warning: quotaCheck.warning,
+      }
+    : { ok: true, key, url, kind: args.kind, filename: safe }
 }
 
 /**

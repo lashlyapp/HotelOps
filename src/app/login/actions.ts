@@ -3,6 +3,11 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { after } from 'next/server'
+import { reconcileStorageForProperty } from '@/lib/storage/reconcile'
+import {
+  STORAGE_STALE_MS,
+  refreshStorageForProperty,
+} from '@/lib/storage/usage'
 import { reconcileOrgSubscriptions } from '@/lib/stripe/reconcile'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
@@ -103,8 +108,39 @@ export async function signIn(formData: FormData) {
           .maybeSingle()
         if (!org?.stripe_customer_id) return
         await reconcileOrgSubscriptions(orgId, org.stripe_customer_id)
+        // Refresh storage usage too — but only when it's stale enough
+        // to matter. Each refresh lists every R2 object under the
+        // property's prefix, so a recent cron run (12h staleness
+        // window) keeps us off the slow path.
+        const { data: properties } = await admin2
+          .from('properties')
+          .select('id, r2_prefix, storage_used_at')
+          .eq('org_id', orgId)
+        const cutoff = Date.now() - STORAGE_STALE_MS
+        for (const p of properties ?? []) {
+          const lastAt = p.storage_used_at
+            ? new Date(p.storage_used_at).getTime()
+            : 0
+          if (lastAt > cutoff) continue
+          try {
+            const usedBytes = await refreshStorageForProperty({
+              propertyId: p.id,
+              r2Prefix: p.r2_prefix,
+            })
+            await reconcileStorageForProperty({
+              propertyId: p.id,
+              usedBytes,
+            })
+          } catch (err) {
+            console.warn(
+              '[storage] post-login refresh failed',
+              p.id,
+              err instanceof Error ? err.message : err,
+            )
+          }
+        }
       } catch (err) {
-        // Best-effort; the hourly cron is the safety net behind this.
+        // Best-effort; the nightly cron is the safety net behind this.
         console.warn(
           '[billing] post-login reconcile failed',
           orgId,

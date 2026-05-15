@@ -2,6 +2,11 @@ import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requireSession } from '@/lib/auth/session'
 import { BRAND } from '@/lib/brand'
+import {
+  STORAGE_BLOCK_BYTES,
+  computeStorageBlocks,
+  formatBytes,
+} from '@/lib/storage/usage'
 import { stripe } from '@/lib/stripe/client'
 import {
   HOTELOPS_PRICE_LOOKUP_KEYS,
@@ -249,6 +254,7 @@ function PropertyBillingTable({
             <th className="px-4 py-3 font-medium">Status</th>
             <th className="px-4 py-3 font-medium">Card</th>
             <th className="px-4 py-3 font-medium">Plan</th>
+            <th className="px-4 py-3 font-medium">Storage</th>
             <th className="px-4 py-3 font-medium">Next renewal</th>
             <th className="px-4 py-3 font-medium" />
           </tr>
@@ -349,6 +355,13 @@ function PropertyRow({
           : '—'}
       </td>
       <td className="px-4 py-3 text-muted">{formatPlan(subscription)}</td>
+      <td className="px-4 py-3 text-muted">
+        <StorageBar
+          usedBytes={property.storage_used_bytes ?? 0}
+          quotaBytes={property.storage_quota_bytes ?? STORAGE_BLOCK_BYTES}
+          blocksQuantity={subscription?.storage_blocks_quantity ?? 0}
+        />
+      </td>
       <td className="px-4 py-3 text-muted">
         {subscription?.current_period_end
           ? formatDate(subscription.current_period_end)
@@ -609,5 +622,63 @@ function AddonsCard({
         </div>
       </div>
     </Card>
+  )
+}
+
+/**
+ * Compact storage indicator for a property row.
+ *
+ * Renders as "used / quota" with a thin progress bar underneath. When
+ * the property has crossed into paid blocks, the quota shown widens to
+ * include those blocks ("12.4 / 50 GB · +1 block") so the bar stays a
+ * meaningful percent rather than always pinning at 100% when the
+ * customer is over the soft cap.
+ */
+function StorageBar({
+  usedBytes,
+  quotaBytes,
+  blocksQuantity,
+}: {
+  usedBytes: number
+  quotaBytes: number
+  blocksQuantity: number
+}) {
+  const effectiveQuota =
+    quotaBytes + blocksQuantity * STORAGE_BLOCK_BYTES
+  const pct = effectiveQuota > 0
+    ? Math.min(100, Math.round((usedBytes / effectiveQuota) * 100))
+    : 0
+  const blocksProjected = computeStorageBlocks({ usedBytes, quotaBytes })
+  // Color the bar warning if we're using ≥80% of the current quota or
+  // already over the base — these are the moments where the customer
+  // wants to see at a glance "I'm consuming chargeable storage".
+  const overBaseQuota = usedBytes > quotaBytes
+  const barTone = overBaseQuota
+    ? 'bg-warning-fg'
+    : pct >= 80
+      ? 'bg-warning-fg'
+      : 'bg-fg'
+  return (
+    <div className="min-w-[10rem] space-y-1">
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className="font-medium text-fg tabular-nums">
+          {formatBytes(usedBytes)}
+        </span>
+        <span className="text-subtle tabular-nums">
+          / {formatBytes(effectiveQuota)}
+        </span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-border-subtle">
+        <div
+          className={`h-full rounded-full ${barTone}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {blocksProjected > 0 ? (
+        <p className="text-[10px] text-subtle">
+          +{blocksProjected} × 25 GB block (+${blocksProjected * 5}/mo)
+        </p>
+      ) : null}
+    </div>
   )
 }
