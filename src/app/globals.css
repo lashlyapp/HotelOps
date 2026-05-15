@@ -31,10 +31,12 @@
   --neutral-800: #1c1917;
   --neutral-900: #0c0a09;
 
-  --brand-50:  #f4f4f5;
-  --brand-100: #e4e4e7;
-  --brand-500: #18181b;
-  --brand-600: #09090b;
+  --brand-50:  #eff6ff;
+  --brand-100: #dbeafe;
+  --brand-400: #60a5fa;
+  --brand-500: #3b82f6;
+  --brand-600: #2563eb;
+  --brand-700: #1d4ed8;
 
   --emerald-50:  #ecfdf5;
   --emerald-500: #10b981;
@@ -67,14 +69,11 @@
   --fg-subtle:         var(--neutral-400);
   --fg-on-primary:     var(--neutral-0);
 
-  --primary:           var(--brand-500);
-  /* Hover *lifts* a dark primary button toward neutral-700 so the delta is
-     actually perceptible — brand-500 → brand-600 was a 6% shift on an
-     already-near-black surface and read as a dead button. */
-  --primary-hover:     var(--neutral-700);
+  --primary:           var(--brand-600);
+  --primary-hover:     var(--brand-700);
   --primary-fg:        var(--neutral-0);
 
-  --ring:              var(--neutral-900);
+  --ring:              var(--brand-600);
 
   --success-bg:        var(--emerald-50);
   --success-fg:        var(--emerald-700);
@@ -119,15 +118,13 @@
     --fg:                var(--neutral-50);
     --fg-muted:          var(--neutral-300);
     --fg-subtle:         var(--neutral-400);
-    --fg-on-primary:     var(--neutral-900);
+    --fg-on-primary:     var(--neutral-0);
 
-    --primary:           var(--neutral-50);
-    /* Dim a light primary button on hover; neutral-50 → neutral-0 (pure
-       white) was both imperceptible and the wrong direction. */
-    --primary-hover:     var(--neutral-200);
-    --primary-fg:        var(--neutral-900);
+    --primary:           var(--brand-500);
+    --primary-hover:     var(--brand-400);
+    --primary-fg:        var(--neutral-0);
 
-    --ring:              var(--neutral-50);
+    --ring:              var(--brand-400);
 
     --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.4);
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4), 0 1px 3px 0 rgb(0 0 0 / 0.3);
