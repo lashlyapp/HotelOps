@@ -12,10 +12,10 @@ export default function EventsLayout({
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-wider text-subtle">
-              Events
+              Events &amp; Catering
             </p>
             <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-fg">
-              Catering &amp; event management
+              Inquiry → proposal → invoice
             </h1>
             <p className="mt-1 max-w-xl text-sm text-muted">
               Track inquiries, build proposals, coordinate the day-of, record
