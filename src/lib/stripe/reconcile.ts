@@ -244,7 +244,9 @@ export async function reconcileOrgSubscriptions(
               subscription: sub.id,
               price: priceId,
               quantity: 1,
-              proration_behavior: 'create_prorations',
+              // Match addons.ts — invoice the prorated remainder now,
+              // not on next month's renewal. See docs/pricing.md.
+              proration_behavior: 'always_invoice',
             },
             {
               idempotencyKey: `reconcile:${propertyIdFromMeta}:${key}:add`,

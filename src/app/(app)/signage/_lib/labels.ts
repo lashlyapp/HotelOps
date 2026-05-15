@@ -18,6 +18,10 @@ export const DEFAULT_DURATION_SECONDS: Record<SignageItemKind, number> = {
 
 export const HEARTBEAT_ONLINE_WINDOW_MS = 90 * 1000
 
+// Screens included in the base $100/property/mo plan. Beyond this
+// requires the Signage Unlimited add-on (see docs/pricing.md).
+export const SIGNAGE_BASE_SCREEN_LIMIT = 3
+
 export function isScreenOnline(lastHeartbeatAt: string | null): boolean {
   if (!lastHeartbeatAt) return false
   const last = new Date(lastHeartbeatAt).getTime()

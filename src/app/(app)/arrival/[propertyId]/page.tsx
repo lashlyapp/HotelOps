@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
+import { UpgradePrompt } from '@/components/billing/upgrade-prompt'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requireOrgUser } from '@/lib/auth/session'
+import { hasAddon } from '@/lib/billing/has-addon'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type {
   ArrivalSection,
@@ -30,6 +32,7 @@ export default async function ArrivalBuilderPage({
   const property = session.properties.find((p) => p.id === propertyId)
   if (!property) notFound()
   const isOwner = session.profile.role === 'org_owner'
+  const canPublish = hasAddon(session.organization, 'guest_experience')
 
   // Auto-create the arrival_pages row on first visit so we don't make
   // operators click through a separate "Create" button. Idempotent on
@@ -107,7 +110,16 @@ export default async function ArrivalBuilderPage({
         </div>
       </div>
 
-      <PublishBar page={page} />
+      <PublishBar page={page} canPublish={canPublish} />
+
+      {!canPublish ? (
+        <UpgradePrompt
+          addonKey="guest_experience"
+          propertyCount={session.properties.length}
+          isOwner={isOwner}
+          reason="Build the arrival page now — publishing it (and the QR card) requires the Guest Experience add-on."
+        />
+      ) : null}
 
       <Card>
         <CardHeader>

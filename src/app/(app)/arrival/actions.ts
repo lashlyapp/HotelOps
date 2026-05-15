@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireOrgUser } from '@/lib/auth/session'
+import { hasAddon } from '@/lib/billing/has-addon'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type {
   ArrivalInfoItem,
@@ -183,6 +184,15 @@ export async function publishPageAction(
 ): Promise<ActionResult> {
   const session = await requireOrgUser({ write: true })
   void prev
+  // Server-side soft gate. The UI hides the Publish button when the
+  // Guest Experience add-on isn't on, but a stale tab or a hand-crafted
+  // request shouldn't be able to publish without the add-on either.
+  if (!hasAddon(session.organization, 'guest_experience')) {
+    return {
+      error:
+        'Publishing requires the Guest Experience add-on. Enable it from /billing.',
+    }
+  }
   const pageId = trim(formData.get('page_id'))
   const admin = createAdminClient()
   const { data: page } = await admin

@@ -4,13 +4,14 @@ import { randomBytes } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireOrgUser } from '@/lib/auth/session'
+import { hasAddon } from '@/lib/billing/has-addon'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type {
   SignageItemKind,
   SignagePlaylist,
   SignageScreen,
 } from '@/lib/supabase/types'
-import { ITEM_KINDS } from './_lib/labels'
+import { ITEM_KINDS, SIGNAGE_BASE_SCREEN_LIMIT } from './_lib/labels'
 
 export type ActionResult = { error?: string; success?: string }
 
@@ -74,6 +75,23 @@ export async function startScreenPairingAction(
   if (nickname.length > 80) return { error: 'Name is too long.' }
   if (!(await ensurePropertyInOrg(session.organization.id, propertyId))) {
     return { error: 'Property not found.' }
+  }
+
+  // Soft gate: the base plan includes 3 screens per property. Beyond
+  // that requires Signage Unlimited at the org level. We enforce on the
+  // server too — the UI hides the pair form when at cap, but a stale
+  // tab or hand-crafted request should hit the same wall.
+  if (!hasAddon(session.organization, 'signage_unlimited')) {
+    const admin = createAdminClient()
+    const { count } = await admin
+      .from('signage_screens')
+      .select('id', { count: 'exact', head: true })
+      .eq('property_id', propertyId)
+    if ((count ?? 0) >= SIGNAGE_BASE_SCREEN_LIMIT) {
+      return {
+        error: `Your base plan includes ${SIGNAGE_BASE_SCREEN_LIMIT} screens per property. Enable Signage Unlimited from /billing to add more.`,
+      }
+    }
   }
 
   const code = randomPairingCode()

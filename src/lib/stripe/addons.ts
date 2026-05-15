@@ -88,7 +88,12 @@ export async function addAddonToOrg(
           subscription: sub.stripe_subscription_id,
           price: priceId,
           quantity: 1,
-          proration_behavior: 'create_prorations',
+          // Invoice the prorated remainder of the current period NOW
+          // (vs. rolling it into next month's renewal). Keeps each
+          // property's invoice timeline clean — the customer sees an
+          // immediate charge for what they just enabled, and next
+          // month's renewal is one tidy full-period line item.
+          proration_behavior: 'always_invoice',
         },
         {
           idempotencyKey: `addon:${sub.property_id}:${addonKey}:add`,
