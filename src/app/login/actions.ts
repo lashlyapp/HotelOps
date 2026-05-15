@@ -3,6 +3,7 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { after } from 'next/server'
+import { needsMfaChallenge } from '@/lib/auth/mfa'
 import { reconcileStorageForProperty } from '@/lib/storage/reconcile'
 import {
   STORAGE_STALE_MS,
@@ -148,6 +149,15 @@ export async function signIn(formData: FormData) {
         )
       }
     })
+  }
+
+  // If the user has a verified MFA factor, the session is currently
+  // at aal1 — bounce them to /login/mfa to escalate before they reach
+  // any protected route. requireUser also enforces this at the page
+  // layer; doing it here lets us pick the correct landing page after
+  // MFA succeeds (the MFA action re-derives role-vs-platform-admin).
+  if (await needsMfaChallenge()) {
+    redirect('/login/mfa')
   }
 
   if (profile?.role === 'platform_admin') {

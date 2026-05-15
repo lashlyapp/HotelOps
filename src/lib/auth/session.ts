@@ -2,6 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { isInternalEmail } from '@/lib/admin/policy'
+import { needsMfaChallenge } from '@/lib/auth/mfa'
 import {
   computeOrgGate,
   computePropertyGate,
@@ -57,6 +58,14 @@ export const requireUser = cache(async (): Promise<UserSession> => {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  // MFA gate: if the user has a verified factor but their session is
+  // still at aal1, send them through /login/mfa before any protected
+  // page renders. The challenge page itself does NOT call this
+  // helper (it'd loop), so this is safe to redirect from.
+  if (await needsMfaChallenge()) {
+    redirect('/login/mfa')
+  }
 
   const { data: profile, error } = await supabase
     .from('profiles')
