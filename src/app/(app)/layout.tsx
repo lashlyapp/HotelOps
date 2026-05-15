@@ -65,13 +65,19 @@ function SidebarBody({ session }: { session: Session }) {
         <NavLink href="/arrival">Arrival</NavLink>
         <NavLink href="/media">Media catalog</NavLink>
         <NavLink href="/it-hub">IT Hub</NavLink>
+
+        {/* Visual break between operational features (above) and
+            org-management surfaces (below) so the sidebar reads as
+            two distinct groups. */}
+        <hr className="!my-3 border-t border-border-subtle" />
+
         {session.profile.role === 'org_owner' ? (
           <NavLink href="/properties">Properties</NavLink>
         ) : null}
-        <NavLink href="/billing">Billing</NavLink>
         {session.profile.role === 'org_owner' ? (
           <NavLink href="/team">Team</NavLink>
         ) : null}
+        <NavLink href="/billing">Billing</NavLink>
         <NavLink href="/account">Account</NavLink>
       </nav>
 
