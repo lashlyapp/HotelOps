@@ -6,9 +6,11 @@ import {
   syncSubscriptionToDb,
 } from '@/lib/stripe/subscriptions'
 import {
+  buildPropertyMemo,
   orgIdFromMetadata,
   parseStripeEvent,
   propertyIdFromMetadata,
+  subscriptionIdFromInvoice,
 } from '@/lib/stripe/webhook'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -17,13 +19,20 @@ export const dynamic = 'force-dynamic'
 
 /**
  * Stripe webhook receiver. Every event is logged in stripe_events first so
- * redeliveries are no-ops, and only customer.subscription.* /
- * checkout.session.completed events drive state changes.
+ * redeliveries are no-ops. State changes are driven by
+ * customer.subscription.* and checkout.session.completed; invoice.created
+ * and invoice.finalized are used to stamp the property identity onto each
+ * invoice so customers can tell which property a charge belongs to.
  *
- * This endpoint must be configured under the HotelOps Stripe account → only
- * subscribe to events we handle. We also filter incoming events by the
- * `app: "hotelops"` metadata as a defense-in-depth check, in case the same
- * webhook URL is ever pointed at a Lashly account by mistake.
+ * This endpoint must be configured under the HotelOps Stripe account →
+ * only subscribe to events we handle. Required event types:
+ *   customer.subscription.created / updated / deleted / paused / resumed
+ *   checkout.session.completed
+ *   invoice.created
+ *   invoice.finalized
+ * We also filter incoming events by the `app: "hotelops"` metadata as a
+ * defense-in-depth check, in case the same webhook URL is ever pointed
+ * at a Lashly account by mistake.
  */
 export async function POST(request: NextRequest) {
   const sig = request.headers.get('stripe-signature')
@@ -118,6 +127,13 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
     case 'checkout.session.completed': {
       const checkoutSession = event.data.object as Stripe.Checkout.Session
       await handleCheckoutCompleted(checkoutSession)
+      return
+    }
+
+    case 'invoice.created':
+    case 'invoice.finalized': {
+      const invoice = event.data.object as Stripe.Invoice
+      await stampPropertyOnInvoice(invoice)
       return
     }
 
@@ -300,4 +316,80 @@ async function handleSetupModeCompleted(
     paymentMethodDueAt: null,
   })
 }
+
+/**
+ * Tag a freshly created (or finalized) invoice with the property it bills
+ * for. Without this the rendered Stripe invoice only shows generic product
+ * names ("Per Property Monthly", "Onboarding Fee") and a customer with
+ * multiple properties can't tell which invoice belongs to which property.
+ *
+ * Stripe's "Bill to" block is owned by the Customer record and there's
+ * one Customer per org, so we can't redirect "Bill to" at the property
+ * without restructuring billing. Instead we put property identity on
+ * the invoice via two surfaces Stripe DOES expose per-invoice:
+ *   - `custom_fields`: a labeled "Property: <name>" pair rendered in
+ *     the invoice header (value capped at 30 chars).
+ *   - `description`: a multi-line memo with the property's name and
+ *     postal address, rendered prominently under the header.
+ *
+ * The org continues to appear as the Customer ("Bill to") — that's the
+ * informational role for the org per the product decision.
+ *
+ * We listen on both `invoice.created` (draft) and `invoice.finalized`
+ * (open) because both states accept these updates, so we still tag the
+ * invoice if the earlier event was missed.
+ *
+ * Best-effort: a failure here must not 500 the webhook (Stripe would
+ * retry and we'd loop). Skip silently for invoices unrelated to a
+ * property subscription (manual invoices, tests, etc.).
+ */
+async function stampPropertyOnInvoice(invoice: Stripe.Invoice): Promise<void> {
+  if (!invoice.id) return
+  // Once finalized-and-paid (or void/uncollectible) Stripe rejects updates
+  // to custom_fields/description; don't fight the state machine.
+  if (invoice.status && invoice.status !== 'draft' && invoice.status !== 'open') {
+    return
+  }
+  // Skip if a redelivery already tagged this invoice.
+  if (invoice.custom_fields?.some((f) => f.name === 'Property')) return
+
+  const subscriptionId = subscriptionIdFromInvoice(invoice)
+  if (!subscriptionId) return
+
+  const admin = createAdminClient()
+  const { data: subRow } = await admin
+    .from('billing_subscriptions')
+    .select('property_id')
+    .eq('stripe_subscription_id', subscriptionId)
+    .maybeSingle()
+  if (!subRow?.property_id) return
+  const { data: property } = await admin
+    .from('properties')
+    .select(
+      'name, address_line1, address_line2, city, state, postal_code, country, email',
+    )
+    .eq('id', subRow.property_id)
+    .maybeSingle()
+  if (!property?.name) return
+
+  // Stripe limits invoice custom_fields values to 30 characters.
+  const value = property.name.slice(0, 30)
+  // And invoice.description (the memo block) to 1500 characters. The
+  // address fields are user-edited strings so guard defensively.
+  const memo = buildPropertyMemo(property).slice(0, 1500)
+
+  try {
+    await stripe().invoices.update(invoice.id, {
+      custom_fields: [{ name: 'Property', value }],
+      description: memo,
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.warn(
+      '[stripe-webhook] stampPropertyOnInvoice failed',
+      { invoiceId: invoice.id, message },
+    )
+  }
+}
+
 
