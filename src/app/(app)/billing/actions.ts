@@ -2,6 +2,12 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireOrgOwner } from '@/lib/auth/session'
+import {
+  ADDONS,
+  addAddonToOrg,
+  removeAddonFromOrg,
+  type AddonKey,
+} from '@/lib/stripe/addons'
 import { stripe } from '@/lib/stripe/client'
 import { startSubscriptionForProperty } from '@/lib/stripe/start-subscription'
 import {
@@ -512,4 +518,53 @@ export async function updateBillingDetailsAction(
 
   revalidatePath('/billing')
   return { success: 'Billing details updated.' }
+}
+
+
+// ----------------------------------------------------------------------------
+// Add-on subscription items
+//
+// Org-level activation. Toggling on/off fans out the Stripe
+// SubscriptionItem to every property in the org so the customer is
+// billed for the feature on every property that has it (closing the
+// loophole where one $49 line item would unlock the feature for an
+// entire portfolio). See docs/pricing.md.
+// ----------------------------------------------------------------------------
+
+function isAddonKey(value: string): value is AddonKey {
+  return value in ADDONS
+}
+
+export async function addAddonAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await requireOrgOwner()
+  const addonKey = String(formData.get('addon_key') ?? '')
+  if (!isAddonKey(addonKey)) return { error: 'Unknown add-on.' }
+
+  const result = await addAddonToOrg(session.organization.id, addonKey)
+  if (!result.ok) return { error: result.error }
+
+  revalidatePath('/billing')
+  return {
+    success: `${ADDONS[addonKey].label} enabled for every property.`,
+  }
+}
+
+export async function removeAddonAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await requireOrgOwner()
+  const addonKey = String(formData.get('addon_key') ?? '')
+  if (!isAddonKey(addonKey)) return { error: 'Unknown add-on.' }
+
+  const result = await removeAddonFromOrg(session.organization.id, addonKey)
+  if (!result.ok) return { error: result.error }
+
+  revalidatePath('/billing')
+  return {
+    success: `${ADDONS[addonKey].label} disabled for every property.`,
+  }
 }

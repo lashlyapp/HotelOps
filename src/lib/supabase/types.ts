@@ -6,6 +6,11 @@ export type Organization = {
   name: string
   created_at: string
   stripe_customer_id: string | null
+  // Org-level add-on intent. When true, every property's subscription
+  // carries the matching SubscriptionItem. See docs/pricing.md +
+  // 20260514070000_org_addon_flags.sql for the data model.
+  signage_unlimited_addon_active: boolean
+  guest_experience_addon_active: boolean
 }
 
 export type Profile = {
@@ -38,6 +43,10 @@ export type Property = {
   description: string | null
   logo_key: string | null
   logo_uploaded_at: string | null
+  // Storage accounting — see 20260514090000_storage_quota.sql.
+  storage_used_bytes: number
+  storage_used_at: string | null
+  storage_quota_bytes: number
 }
 
 export type ItNetworkType = 'guest' | 'staff' | 'boh' | 'event' | 'iot' | 'other'
@@ -216,6 +225,19 @@ export type BillingSubscription = {
   default_payment_method_id: string | null
   default_payment_brand: string | null
   default_payment_last4: string | null
+  // Add-on line items. *_active reflects whether the corresponding Stripe
+  // Price is currently a SubscriptionItem on this subscription; *_item_id
+  // is the Stripe SubscriptionItem id used when removing the add-on.
+  // See docs/pricing.md for the canonical pricing structure.
+  signage_unlimited_active: boolean
+  signage_unlimited_item_id: string | null
+  guest_experience_active: boolean
+  guest_experience_item_id: string | null
+  // Storage overage. quantity = number of 25 GB blocks active beyond
+  // the property's storage_quota_bytes. item_id is the Stripe
+  // SubscriptionItem id for the overage Price; null when quantity = 0.
+  storage_blocks_quantity: number
+  storage_blocks_item_id: string | null
   created_at: string
   updated_at: string
 }
@@ -386,4 +408,253 @@ export type TenantSignupRequest = {
   email_verification_token: string | null
   email_verification_sent_at: string | null
   created_at: string
+}
+
+// ----------------------------------------------------------------------------
+// Work orders (Kanban) — see docs/work-orders-spec.md.
+// Was historically named "tasks"; renamed in migration 20260514080000.
+// ----------------------------------------------------------------------------
+export type WorkOrderStatus = 'open' | 'in_progress' | 'waiting' | 'done'
+export type WorkOrderPriority = 'low' | 'normal' | 'high' | 'urgent'
+export type WorkOrderCategory =
+  | 'plumbing'
+  | 'electrical'
+  | 'hvac'
+  | 'appliance'
+  | 'furniture'
+  | 'fixtures'
+  | 'flooring'
+  | 'paint_wall'
+  | 'door_lock'
+  | 'window'
+  | 'lighting'
+  | 'tv_av'
+  | 'pool_spa'
+  | 'landscaping'
+  | 'pest'
+  | 'housekeeping'
+  | 'lost_found'
+  | 'amenities'
+  | 'cleanliness'
+  | 'guest_request'
+  | 'safety'
+  | 'it'
+  | 'other'
+
+export type WorkOrderAttachmentKind = 'photo' | 'video'
+export type WorkOrderAttachmentPhase = 'before' | 'progress' | 'after'
+
+export type WorkOrder = {
+  id: string
+  org_id: string
+  property_id: string
+  reference: string
+  title: string
+  description: string | null
+  status: WorkOrderStatus
+  priority: WorkOrderPriority
+  category: WorkOrderCategory
+  location: string | null
+  assignee_id: string | null
+  created_by: string | null
+  created_by_email: string | null
+  resolved_at: string | null
+  resolved_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type WorkOrderAttachment = {
+  id: string
+  work_order_id: string
+  org_id: string
+  kind: WorkOrderAttachmentKind
+  r2_key: string
+  poster_key: string | null
+  filename: string
+  content_type: string | null
+  size_bytes: number
+  caption: string | null
+  phase: WorkOrderAttachmentPhase
+  uploaded_by: string | null
+  created_at: string
+}
+
+export type WorkOrderComment = {
+  id: string
+  work_order_id: string
+  org_id: string
+  body: string
+  author_id: string | null
+  author_email: string | null
+  created_at: string
+}
+
+export type WorkOrderActivityKind =
+  | 'created'
+  | 'assigned'
+  | 'unassigned'
+  | 'status'
+  | 'priority'
+  | 'attachment'
+  | 'comment'
+  | 'forced_done'
+  | 'deleted'
+
+export type WorkOrderActivity = {
+  id: string
+  work_order_id: string
+  org_id: string
+  kind: WorkOrderActivityKind
+  from_value: string | null
+  to_value: string | null
+  note: string | null
+  actor_id: string | null
+  actor_email: string | null
+  created_at: string
+}
+
+export type WorkOrderTag = {
+  id: string
+  work_order_id: string
+  org_id: string
+  tag: string
+  created_at: string
+}
+
+// ----------------------------------------------------------------------------
+// Digital signage — see docs/signage-spec.md
+// ----------------------------------------------------------------------------
+export type SignageItemKind = 'image' | 'video' | 'web' | 'text'
+
+export type SignageScreen = {
+  id: string
+  org_id: string
+  property_id: string
+  nickname: string
+  player_token: string
+  pairing_code: string | null
+  pairing_code_expires_at: string | null
+  last_heartbeat_at: string | null
+  last_user_agent: string | null
+  current_item_id: string | null
+  emergency_message: string | null
+  emergency_until: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type SignagePlaylist = {
+  id: string
+  org_id: string
+  property_id: string
+  name: string
+  is_default: boolean
+  created_at: string
+  updated_at: string
+}
+
+// payload shapes by kind. Keep these loose at the type level — the server
+// actions validate the contents before persisting.
+export type SignageItemPayload =
+  | { r2_key: string; poster_key?: string | null }     // image / video
+  | { url: string }                                     // web
+  | {                                                   // text
+      heading: string
+      subheading?: string | null
+      background?: string | null
+      color?: string | null
+    }
+
+export type SignagePlaylistItem = {
+  id: string
+  playlist_id: string
+  org_id: string
+  kind: SignageItemKind
+  payload: SignageItemPayload
+  duration_seconds: number
+  sort_order: number
+  created_at: string
+}
+
+export type SignageSchedule = {
+  id: string
+  screen_id: string
+  playlist_id: string
+  org_id: string
+  starts_on: string | null
+  ends_on: string | null
+  start_time: string | null
+  end_time: string | null
+  priority: number
+  created_at: string
+}
+
+// ----------------------------------------------------------------------------
+// Arrival experience — see docs/arrival-spec.md
+// ----------------------------------------------------------------------------
+export type ArrivalSectionKind = 'info' | 'menu' | 'event' | 'marketing'
+
+export type ArrivalQuickInfoEntry = { label: string; value: string }
+
+export type ArrivalPage = {
+  id: string
+  org_id: string
+  property_id: string
+  public_slug: string
+  brand_color: string | null
+  welcome_heading: string | null
+  welcome_body: string | null
+  quick_info: ArrivalQuickInfoEntry[]
+  checkout_time: string | null
+  parking: string | null
+  pet_policy: string | null
+  smoking_policy: string | null
+  contact_phone: string | null
+  hidden_network_ids: string[]
+  published_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ArrivalInfoItem = {
+  id: string
+  title: string
+  subtitle?: string | null
+  body?: string | null
+  hours?: string | null
+  image_key?: string | null
+  url?: string | null
+}
+
+export type ArrivalMenuItem = {
+  id: string
+  name: string
+  description?: string | null
+  price?: string | null
+  image_key?: string | null
+  diet?: string[]
+}
+
+export type ArrivalMenuGroup = {
+  id: string
+  name: string
+  items: ArrivalMenuItem[]
+}
+
+export type ArrivalSectionBody =
+  | { items: ArrivalInfoItem[] }            // info / event / marketing
+  | { groups: ArrivalMenuGroup[] }          // menu
+
+export type ArrivalSection = {
+  id: string
+  page_id: string
+  org_id: string
+  kind: ArrivalSectionKind
+  title: string
+  body: ArrivalSectionBody
+  sort_order: number
+  is_published: boolean
+  created_at: string
+  updated_at: string
 }

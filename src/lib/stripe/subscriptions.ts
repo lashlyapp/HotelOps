@@ -3,6 +3,7 @@ import type Stripe from 'stripe'
 import { syncGateToCdn } from '@/lib/billing/cdn-gate'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { BillingSubscription, BillingSubscriptionStatus } from '@/lib/supabase/types'
+import { extractAddonState } from './addon-config'
 import { stripe } from './client'
 import {
   HOTELOPS_PRICE_LOOKUP_KEYS,
@@ -242,8 +243,19 @@ export async function syncSubscriptionToDb(
     return
   }
 
-  const item = subscription.items.data[0]
+  // Pick the BASE item explicitly — relying on items.data[0] used to be
+  // safe when each subscription carried exactly one item, but add-ons
+  // (signage_unlimited, guest_experience) can now be present as
+  // additional items in any order. Fall back to data[0] if no item
+  // matches the base lookup key, which preserves behavior for legacy
+  // pre-2026 rows without metadata.
+  const item =
+    subscription.items.data.find(
+      (i) =>
+        i.price?.lookup_key === HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
+    ) ?? subscription.items.data[0]
   const price = item?.price
+  const addons = extractAddonState(subscription)
 
   const defaultPmId = resolveDefaultPaymentMethodId(subscription)
   let pmBrand: string | null = null
@@ -302,10 +314,49 @@ export async function syncSubscriptionToDb(
       : null
   }
 
+  // Add-on columns were introduced in migration 20260514050000. We write
+  // them in a separate, best-effort statement so that a deployment that
+  // outpaces the migration apply doesn't fail the main subscription
+  // mirror — the base columns above are what /billing relies on to know
+  // a property is "Active" at all. Without this split, a missing column
+  // turned every customer.subscription.* event into a 500 and the row
+  // never got created (which is exactly how Grand Hotel ended up showing
+  // "Not Started" while Stripe had it Active).
+  const addonUpdate = {
+    signage_unlimited_active: addons.signage_unlimited.active,
+    signage_unlimited_item_id: addons.signage_unlimited.itemId,
+    guest_experience_active: addons.guest_experience.active,
+    guest_experience_item_id: addons.guest_experience.itemId,
+  }
+
   const { error } = await admin
     .from('billing_subscriptions')
     .upsert(update, { onConflict: 'property_id' })
   if (error) throw error
+
+  // Best-effort add-on column update. Swallow "column does not exist"
+  // (Postgres SQLSTATE 42703) so the webhook stays green during the
+  // migration-apply window. Once the migration runs, this becomes a
+  // normal no-op-when-unchanged update.
+  try {
+    const { error: addonErr } = await admin
+      .from('billing_subscriptions')
+      .update(addonUpdate)
+      .eq('property_id', propertyId)
+    if (addonErr) {
+      const code = (addonErr as { code?: string }).code
+      if (code !== '42703') throw addonErr
+      console.warn(
+        '[billing] addon columns not present yet (migration pending?)',
+        addonErr.message,
+      )
+    }
+  } catch (err) {
+    console.warn(
+      '[billing] addon column write failed; main mirror is still committed',
+      err instanceof Error ? err.message : err,
+    )
+  }
 
   // Propagate the (possibly new) gate state to Cloudflare KV so the
   // cdn-gate Worker enforces it on incoming media requests. The CDN gate

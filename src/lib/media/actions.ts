@@ -16,6 +16,7 @@ import {
   r2PresignPutUrl,
 } from '@/lib/r2/upload'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { checkStorageGuardrails } from '@/lib/storage/guardrails'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 // Both images and videos go through R2 now; videos used to take the
@@ -62,12 +63,33 @@ const PRESIGN_LIMIT = { limit: 60, windowMs: 60_000 } as const
 // ----------------------------------------------------------------------------
 
 export type PresignResult =
-  | { ok: true; key: string; url: string }
+  | {
+      ok: true
+      key: string
+      url: string
+      /** Non-null when accepting this upload pushes the property into a
+       *  new billing block (or further beyond the soft quota). The UI
+       *  shows it as a one-time confirmation so the operator knows what
+       *  the charge will be before they commit. */
+      warning?: {
+        kind: 'storage_block_added'
+        message: string
+      }
+    }
   | { ok: false; error: string }
 
 /**
  * Authorize the caller for this property and return a presigned PUT URL the
  * browser uses to upload the file directly to R2.
+ *
+ * Enforces both file-level and account-level guardrails:
+ *   - File type / size: same MIME allow-list and 5 GB-per-file cap as before
+ *   - Storage hard cap: refuse uploads that would push the property's
+ *     total usage past STORAGE_HARD_CAP_BYTES (500 GB). Anyone hitting
+ *     this is doing something we'd want to talk to them about anyway.
+ *   - Storage soft cap: allow uploads that put the property over its
+ *     paid block but surface a `warning` so the UI can show a one-time
+ *     confirmation explaining the billing impact (+$5/property/month).
  */
 export async function presignUploadAction(args: {
   propertyId: string
@@ -95,13 +117,23 @@ export async function presignUploadAction(args: {
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return { ok: false, error: 'Property not found.' }
 
+  // Storage quota guardrails. Reads the cached storage_used_bytes the
+  // nightly cron stamps; freshness lags reality by up to one cron
+  // interval which is fine — the math we care about is "approximate
+  // capacity left", not "exactly which byte you just uploaded".
+  const quotaCheck = checkStorageGuardrails(property, args.size)
+  if (!quotaCheck.ok) return quotaCheck
+
   const safe = sanitizeFilename(args.filename)
   if (!safe) return { ok: false, error: 'Invalid filename.' }
 
   const key = await uniqueKey(property.r2_prefix, safe)
   const url = await r2PresignPutUrl(key, args.contentType)
-  return { ok: true, key, url }
+  return quotaCheck.warning
+    ? { ok: true, key, url, warning: quotaCheck.warning }
+    : { ok: true, key, url }
 }
+
 
 /**
  * Trigger UI revalidation after the browser finishes uploading. The actual

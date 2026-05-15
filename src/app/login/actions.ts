@@ -2,6 +2,13 @@
 
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { after } from 'next/server'
+import { reconcileStorageForProperty } from '@/lib/storage/reconcile'
+import {
+  STORAGE_STALE_MS,
+  refreshStorageForProperty,
+} from '@/lib/storage/usage'
+import { reconcileOrgSubscriptions } from '@/lib/stripe/reconcile'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
@@ -77,9 +84,71 @@ export async function signIn(formData: FormData) {
   // Route to the role-appropriate landing page.
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, org_id')
     .eq('id', data.user.id)
     .maybeSingle()
+
+  // Background-reconcile this user's org with Stripe right after the
+  // login response goes out. Runs via next/server's `after()`, so it's
+  // off the redirect's critical path — the user navigates immediately
+  // and the heal completes in the background while their browser is
+  // loading the next page. By the time they reach /billing (if they
+  // even go there), Grand-Hotel-style drift has self-corrected. The
+  // reconciler short-circuits to a no-op when nothing's wrong, so a
+  // healthy login is effectively free.
+  if (profile?.org_id) {
+    const orgId = profile.org_id as string
+    after(async () => {
+      try {
+        const admin2 = createAdminClient()
+        const { data: org } = await admin2
+          .from('organizations')
+          .select('stripe_customer_id')
+          .eq('id', orgId)
+          .maybeSingle()
+        if (!org?.stripe_customer_id) return
+        await reconcileOrgSubscriptions(orgId, org.stripe_customer_id)
+        // Refresh storage usage too — but only when it's stale enough
+        // to matter. Each refresh lists every R2 object under the
+        // property's prefix, so a recent cron run (12h staleness
+        // window) keeps us off the slow path.
+        const { data: properties } = await admin2
+          .from('properties')
+          .select('id, r2_prefix, storage_used_at')
+          .eq('org_id', orgId)
+        const cutoff = Date.now() - STORAGE_STALE_MS
+        for (const p of properties ?? []) {
+          const lastAt = p.storage_used_at
+            ? new Date(p.storage_used_at).getTime()
+            : 0
+          if (lastAt > cutoff) continue
+          try {
+            const usedBytes = await refreshStorageForProperty({
+              propertyId: p.id,
+              r2Prefix: p.r2_prefix,
+            })
+            await reconcileStorageForProperty({
+              propertyId: p.id,
+              usedBytes,
+            })
+          } catch (err) {
+            console.warn(
+              '[storage] post-login refresh failed',
+              p.id,
+              err instanceof Error ? err.message : err,
+            )
+          }
+        }
+      } catch (err) {
+        // Best-effort; the nightly cron is the safety net behind this.
+        console.warn(
+          '[billing] post-login reconcile failed',
+          orgId,
+          err instanceof Error ? err.message : err,
+        )
+      }
+    })
+  }
 
   if (profile?.role === 'platform_admin') {
     redirect('/admin')

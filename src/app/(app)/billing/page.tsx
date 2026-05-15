@@ -2,6 +2,11 @@ import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requireSession } from '@/lib/auth/session'
 import { BRAND } from '@/lib/brand'
+import {
+  STORAGE_BLOCK_BYTES,
+  computeStorageBlocks,
+  formatBytes,
+} from '@/lib/storage/usage'
 import { stripe } from '@/lib/stripe/client'
 import {
   HOTELOPS_PRICE_LOOKUP_KEYS,
@@ -21,9 +26,11 @@ import {
 import type {
   BillingSubscription,
   BillingSubscriptionStatus,
+  Organization,
   Profile,
   Property,
 } from '@/lib/supabase/types'
+import { AddonToggle } from './_components/addon-toggle'
 import { StripeRedirectButton } from './_components/billing-actions'
 import { BillingDetailsForm } from './_components/billing-details-form'
 import { PropertyCardManager } from './_components/property-card-manager'
@@ -101,6 +108,13 @@ export default async function BillingPage() {
           autopayDefaultPmId={autopayDefaultPmId}
         />
       )}
+
+      {isOwner && rows.length > 0 ? (
+        <AddonsCard
+          organization={session.organization}
+          propertyCount={session.properties.length}
+        />
+      ) : null}
 
       <StripeInvoicesCard
         invoices={stripeInvoices}
@@ -240,6 +254,7 @@ function PropertyBillingTable({
             <th className="px-4 py-3 font-medium">Status</th>
             <th className="px-4 py-3 font-medium">Card</th>
             <th className="px-4 py-3 font-medium">Plan</th>
+            <th className="px-4 py-3 font-medium">Storage</th>
             <th className="px-4 py-3 font-medium">Next renewal</th>
             <th className="px-4 py-3 font-medium" />
           </tr>
@@ -287,9 +302,39 @@ function PropertyRow({
   const isScheduledCancel =
     !isEnded && Boolean(subscription?.cancel_at_period_end)
 
+  // Active add-ons render as small chips next to the property name —
+  // visible-when-on so the operator sees what they're paying for, but
+  // not occupying space when off. Toggle UI lives behind the row's …
+  // menu → Manage add-ons.
+  // Active add-on chips next to the property name. The activation
+  // decision is org-level (toggled from the Add-ons card above), but
+  // surfacing the per-property state here gives the operator visible
+  // confirmation that every property is being billed for what the
+  // toggle said — and catches any drift the reconciler hasn't healed
+  // yet (chip missing on one row would tell us something's wrong).
+  const activeAddons: Array<{ label: string }> = []
+  if (subscription?.signage_unlimited_active) {
+    activeAddons.push({ label: 'Signage Unlimited' })
+  }
+  if (subscription?.guest_experience_active) {
+    activeAddons.push({ label: 'Guest Experience' })
+  }
+
   return (
     <tr>
-      <td className="px-4 py-3 font-medium text-fg">{property.name}</td>
+      <td className="px-4 py-3 font-medium text-fg">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span>{property.name}</span>
+          {activeAddons.map((a) => (
+            <span
+              key={a.label}
+              className="inline-flex items-center rounded-full bg-success-bg px-2 py-0.5 text-[10px] font-medium text-success-fg"
+            >
+              {a.label}
+            </span>
+          ))}
+        </div>
+      </td>
       <td className="px-4 py-3">
         {subscription ? (
           <>
@@ -311,6 +356,13 @@ function PropertyRow({
       </td>
       <td className="px-4 py-3 text-muted">{formatPlan(subscription)}</td>
       <td className="px-4 py-3 text-muted">
+        <StorageBar
+          usedBytes={property.storage_used_bytes ?? 0}
+          quotaBytes={property.storage_quota_bytes ?? STORAGE_BLOCK_BYTES}
+          blocksQuantity={subscription?.storage_blocks_quantity ?? 0}
+        />
+      </td>
+      <td className="px-4 py-3 text-muted">
         {subscription?.current_period_end
           ? formatDate(subscription.current_period_end)
           : needsCard && subscription?.payment_method_due_at
@@ -318,32 +370,34 @@ function PropertyRow({
             : '—'}
       </td>
       <td className="px-4 py-3 text-right">
-        {canManage ? (
-          !subscription ? (
-            <StripeRedirectButton
-              endpoint="/api/stripe/setup-checkout"
-              body={{ property_id: property.id }}
-              size="sm"
-            >
-              Start &amp; add card
-            </StripeRedirectButton>
-          ) : isEnded ? (
-            <ResubscribeButton propertyId={property.id} />
-          ) : (
-            <PropertyCardManager
-              propertyId={property.id}
-              currentPaymentMethodId={
-                subscription.default_payment_method_id ?? null
-              }
-              currentBrand={subscription.default_payment_brand ?? null}
-              currentLast4={subscription.default_payment_last4 ?? null}
-              savedCards={savedCards}
-              autopayDefaultPmId={autopayDefaultPmId}
-              cancelAtPeriodEnd={subscription.cancel_at_period_end}
-              currentPeriodEnd={subscription.current_period_end}
-            />
-          )
-        ) : null}
+        <div className="flex items-center justify-end gap-1">
+          {canManage ? (
+            !subscription ? (
+              <StripeRedirectButton
+                endpoint="/api/stripe/setup-checkout"
+                body={{ property_id: property.id }}
+                size="sm"
+              >
+                Start &amp; add card
+              </StripeRedirectButton>
+            ) : isEnded ? (
+              <ResubscribeButton propertyId={property.id} />
+            ) : (
+              <PropertyCardManager
+                propertyId={property.id}
+                currentPaymentMethodId={
+                  subscription.default_payment_method_id ?? null
+                }
+                currentBrand={subscription.default_payment_brand ?? null}
+                currentLast4={subscription.default_payment_last4 ?? null}
+                savedCards={savedCards}
+                autopayDefaultPmId={autopayDefaultPmId}
+                cancelAtPeriodEnd={subscription.cancel_at_period_end}
+                currentPeriodEnd={subscription.current_period_end}
+              />
+            )
+          ) : null}
+        </div>
       </td>
     </tr>
   )
@@ -519,4 +573,112 @@ function daysUntil(iso: string | null): number | null {
 function capitalize(s: string | null | undefined): string {
   if (!s) return 'Card'
   return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+
+
+/**
+ * Org-level Add-ons card. One toggle per add-on; flipping affects every
+ * property in the org (closes the per-property loophole). The card
+ * surfaces the total monthly cost up front (price × property count) so
+ * the operator sees the real impact before clicking.
+ */
+function AddonsCard({
+  organization,
+  propertyCount,
+}: {
+  organization: Organization
+  propertyCount: number
+}) {
+  return (
+    <Card>
+      <div className="px-5 py-4 border-b border-border-subtle">
+        <h2 className="text-sm font-semibold text-fg">Add-ons</h2>
+        <p className="mt-1 text-xs text-muted">
+          Enabled once for the whole organization. Each property is billed
+          for what&rsquo;s active.
+        </p>
+      </div>
+      <div className="divide-y divide-border-subtle">
+        <div className="p-5">
+          <AddonToggle
+            addonKey="signage_unlimited"
+            label="Signage Unlimited"
+            priceCents={4900}
+            propertyCount={propertyCount}
+            active={organization.signage_unlimited_addon_active}
+            description="Unlimited TV screens per property. Base subscription includes 3 per property; this add-on lifts the cap."
+          />
+        </div>
+        <div className="p-5">
+          <AddonToggle
+            addonKey="guest_experience"
+            label="Guest Experience"
+            priceCents={3900}
+            propertyCount={propertyCount}
+            active={organization.guest_experience_addon_active}
+            description="Arrival pages, printable QR cards, and guest room-issue intake."
+          />
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+/**
+ * Compact storage indicator for a property row.
+ *
+ * Renders as "used / quota" with a thin progress bar underneath. When
+ * the property has crossed into paid blocks, the quota shown widens to
+ * include those blocks ("12.4 / 50 GB · +1 block") so the bar stays a
+ * meaningful percent rather than always pinning at 100% when the
+ * customer is over the soft cap.
+ */
+function StorageBar({
+  usedBytes,
+  quotaBytes,
+  blocksQuantity,
+}: {
+  usedBytes: number
+  quotaBytes: number
+  blocksQuantity: number
+}) {
+  const effectiveQuota =
+    quotaBytes + blocksQuantity * STORAGE_BLOCK_BYTES
+  const pct = effectiveQuota > 0
+    ? Math.min(100, Math.round((usedBytes / effectiveQuota) * 100))
+    : 0
+  const blocksProjected = computeStorageBlocks({ usedBytes, quotaBytes })
+  // Color the bar warning if we're using ≥80% of the current quota or
+  // already over the base — these are the moments where the customer
+  // wants to see at a glance "I'm consuming chargeable storage".
+  const overBaseQuota = usedBytes > quotaBytes
+  const barTone = overBaseQuota
+    ? 'bg-warning-fg'
+    : pct >= 80
+      ? 'bg-warning-fg'
+      : 'bg-fg'
+  return (
+    <div className="min-w-[10rem] space-y-1">
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className="font-medium text-fg tabular-nums">
+          {formatBytes(usedBytes)}
+        </span>
+        <span className="text-subtle tabular-nums">
+          / {formatBytes(effectiveQuota)}
+        </span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-border-subtle">
+        <div
+          className={`h-full rounded-full ${barTone}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {blocksProjected > 0 ? (
+        <p className="text-[10px] text-subtle">
+          +{blocksProjected} × 25 GB block (+${blocksProjected * 5}/mo)
+        </p>
+      ) : null}
+    </div>
+  )
 }

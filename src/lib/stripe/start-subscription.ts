@@ -1,6 +1,7 @@
 import 'server-only'
 import type Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { ADDONS, type AddonKey } from './addon-config'
 import { stripe } from './client'
 import {
   HOTELOPS_PRICE_LOOKUP_KEYS,
@@ -8,6 +9,46 @@ import {
   resolvePriceIdByLookupKey,
 } from './prices'
 import { propertyHasBeenSubscribed } from './subscriptions'
+
+/**
+ * Resolve the Stripe Price ids for every add-on the org currently has
+ * turned on. Returns the empty list when no add-ons are active, so the
+ * caller can just spread it into `items` / `line_items` unconditionally.
+ *
+ * Used by both subscription-creation paths (server-side
+ * startSubscriptionForProperty and the /api/stripe/setup-checkout
+ * `mode: 'subscription'` path) so a property added while the org has
+ * Signage Unlimited on inherits the line item at create time, not via
+ * a follow-up reconciler pass.
+ */
+export async function resolveActiveOrgAddonPriceIds(
+  s: Stripe,
+  orgId: string,
+): Promise<Array<{ key: AddonKey; priceId: string }>> {
+  const admin = createAdminClient()
+  const { data: org } = await admin
+    .from('organizations')
+    .select('signage_unlimited_addon_active, guest_experience_addon_active')
+    .eq('id', orgId)
+    .maybeSingle()
+  if (!org) return []
+  const out: Array<{ key: AddonKey; priceId: string }> = []
+  if (org.signage_unlimited_addon_active) {
+    const priceId = await resolvePriceIdByLookupKey(
+      s,
+      ADDONS.signage_unlimited.lookupKey,
+    )
+    if (priceId) out.push({ key: 'signage_unlimited', priceId })
+  }
+  if (org.guest_experience_addon_active) {
+    const priceId = await resolvePriceIdByLookupKey(
+      s,
+      ADDONS.guest_experience.lookupKey,
+    )
+    if (priceId) out.push({ key: 'guest_experience', priceId })
+  }
+  return out
+}
 
 export type StartSubscriptionOptions = {
   priceId?: string
@@ -149,7 +190,16 @@ export async function startSubscriptionForProperty(
   const useChargeAutomatically = Boolean(opts.defaultPaymentMethodId)
   const params: Stripe.SubscriptionCreateParams = {
     customer: customerId,
-    items: [{ price: priceId, quantity: 1 }],
+    items: [
+      { price: priceId, quantity: 1 },
+      // Inherit whatever add-ons the org has turned on globally so a
+      // brand-new property is billed correctly from invoice 1 instead
+      // of waiting for the reconciler to attach the items.
+      ...(await resolveActiveOrgAddonPriceIds(s, org.id)).map((a) => ({
+        price: a.priceId,
+        quantity: 1,
+      })),
+    ],
     description,
     metadata: {
       org_id: org.id,

@@ -1,0 +1,10 @@
+# Next.js build artifacts
+/.next/
+/out/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Vercel
+.vercel

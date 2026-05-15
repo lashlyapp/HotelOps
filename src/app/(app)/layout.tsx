@@ -60,6 +60,9 @@ function SidebarBody({ session }: { session: Session }) {
       <nav className="flex-1 px-3 py-4 space-y-1 text-sm">
         <NavLink href="/dashboard">Dashboard</NavLink>
         <NavLink href="/events">Events</NavLink>
+        <NavLink href="/work-orders">Work orders</NavLink>
+        <NavLink href="/signage">Signage</NavLink>
+        <NavLink href="/arrival">Arrival</NavLink>
         <NavLink href="/media">Media catalog</NavLink>
         <NavLink href="/it-hub">IT Hub</NavLink>
         {session.profile.role === 'org_owner' ? (

@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
@@ -13,6 +14,29 @@ import { createClient } from '@/lib/supabase/server'
 const HERO_IMAGE = '/AdobeStock_94588323.jpeg' // manager with tablet, warm hotel interior
 const RECEPTION_IMAGE = '/AdobeStock_327436679.jpeg' // reception desk with brass service bell
 const GUEST_ROOM_IMAGE = '/AdobeStock_131189921.jpeg' // modern guest room
+const LOBBY_IMAGE = '/AdobeStock_1896833868.jpeg'
+const EXTERIOR_IMAGE = '/AdobeStock_1951250090.jpeg'
+
+export const metadata: Metadata = {
+  title: `${BRAND.name} — Hotel maintenance, signage, and guest experience software`,
+  description:
+    'HotelOps is hotel operations software for independent and boutique properties. Photo-based maintenance work orders, digital signage for every TV, and guest arrival pages — flat per-property pricing instead of per-screen or per-room.',
+  alternates: { canonical: `https://www.${BRAND.domain}/` },
+  openGraph: {
+    type: 'website',
+    title: `${BRAND.name} — One platform for hotel operations`,
+    description:
+      'Maintenance work orders, digital signage, and guest arrival pages — flat per-property pricing.',
+    url: `https://www.${BRAND.domain}/`,
+    siteName: BRAND.name,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${BRAND.name} — One platform for hotel operations`,
+    description:
+      'Maintenance work orders, digital signage, and guest arrival pages — flat per-property pricing.',
+  },
+}
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -28,11 +52,136 @@ export default async function HomePage() {
     redirect(profile?.role === 'platform_admin' ? '/admin' : '/dashboard')
   }
 
+  // Structured data: three SoftwareApplication entries (one per anchor
+  // keyword section) plus the Organization. Google understands these as
+  // distinct features of one product when listed under @graph, which is
+  // the closest schema for "one tool, three buyer intents".
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `https://www.${BRAND.domain}/#org`,
+        name: BRAND.legalName,
+        url: `https://www.${BRAND.domain}/`,
+        logo: `https://www.${BRAND.domain}/HotelOps.png`,
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: BRAND.address.line1,
+          addressLocality: BRAND.address.city,
+          addressRegion: BRAND.address.state,
+          postalCode: BRAND.address.postalCode,
+          addressCountry: 'US',
+        },
+        contactPoint: {
+          '@type': 'ContactPoint',
+          email: BRAND.supportEmail,
+          contactType: 'customer support',
+        },
+      },
+      {
+        '@type': 'SoftwareApplication',
+        '@id': `https://www.${BRAND.domain}/#work-orders`,
+        name: `${BRAND.name} Work Orders`,
+        applicationCategory: 'BusinessApplication',
+        description:
+          'Hotel maintenance software with photo and video work orders, Kanban board, and per-property assignment.',
+        operatingSystem: 'Web',
+        offers: {
+          '@type': 'Offer',
+          price: '100',
+          priceCurrency: 'USD',
+          priceSpecification: {
+            '@type': 'UnitPriceSpecification',
+            price: '100',
+            priceCurrency: 'USD',
+            unitText: 'property/month',
+          },
+        },
+      },
+      {
+        '@type': 'SoftwareApplication',
+        '@id': `https://www.${BRAND.domain}/#signage`,
+        name: `${BRAND.name} Signage`,
+        applicationCategory: 'BusinessApplication',
+        description:
+          'Hotel digital signage SaaS with unlimited screens per property, scheduling, and one-click emergency broadcast.',
+        operatingSystem: 'Web',
+        offers: {
+          '@type': 'Offer',
+          price: '49',
+          priceCurrency: 'USD',
+          priceSpecification: {
+            '@type': 'UnitPriceSpecification',
+            price: '49',
+            priceCurrency: 'USD',
+            unitText: 'property/month',
+          },
+        },
+      },
+      {
+        '@type': 'SoftwareApplication',
+        '@id': `https://www.${BRAND.domain}/#arrival`,
+        name: `${BRAND.name} Arrival`,
+        applicationCategory: 'BusinessApplication',
+        description:
+          'Digital concierge for hotels — guest arrival pages with Wi-Fi, dining hours, menus, and a printable in-room QR card.',
+        operatingSystem: 'Web',
+        offers: {
+          '@type': 'Offer',
+          price: '39',
+          priceCurrency: 'USD',
+          priceSpecification: {
+            '@type': 'UnitPriceSpecification',
+            price: '39',
+            priceCurrency: 'USD',
+            unitText: 'property/month',
+          },
+        },
+      },
+    ],
+  }
+
   return (
     <div className="flex flex-1 flex-col">
+      <script
+        type="application/ld+json"
+        // Server-rendered, content is fixed, no XSS surface here.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <header className="border-b border-border-subtle">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Wordmark size="md" href="/" />
+          <nav
+            aria-label="Primary"
+            className="hidden items-center gap-1 text-sm sm:flex"
+          >
+            <Link
+              href="/#work-orders"
+              className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
+            >
+              Work Orders
+            </Link>
+            <Link
+              href="/#signage"
+              className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
+            >
+              Signage
+            </Link>
+            <Link
+              href="/#arrival"
+              className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
+            >
+              Arrival
+            </Link>
+            <Link
+              href="/pricing"
+              className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
+            >
+              Pricing
+            </Link>
+          </nav>
           <div className="flex items-center gap-2">
             <Link
               href="/login"
@@ -56,17 +205,19 @@ export default async function HomePage() {
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                Operations platform for hotel property owners
+                Hotel operations software · per property, not per seat
               </p>
               <h1 className="mt-4 text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-fg leading-[1.05]">
-                Run your hotel
+                Maintenance, signage,
                 <br />
-                from one place.
+                and guest experience — in one place.
               </h1>
               <p className="mt-6 text-lg text-muted max-w-xl leading-relaxed">
-                {BRAND.name} puts your property photos, event proposals,
-                vendor records, team, and billing in one workspace —
-                shared by everyone from the front desk to ownership.
+                {BRAND.name} replaces three line items every independent
+                hotel pays for separately: maintenance ticketing, digital
+                signage, and the guest arrival concierge. Flat per-property
+                pricing — no per-screen, per-room, or per-seat surprise on
+                the invoice.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
@@ -76,15 +227,16 @@ export default async function HomePage() {
                   Sign up
                 </Link>
                 <Link
-                  href="/login"
+                  href="/pricing"
                   className="focus-ring inline-flex h-11 items-center rounded-md px-5 text-base font-medium text-fg hover:bg-surface-muted transition-colors"
                 >
-                  Log in →
+                  See pricing →
                 </Link>
               </div>
               <p className="mt-6 text-xs text-subtle">
-                We onboard you and your team personally so you’re running on
-                day one — no setup wizard, no months of implementation.
+                We onboard you and your team personally so you&apos;re
+                running on day one — no setup wizard, no months of
+                implementation.
               </p>
             </div>
 
@@ -101,49 +253,168 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* ─── Feature grid ──────────────────────────────────────────── */}
-        <section className="border-y border-border-subtle bg-surface-muted/40">
+        {/* ─── Module: Work Orders (SEO: "hotel maintenance software") ─ */}
+        <section
+          id="work-orders"
+          className="border-y border-border-subtle bg-surface-muted/40 scroll-mt-20"
+        >
           <div className="mx-auto max-w-6xl px-6 py-20">
-            <div className="max-w-2xl">
+            <div className="grid gap-12 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Module · included in base
+                </p>
+                <h2 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
+                  Hotel maintenance software, photo-first.
+                </h2>
+                <p className="mt-4 text-base text-muted leading-relaxed">
+                  Every dripping faucet, cracked tile, and flickering ballast
+                  gets a photo or short video instead of a long-form text
+                  ticket. Front-desk staff snap, tag, hand off; engineering
+                  closes with an after-photo. Kanban board across every
+                  property, owner-override completions, full activity log.
+                </p>
+                <p className="mt-4 text-base text-muted leading-relaxed">
+                  Replaces hotel maintenance tools like Quore ($130/mo per
+                  property) and HotSOS ($200–$500/mo) — and unlike either,
+                  it&apos;s already bundled into our $100/property base.
+                </p>
+                <ul className="mt-6 space-y-2 text-sm text-muted">
+                  <FeatureLi>Snap, tag, assign — under 10 seconds end-to-end</FeatureLi>
+                  <FeatureLi>Before / in-progress / after evidence trail</FeatureLi>
+                  <FeatureLi>Per-property reference numbers (WO-0042)</FeatureLi>
+                  <FeatureLi>Owner-override mark-done with full audit log</FeatureLi>
+                </ul>
+              </div>
+              <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-border-subtle bg-surface">
+                <Image
+                  src={LOBBY_IMAGE}
+                  alt="Hotel lobby — work order capture in context"
+                  fill
+                  sizes="(min-width: 1024px) 480px, 100vw"
+                  className="object-cover"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Module: Signage (SEO: "hotel signage SaaS") ───────────── */}
+        <section id="signage" className="scroll-mt-20">
+          <div className="mx-auto max-w-6xl px-6 py-20">
+            <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:items-center">
+              <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-border-subtle bg-surface order-2 lg:order-1">
+                <Image
+                  src={EXTERIOR_IMAGE}
+                  alt="Hotel exterior — signage across the property"
+                  fill
+                  sizes="(min-width: 1024px) 480px, 100vw"
+                  className="object-cover"
+                />
+              </div>
+              <div className="order-1 lg:order-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Module · +$49/property/mo (unlimited) · 3 screens free
+                </p>
+                <h2 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
+                  Hotel signage SaaS without the per-screen tax.
+                </h2>
+                <p className="mt-4 text-base text-muted leading-relaxed">
+                  Lobby TV, breakroom board, pool deck, every meeting room —
+                  drive them all from one dashboard. Pair a TV with a 6-digit
+                  code, schedule playlists, push a property-wide emergency
+                  message in one click. Free for your first 3 screens per
+                  property; unlimited above that for $49/property/month.
+                </p>
+                <p className="mt-4 text-base text-muted leading-relaxed">
+                  Yodeck and OptiSigns charge $8–$30 per screen per month.
+                  A 20-screen resort pays Yodeck $160/mo; pays us $49 — same
+                  feature, less than a third of the cost.
+                </p>
+                <ul className="mt-6 space-y-2 text-sm text-muted">
+                  <FeatureLi>Pair any Fire TV, Onn., or smart TV with a browser</FeatureLi>
+                  <FeatureLi>Schedule playlists by date and time-of-day</FeatureLi>
+                  <FeatureLi>Image, video, web page, or branded text card</FeatureLi>
+                  <FeatureLi>Emergency takeover for the whole property</FeatureLi>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Module: Arrival (SEO: "hotel digital concierge") ──────── */}
+        <section
+          id="arrival"
+          className="border-y border-border-subtle bg-surface-muted/40 scroll-mt-20"
+        >
+          <div className="mx-auto max-w-6xl px-6 py-20">
+            <div className="grid gap-12 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Module · +$39/property/mo
+                </p>
+                <h2 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
+                  A digital concierge guests already know how to use.
+                </h2>
+                <p className="mt-4 text-base text-muted leading-relaxed">
+                  We print a QR card for each room. Your guest scans with
+                  the camera app already on their phone — no install, no
+                  account — and lands on a branded arrival page: Wi-Fi,
+                  dining hours, gym info, room service menu, things to do
+                  nearby. You edit it in five minutes; we cache it for
+                  speed and host the print layout.
+                </p>
+                <p className="mt-4 text-base text-muted leading-relaxed">
+                  Duve and Canary charge $3–$6 per occupied room per month.
+                  A 40-room property pays Duve $160; pays us $39 — flat,
+                  regardless of occupancy.
+                </p>
+                <ul className="mt-6 space-y-2 text-sm text-muted">
+                  <FeatureLi>Wi-Fi auto-imported from your IT Hub</FeatureLi>
+                  <FeatureLi>Restaurant + room service menus with photos and prices</FeatureLi>
+                  <FeatureLi>Printable QR card with property logo and short URL</FeatureLi>
+                  <FeatureLi>No guest account, no app to download</FeatureLi>
+                </ul>
+              </div>
+              <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-border-subtle bg-surface">
+                <Image
+                  src={GUEST_ROOM_IMAGE}
+                  alt="Modern hotel guest room with QR card on the desk"
+                  fill
+                  sizes="(min-width: 1024px) 480px, 100vw"
+                  className="object-cover"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Pricing teaser → /pricing ─────────────────────────────── */}
+        <section className="mx-auto max-w-6xl px-6 py-20">
+          <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-end">
+            <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                What you can do today
+                Pricing
               </p>
               <h2 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-                Everything you need to run your hotel.
+                One $100/property line item. Two add-ons. That&apos;s it.
               </h2>
-              <p className="mt-4 text-base text-muted leading-relaxed">
-                Replace the patchwork of spreadsheets, shared drives, and
-                email threads. {BRAND.name} brings the day-to-day of running
-                a hotel into one workspace your whole team shares.
+              <p className="mt-4 max-w-2xl text-base text-muted leading-relaxed">
+                A 40-room boutique buying the same features à la carte from
+                Quore, Yodeck, and Duve pays around $580/month. With us,
+                everything-on costs $188/month per property — and you can
+                drop either add-on with a single click.
               </p>
             </div>
-
-            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              <Feature
-                title="Your photos in one place"
-                body="Every photo and video for every property in one organized library. Share them on your hotel website with a permanent link — no more broken images when a file gets renamed or moved."
-              />
-              <Feature
-                title="Win more events"
-                body="Move catering and event inquiries from first call to signed contract without leaving your inbox. Send a polished proposal with line items, deposit, and balance — branded as your hotel."
-              />
-              <Feature
-                title="Stop losing the vendor password"
-                body="Keep contracts, runbooks, and vendor logins in one place your whole team can find — even when the person who set it up isn’t around. Wi-Fi codes, PMS credentials, supplier accounts."
-              />
-              <Feature
-                title="One account, every property"
-                body="Run a single boutique hotel or a portfolio of properties from one login. Each property keeps its own photos, events, and documents — switch between them with one click."
-              />
-              <Feature
-                title="Set-and-forget billing"
-                body="Save a card once and your monthly subscription renews on its own. Every invoice is right there in your account whenever you need it for the books."
-              />
-              <Feature
-                title="Photos that load anywhere"
-                body="Your images are delivered through a worldwide content network, so they appear instantly — whether your guest is browsing from across town or across an ocean."
-              />
-            </div>
+            <PricingMini />
+          </div>
+          <div className="mt-10">
+            <Link
+              href="/pricing"
+              className="focus-ring inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-base font-medium text-primary-fg hover:bg-primary-hover transition-colors"
+            >
+              See the full pricing &amp; comparison →
+            </Link>
           </div>
         </section>
 
@@ -168,50 +439,17 @@ export default async function HomePage() {
               </h2>
               <p className="mt-4 text-base text-white/85 leading-relaxed">
                 Every part of {BRAND.name} comes from real workflows hotel
-                owners walked us through — the media request from a travel
-                writer, the weekend wedding inquiry, the renewal date nobody
-                can find. No bloat, no learning curve. Just the pieces of
-                your day, in one place.
+                owners walked us through — the maintenance ticket from
+                Room 312, the wedding inquiry, the lobby TV that froze on
+                a black screen at 4pm on Saturday. No bloat, no learning
+                curve. Just the pieces of your day, in one place.
               </p>
-            </div>
-          </div>
-        </section>
-
-        {/* ─── Closing CTA band ──────────────────────────────────────── */}
-        <section className="mx-auto max-w-6xl px-6 py-24">
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-border-subtle bg-surface-muted order-2 lg:order-1">
-              <Image
-                src={GUEST_ROOM_IMAGE}
-                alt="Modern hotel guest room"
-                fill
-                sizes="(min-width: 1024px) 540px, 100vw"
-                className="object-cover"
-              />
-            </div>
-            <div className="order-1 lg:order-2">
-              <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-                Your property, finally organized.
-              </h2>
-              <p className="mt-4 text-base text-muted leading-relaxed">
-                Stop digging through shared drives for the right photo,
-                forwarding old emails to find a proposal, or texting the
-                manager for the Wi-Fi password. {BRAND.name} keeps the
-                day-to-day of running your hotel in one shared workspace —
-                for you, your team, and whoever joins next year.
-              </p>
-              <div className="mt-8 flex flex-wrap items-center gap-3">
+              <div className="mt-8">
                 <Link
                   href="/signup"
-                  className="focus-ring inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-base font-medium text-primary-fg hover:bg-primary-hover transition-colors"
+                  className="focus-ring inline-flex h-11 items-center justify-center rounded-md bg-white px-6 text-base font-medium text-slate-900 hover:bg-white/90 transition-colors"
                 >
-                  Sign up
-                </Link>
-                <Link
-                  href="/login"
-                  className="focus-ring inline-flex h-11 items-center rounded-md px-5 text-base font-medium text-fg hover:bg-surface-muted transition-colors"
-                >
-                  Log in
+                  Start now
                 </Link>
               </div>
             </div>
@@ -224,15 +462,55 @@ export default async function HomePage() {
   )
 }
 
-function Feature({ title, body }: { title: string; body: string }) {
+function FeatureLi({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex gap-2">
+      <span
+        aria-hidden
+        className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-fg"
+      />
+      <span>{children}</span>
+    </li>
+  )
+}
+
+function PricingMini() {
   return (
     <Card>
-      <CardBody>
-        <h3 className="text-base font-semibold tracking-tight text-fg">
-          {title}
-        </h3>
-        <p className="mt-2 text-sm text-muted leading-relaxed">{body}</p>
+      <CardBody className="space-y-3">
+        <Row label="Base" sub="Work Orders, Events, IT Hub, Media, 3 signage screens">
+          $100
+        </Row>
+        <Row label="Signage Unlimited" sub="optional · unlimited screens">
+          +$49
+        </Row>
+        <Row label="Guest Experience" sub="optional · arrival pages + QR cards">
+          +$39
+        </Row>
+        <p className="border-t border-border-subtle pt-3 text-xs text-subtle">
+          Per property, per month. Cancel any add-on with one click.
+        </p>
       </CardBody>
     </Card>
+  )
+}
+
+function Row({
+  label,
+  sub,
+  children,
+}: {
+  label: string
+  sub: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 text-sm">
+      <div className="min-w-0">
+        <p className="font-medium text-fg">{label}</p>
+        <p className="text-xs text-subtle">{sub}</p>
+      </div>
+      <p className="shrink-0 font-mono text-fg">{children}</p>
+    </div>
   )
 }
