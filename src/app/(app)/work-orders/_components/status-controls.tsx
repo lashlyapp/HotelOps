@@ -4,8 +4,8 @@ import { useActionState } from 'react'
 import { Button } from '@/components/ui/button'
 import type {
   Profile,
-  TaskPriority,
-  TaskStatus,
+  WorkOrderPriority,
+  WorkOrderStatus,
 } from '@/lib/supabase/types'
 import {
   changeAssigneeAction,
@@ -21,7 +21,7 @@ import {
 } from '../_lib/labels'
 
 export function StatusControls({
-  taskId,
+  workOrderId,
   status,
   priority,
   assigneeId,
@@ -29,9 +29,9 @@ export function StatusControls({
   isOwner,
   hasAfterEvidence,
 }: {
-  taskId: string
-  status: TaskStatus
-  priority: TaskPriority
+  workOrderId: string
+  status: WorkOrderStatus
+  priority: WorkOrderPriority
   assigneeId: string | null
   assignees: Pick<Profile, 'id' | 'full_name'>[]
   isOwner: boolean
@@ -40,14 +40,14 @@ export function StatusControls({
   return (
     <div className="space-y-3">
       <StatusForm
-        taskId={taskId}
+        workOrderId={workOrderId}
         status={status}
         isOwner={isOwner}
         hasAfterEvidence={hasAfterEvidence}
       />
-      <PriorityForm taskId={taskId} priority={priority} />
+      <PriorityForm workOrderId={workOrderId} priority={priority} />
       <AssigneeForm
-        taskId={taskId}
+        workOrderId={workOrderId}
         assigneeId={assigneeId}
         assignees={assignees}
       />
@@ -56,13 +56,13 @@ export function StatusControls({
 }
 
 function StatusForm({
-  taskId,
+  workOrderId,
   status,
   isOwner,
   hasAfterEvidence,
 }: {
-  taskId: string
-  status: TaskStatus
+  workOrderId: string
+  status: WorkOrderStatus
   isOwner: boolean
   hasAfterEvidence: boolean
 }) {
@@ -75,7 +75,7 @@ function StatusForm({
       <label className="text-xs font-medium uppercase tracking-wider text-subtle">
         Status
       </label>
-      <input type="hidden" name="task_id" value={taskId} />
+      <input type="hidden" name="work_order_id" value={workOrderId} />
       <select
         name="status"
         defaultValue={status}
@@ -106,11 +106,11 @@ function StatusForm({
 }
 
 function PriorityForm({
-  taskId,
+  workOrderId,
   priority,
 }: {
-  taskId: string
-  priority: TaskPriority
+  workOrderId: string
+  priority: WorkOrderPriority
 }) {
   const [state, action, pending] = useActionState<ActionResult, FormData>(
     changePriorityAction,
@@ -121,7 +121,7 @@ function PriorityForm({
       <label className="text-xs font-medium uppercase tracking-wider text-subtle">
         Priority
       </label>
-      <input type="hidden" name="task_id" value={taskId} />
+      <input type="hidden" name="work_order_id" value={workOrderId} />
       <select
         name="priority"
         defaultValue={priority}
@@ -142,11 +142,11 @@ function PriorityForm({
 }
 
 function AssigneeForm({
-  taskId,
+  workOrderId,
   assigneeId,
   assignees,
 }: {
-  taskId: string
+  workOrderId: string
   assigneeId: string | null
   assignees: Pick<Profile, 'id' | 'full_name'>[]
 }) {
@@ -159,7 +159,7 @@ function AssigneeForm({
       <label className="text-xs font-medium uppercase tracking-wider text-subtle">
         Assignee
       </label>
-      <input type="hidden" name="task_id" value={taskId} />
+      <input type="hidden" name="work_order_id" value={workOrderId} />
       <select
         name="assignee_id"
         defaultValue={assigneeId ?? ''}

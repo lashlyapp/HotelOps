@@ -1,13 +1,13 @@
 import Image from 'next/image'
 import { r2PublicUrl } from '@/lib/r2/client'
 import type {
-  TaskAttachment,
-  TaskAttachmentPhase,
+  WorkOrderAttachment,
+  WorkOrderAttachmentPhase,
 } from '@/lib/supabase/types'
 import { deleteAttachmentAction } from '../actions'
 import { formatDateTime } from '../_lib/time'
 
-const PHASE_LABELS: Record<TaskAttachmentPhase, string> = {
+const PHASE_LABELS: Record<WorkOrderAttachmentPhase, string> = {
   before: 'Before',
   progress: 'Progress',
   after: 'After',
@@ -17,19 +17,19 @@ export function Gallery({
   attachments,
   canDelete,
 }: {
-  attachments: TaskAttachment[]
+  attachments: WorkOrderAttachment[]
   canDelete: boolean
 }) {
   if (attachments.length === 0) {
     return (
       <p className="text-sm text-muted">
         No photos or videos yet. The capture form below records evidence
-        directly to the task.
+        directly to the work order.
       </p>
     )
   }
 
-  const grouped: Record<TaskAttachmentPhase, TaskAttachment[]> = {
+  const grouped: Record<WorkOrderAttachmentPhase, WorkOrderAttachment[]> = {
     before: [],
     progress: [],
     after: [],
@@ -38,7 +38,7 @@ export function Gallery({
 
   return (
     <div className="space-y-5">
-      {(['before', 'progress', 'after'] as TaskAttachmentPhase[]).map((phase) =>
+      {(['before', 'progress', 'after'] as WorkOrderAttachmentPhase[]).map((phase) =>
         grouped[phase].length === 0 ? null : (
           <section key={phase} className="space-y-2">
             <h4 className="text-xs uppercase tracking-wider text-subtle">
@@ -60,7 +60,7 @@ function Item({
   att,
   canDelete,
 }: {
-  att: TaskAttachment
+  att: WorkOrderAttachment
   canDelete: boolean
 }) {
   const url = r2PublicUrl(att.r2_key)

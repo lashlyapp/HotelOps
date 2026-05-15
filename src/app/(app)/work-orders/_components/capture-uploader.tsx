@@ -4,8 +4,8 @@ import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
 import {
-  presignTaskAttachmentAction,
-  presignTaskPosterAction,
+  presignWorkOrderAttachmentAction,
+  presignWorkOrderPosterAction,
   type PresignAttachmentResult,
 } from '../actions'
 
@@ -40,12 +40,12 @@ type Slot = {
  */
 export function CaptureUploader({
   propertyId,
-  taskId,
+  workOrderId,
   initial = [],
   onChange,
 }: {
   propertyId: string
-  taskId: string
+  workOrderId: string
   initial?: UploadedAttachment[]
   onChange: (uploads: UploadedAttachment[]) => void
 }) {
@@ -134,9 +134,9 @@ export function CaptureUploader({
     kind: 'photo' | 'video',
   ) {
     try {
-      const presign: PresignAttachmentResult = await presignTaskAttachmentAction({
+      const presign: PresignAttachmentResult = await presignWorkOrderAttachmentAction({
         propertyId,
-        taskId,
+        workOrderId,
         filename: file.name,
         contentType: file.type || (kind === 'photo' ? 'image/jpeg' : 'video/mp4'),
         size: file.size,
@@ -156,11 +156,11 @@ export function CaptureUploader({
           file,
           presign.key,
           propertyId,
-          taskId,
+          workOrderId,
         ).catch((err) => {
-          // Don't block the task on a poster — the player shows the first
+          // Don't block the work order on a poster — the player shows the first
           // frame as a fallback. The cover-picker is the v1.1 follow-up.
-          console.warn('[tasks] poster capture failed', err)
+          console.warn('[work-orders] poster capture failed', err)
           return null
         })
       }
@@ -439,20 +439,20 @@ function putToR2(
 
 // ----------------------------------------------------------------------------
 // Capture a poster JPEG from the just-uploaded video and PUT it next to the
-// video under the task's _posters/ subprefix. Best-effort — codec-unsupported
+// video under the work order's _posters/ subprefix. Best-effort — codec-unsupported
 // videos (iPhone HEVC on Chrome) silently fall back to "no poster".
 // ----------------------------------------------------------------------------
 async function capturePosterAndUpload(
   file: File,
   videoKey: string,
   propertyId: string,
-  taskId: string,
+  workOrderId: string,
 ): Promise<string | null> {
   const blob = await captureFirstFrame(file)
   if (!blob) return null
-  const presign = await presignTaskPosterAction({
+  const presign = await presignWorkOrderPosterAction({
     propertyId,
-    taskId,
+    workOrderId,
     videoKey,
     size: blob.size,
   })

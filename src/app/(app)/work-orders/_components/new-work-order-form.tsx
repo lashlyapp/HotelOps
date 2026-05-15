@@ -7,10 +7,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type {
   Property,
-  TaskCategory,
-  TaskPriority,
+  WorkOrderCategory,
+  WorkOrderPriority,
 } from '@/lib/supabase/types'
-import { createTaskAction } from '../actions'
+import { createWorkOrderAction } from '../actions'
 import {
   CATEGORIES,
   CATEGORY_LABELS,
@@ -19,16 +19,16 @@ import {
 } from '../_lib/labels'
 import { CaptureUploader, type UploadedAttachment } from './capture-uploader'
 
-const STORAGE_KEY = 'tasks:new-form'
+const STORAGE_KEY = 'work-orders:new-form'
 
 type DraftState = {
   propertyId: string
-  category: TaskCategory
-  priority: TaskPriority
+  category: WorkOrderCategory
+  priority: WorkOrderPriority
   location: string
 }
 
-export function NewTaskForm({
+export function NewWorkOrderForm({
   properties,
   defaultPropertyId,
 }: {
@@ -46,7 +46,7 @@ export function NewTaskForm({
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [attachments, setAttachments] = useState<UploadedAttachment[]>([])
-  const [taskId] = useState(() => crypto.randomUUID())
+  const [workOrderId] = useState(() => crypto.randomUUID())
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -80,8 +80,8 @@ export function NewTaskForm({
     const finalTitle = title.trim() || suggestedTitle()
     persistDraft(draft)
     startTransition(async () => {
-      const result = await createTaskAction({
-        id: taskId,
+      const result = await createWorkOrderAction({
+        id: workOrderId,
         propertyId: property.id,
         title: finalTitle,
         description: description.trim() || null,
@@ -101,14 +101,14 @@ export function NewTaskForm({
         setError(result.error)
         return
       }
-      router.push(`/tasks/${result.id}`)
+      router.push(`/work-orders/${result.id}`)
     })
   }
 
   if (properties.length === 0) {
     return (
       <p className="text-sm text-muted">
-        Add a property first, then come back to create a task.
+        Add a property first, then come back to create a workOrder.
       </p>
     )
   }
@@ -124,7 +124,7 @@ export function NewTaskForm({
         {property ? (
           <CaptureUploader
             propertyId={property.id}
-            taskId={taskId}
+            workOrderId={workOrderId}
             onChange={setAttachments}
           />
         ) : null}
@@ -170,7 +170,7 @@ export function NewTaskForm({
             onChange={(e) =>
               setDraft((d) => ({
                 ...d,
-                category: e.target.value as TaskCategory,
+                category: e.target.value as WorkOrderCategory,
               }))
             }
             className="focus-ring h-10 w-full rounded-md border border-border-default bg-surface px-3 text-sm text-fg"
@@ -190,7 +190,7 @@ export function NewTaskForm({
             onChange={(e) =>
               setDraft((d) => ({
                 ...d,
-                priority: e.target.value as TaskPriority,
+                priority: e.target.value as WorkOrderPriority,
               }))
             }
             className="focus-ring h-10 w-full rounded-md border border-border-default bg-surface px-3 text-sm text-fg"
@@ -243,12 +243,12 @@ export function NewTaskForm({
 
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={pending}>
-          {pending ? 'Saving…' : 'Create task'}
+          {pending ? 'Saving…' : 'Create work order'}
         </Button>
         <Button
           type="button"
           variant="ghost"
-          onClick={() => router.push('/tasks')}
+          onClick={() => router.push('/work-orders')}
           disabled={pending}
         >
           Cancel
@@ -281,11 +281,11 @@ function loadDraft(
           : fallback.propertyId,
       category:
         parsed.category && (CATEGORIES as string[]).includes(parsed.category)
-          ? (parsed.category as TaskCategory)
+          ? (parsed.category as WorkOrderCategory)
           : fallback.category,
       priority:
         parsed.priority && (PRIORITIES as string[]).includes(parsed.priority)
-          ? (parsed.priority as TaskPriority)
+          ? (parsed.priority as WorkOrderPriority)
           : fallback.priority,
       location: typeof parsed.location === 'string' ? parsed.location : '',
     }

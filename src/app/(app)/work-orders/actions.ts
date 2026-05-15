@@ -8,21 +8,21 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { r2DeleteObject, r2PresignPutUrl } from '@/lib/r2/upload'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type {
-  Task,
-  TaskActivityKind,
-  TaskAttachmentKind,
-  TaskAttachmentPhase,
-  TaskCategory,
-  TaskPriority,
-  TaskStatus,
+  WorkOrder,
+  WorkOrderActivityKind,
+  WorkOrderAttachmentKind,
+  WorkOrderAttachmentPhase,
+  WorkOrderCategory,
+  WorkOrderPriority,
+  WorkOrderStatus,
 } from '@/lib/supabase/types'
 import { CATEGORIES, PRIORITIES, STATUSES } from './_lib/labels'
-import { nextTaskReference } from './_lib/reference'
+import { nextWorkOrderReference } from './_lib/reference'
 
 export type ActionResult = { error?: string; success?: string }
 
 // ----------------------------------------------------------------------------
-// Allowed media for task attachments. Tighter than /media — we only want
+// Allowed media for work order attachments. Tighter than /media — we only want
 // photo + short video evidence, not the full creative-asset surface.
 // ----------------------------------------------------------------------------
 const PHOTO_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'])
@@ -45,13 +45,13 @@ function trimOrNull(value: FormDataEntryValue | null): string | null {
   return v === '' ? null : v
 }
 
-function isStatus(v: string): v is TaskStatus {
+function isStatus(v: string): v is WorkOrderStatus {
   return (STATUSES as string[]).includes(v)
 }
-function isPriority(v: string): v is TaskPriority {
+function isPriority(v: string): v is WorkOrderPriority {
   return (PRIORITIES as string[]).includes(v)
 }
-function isCategory(v: string): v is TaskCategory {
+function isCategory(v: string): v is WorkOrderCategory {
   return (CATEGORIES as string[]).includes(v)
 }
 
@@ -69,29 +69,29 @@ async function ensurePropertyInOrg(
   return !!data
 }
 
-async function loadTaskForOrg(
+async function loadWorkOrderForOrg(
   orgId: string,
-  taskId: string,
-): Promise<Task | null> {
+  workOrderId: string,
+): Promise<WorkOrder | null> {
   const admin = createAdminClient()
   const { data } = await admin
-    .from('tasks')
+    .from('work_orders')
     .select('*')
-    .eq('id', taskId)
+    .eq('id', workOrderId)
     .eq('org_id', orgId)
     .maybeSingle()
-  return (data as Task | null) ?? null
+  return (data as WorkOrder | null) ?? null
 }
 
-function revalidateTask(taskId: string) {
-  revalidatePath('/tasks')
-  revalidatePath(`/tasks/${taskId}`)
+function revalidateWorkOrder(workOrderId: string) {
+  revalidatePath('/work-orders')
+  revalidatePath(`/work-orders/${workOrderId}`)
 }
 
 async function logActivity(args: {
-  taskId: string
+  workOrderId: string
   orgId: string
-  kind: TaskActivityKind
+  kind: WorkOrderActivityKind
   from?: string | null
   to?: string | null
   note?: string | null
@@ -99,8 +99,8 @@ async function logActivity(args: {
   actorEmail: string | null
 }) {
   const admin = createAdminClient()
-  await admin.from('task_activity').insert({
-    task_id: args.taskId,
+  await admin.from('work_order_activity').insert({
+    work_order_id: args.workOrderId,
     org_id: args.orgId,
     kind: args.kind,
     from_value: args.from ?? null,
@@ -132,32 +132,32 @@ export type PresignAttachmentResult =
       ok: true
       key: string
       url: string
-      kind: TaskAttachmentKind
+      kind: WorkOrderAttachmentKind
       filename: string
     }
   | { ok: false; error: string }
 
 /**
- * Presign a PUT for a task attachment (photo or short video). The browser
+ * Presign a PUT for a work order attachment (photo or short video). The browser
  * uploads directly to R2 to bypass Vercel's 4.5 MB function body limit.
  *
- * Attachments live under `<property.r2_prefix>_tasks/<task_id>/...` so
+ * Attachments live under `<property.r2_prefix>_work-orders/<work_order_id>/...` so
  * `/media` never sees them (see `src/lib/r2/list.ts` exclusion list).
- * `task_id` is supplied by the client — the row is created later by
- * `createTaskAction`, but the storage key only needs to be stable, not
+ * `work_order_id` is supplied by the client — the row is created later by
+ * `createWorkOrderAction`, but the storage key only needs to be stable, not
  * already-bound to a database row.
  */
-export async function presignTaskAttachmentAction(args: {
+export async function presignWorkOrderAttachmentAction(args: {
   propertyId: string
-  taskId: string // client-generated UUID for new tasks; existing id for evidence-add.
+  workOrderId: string // client-generated UUID for new work orders; existing id for evidence-add.
   filename: string
   contentType: string
   size: number
-  kind: TaskAttachmentKind
+  kind: WorkOrderAttachmentKind
 }): Promise<PresignAttachmentResult> {
   const session = await requireOrgUser({ write: true })
 
-  const rl = checkRateLimit(`tasks-presign:${session.userId}`, PRESIGN_LIMIT)
+  const rl = checkRateLimit(`work-orders-presign:${session.userId}`, PRESIGN_LIMIT)
   if (!rl.ok) {
     return { ok: false, error: 'Too many uploads — slow down a moment.' }
   }
@@ -184,14 +184,14 @@ export async function presignTaskAttachmentAction(args: {
   if (!property) return { ok: false, error: 'Property not found.' }
 
   // UUID shape only; we don't bind to a row yet.
-  if (!/^[0-9a-fA-F-]{32,40}$/.test(args.taskId)) {
-    return { ok: false, error: 'Invalid task id.' }
+  if (!/^[0-9a-fA-F-]{32,40}$/.test(args.workOrderId)) {
+    return { ok: false, error: 'Invalid work order id.' }
   }
 
   const safe = sanitizeFilename(args.filename)
   if (!safe) return { ok: false, error: 'Invalid filename.' }
 
-  const key = `${property.r2_prefix}_tasks/${args.taskId}/${randomToken()}-${safe}`
+  const key = `${property.r2_prefix}_work-orders/${args.workOrderId}/${randomToken()}-${safe}`
   const url = await r2PresignPutUrl(key, args.contentType)
   return { ok: true, key, url, kind: args.kind, filename: safe }
 }
@@ -199,13 +199,13 @@ export async function presignTaskAttachmentAction(args: {
 /**
  * Presign the JPEG poster for a video attachment (companion to the
  * `cover-picker` flow on `/media`). Posters live next to the video under
- * the same task's `_posters/` subprefix so the orphan-posters cron's
+ * the same work order's `_posters/` subprefix so the orphan-posters cron's
  * scan window — which only looks at the property root — won't touch
- * them, and `/media` already filters out the parent `_tasks/`.
+ * them, and `/media` already filters out the parent `_work-orders/`.
  */
-export async function presignTaskPosterAction(args: {
+export async function presignWorkOrderPosterAction(args: {
   propertyId: string
-  taskId: string
+  workOrderId: string
   videoKey: string
   size: number
 }): Promise<
@@ -213,16 +213,16 @@ export async function presignTaskPosterAction(args: {
   | { ok: false; error: string }
 > {
   const session = await requireOrgUser({ write: true })
-  const rl = checkRateLimit(`tasks-presign:${session.userId}`, PRESIGN_LIMIT)
+  const rl = checkRateLimit(`work-orders-presign:${session.userId}`, PRESIGN_LIMIT)
   if (!rl.ok) {
     return { ok: false, error: 'Too many uploads — slow down a moment.' }
   }
   const property = session.properties.find((p) => p.id === args.propertyId)
   if (!property) return { ok: false, error: 'Property not found.' }
 
-  const expectedPrefix = `${property.r2_prefix}_tasks/${args.taskId}/`
+  const expectedPrefix = `${property.r2_prefix}_work-orders/${args.workOrderId}/`
   if (!args.videoKey.startsWith(expectedPrefix)) {
-    return { ok: false, error: 'Video does not belong to this task.' }
+    return { ok: false, error: 'Video does not belong to this work order.' }
   }
   if (args.size <= 0 || args.size > MAX_POSTER_BYTES) {
     return { ok: false, error: 'Invalid poster size.' }
@@ -238,7 +238,7 @@ export async function presignTaskPosterAction(args: {
 // Create
 // ----------------------------------------------------------------------------
 export type AttachmentInput = {
-  kind: TaskAttachmentKind
+  kind: WorkOrderAttachmentKind
   r2Key: string
   posterKey?: string | null
   filename: string
@@ -246,26 +246,26 @@ export type AttachmentInput = {
   sizeBytes: number
 }
 
-export type CreateTaskInput = {
+export type CreateWorkOrderInput = {
   id: string // client-supplied UUID so already-uploaded attachments line up.
   propertyId: string
   title: string
   description?: string | null
-  category: TaskCategory
-  priority: TaskPriority
+  category: WorkOrderCategory
+  priority: WorkOrderPriority
   location?: string | null
   assigneeId?: string | null
   tags?: string[]
   attachments: AttachmentInput[]
 }
 
-export async function createTaskAction(
-  input: CreateTaskInput,
+export async function createWorkOrderAction(
+  input: CreateWorkOrderInput,
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const session = await requireOrgUser({ write: true })
 
   if (!/^[0-9a-f-]{36}$/i.test(input.id)) {
-    return { ok: false, error: 'Invalid task id.' }
+    return { ok: false, error: 'Invalid work order id.' }
   }
   if (!input.propertyId) return { ok: false, error: 'Choose a property.' }
   if (!(await ensurePropertyInOrg(session.organization.id, input.propertyId))) {
@@ -289,17 +289,17 @@ export async function createTaskAction(
   const property = session.properties.find((p) => p.id === input.propertyId)
   if (!property) return { ok: false, error: 'Property not found.' }
   const propertyPrefix = property.r2_prefix
-  const expectedPrefix = `${propertyPrefix}_tasks/${input.id}/`
+  const expectedPrefix = `${propertyPrefix}_work-orders/${input.id}/`
 
   for (const att of input.attachments) {
     if (!att.r2Key.startsWith(expectedPrefix)) {
       return {
         ok: false,
-        error: 'An attachment key does not belong to this task.',
+        error: 'An attachment key does not belong to this work order.',
       }
     }
     if (att.posterKey && !att.posterKey.startsWith(expectedPrefix)) {
-      return { ok: false, error: 'A poster key does not belong to this task.' }
+      return { ok: false, error: 'A poster key does not belong to this work order.' }
     }
   }
 
@@ -319,11 +319,11 @@ export async function createTaskAction(
     assigneeId = input.assigneeId
   }
 
-  const reference = await nextTaskReference(input.propertyId)
+  const reference = await nextWorkOrderReference(input.propertyId)
   const admin = createAdminClient()
 
-  const insertTask = await admin
-    .from('tasks')
+  const insertWorkOrder = await admin
+    .from('work_orders')
     .insert({
       id: input.id,
       org_id: session.organization.id,
@@ -341,15 +341,15 @@ export async function createTaskAction(
     })
     .select('id')
     .single()
-  if (insertTask.error) {
+  if (insertWorkOrder.error) {
     // Clean up any uploaded R2 objects so we don't orphan storage.
     await cleanupAttachments(input.attachments)
-    return { ok: false, error: insertTask.error.message }
+    return { ok: false, error: insertWorkOrder.error.message }
   }
 
   if (input.attachments.length > 0) {
     const rows = input.attachments.map((a) => ({
-      task_id: input.id,
+      work_order_id: input.id,
       org_id: session.organization.id,
       kind: a.kind,
       r2_key: a.r2Key,
@@ -357,22 +357,22 @@ export async function createTaskAction(
       filename: a.filename.slice(0, 200),
       content_type: a.contentType.slice(0, 120),
       size_bytes: Math.max(0, Math.floor(a.sizeBytes)),
-      phase: 'before' as TaskAttachmentPhase,
+      phase: 'before' as WorkOrderAttachmentPhase,
       uploaded_by: session.userId,
     }))
-    const { error } = await admin.from('task_attachments').insert(rows)
+    const { error } = await admin.from('work_order_attachments').insert(rows)
     if (error) {
-      // Soft-fail: the task is already in. Surface a warning by way of activity.
-      console.error('[tasks] attachment insert failed', error)
+      // Soft-fail: the work order is already in. Surface a warning by way of activity.
+      console.error('[work-orders] attachment insert failed', error)
     }
   }
 
   // Tag set (deduped, normalized).
   const tags = normalizeTags(input.tags ?? [])
   if (tags.length > 0) {
-    await admin.from('task_tags').insert(
+    await admin.from('work_order_tags').insert(
       tags.map((tag) => ({
-        task_id: input.id,
+        work_order_id: input.id,
         org_id: session.organization.id,
         tag,
       })),
@@ -380,7 +380,7 @@ export async function createTaskAction(
   }
 
   await logActivity({
-    taskId: input.id,
+    workOrderId: input.id,
     orgId: session.organization.id,
     kind: 'created',
     to: reference,
@@ -388,7 +388,7 @@ export async function createTaskAction(
     actorEmail: session.email,
   })
 
-  revalidateTask(input.id)
+  revalidateWorkOrder(input.id)
   return { ok: true, id: input.id }
 }
 
@@ -419,15 +419,15 @@ export async function changeStatusAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const session = await requireOrgUser({ write: true })
-  const taskId = trim(formData.get('task_id'))
+  const workOrderId = trim(formData.get('work_order_id'))
   const next = trim(formData.get('status'))
   const force = trim(formData.get('force')) === '1'
   if (!isStatus(next)) return { error: 'Invalid status.' }
   void prev
 
-  const task = await loadTaskForOrg(session.organization.id, taskId)
-  if (!task) return { error: 'Task not found.' }
-  if (task.status === next) return { success: 'Already there.' }
+  const workOrder = await loadWorkOrderForOrg(session.organization.id, workOrderId)
+  if (!workOrder) return { error: 'Work order not found.' }
+  if (workOrder.status === next) return { success: 'Already there.' }
 
   // "Done" requires at least one after-photo unless the user has owner
   // privileges and explicitly forces it. This is the proof-of-completion
@@ -435,15 +435,15 @@ export async function changeStatusAction(
   if (next === 'done') {
     const admin = createAdminClient()
     const { count } = await admin
-      .from('task_attachments')
+      .from('work_order_attachments')
       .select('id', { count: 'exact', head: true })
-      .eq('task_id', taskId)
+      .eq('work_order_id', workOrderId)
       .eq('phase', 'after')
     if (!count || count < 1) {
       if (!(force && session.profile.role === 'org_owner')) {
         return {
           error:
-            'Mark done needs an "after" photo or video. Upload one from the task page first.',
+            'Mark done needs an "after" photo or video. Upload one from the work order page first.',
         }
       }
     }
@@ -457,32 +457,32 @@ export async function changeStatusAction(
   if (next === 'done') {
     update.resolved_at = new Date().toISOString()
     update.resolved_by = session.userId
-  } else if (task.status === 'done') {
+  } else if (workOrder.status === 'done') {
     update.resolved_at = null
     update.resolved_by = null
   }
 
   const { error } = await admin
-    .from('tasks')
+    .from('work_orders')
     .update(update)
-    .eq('id', taskId)
+    .eq('id', workOrderId)
     .eq('org_id', session.organization.id)
   if (error) return { error: error.message }
 
   await logActivity({
-    taskId,
+    workOrderId,
     orgId: session.organization.id,
     kind:
       next === 'done' && force && session.profile.role === 'org_owner'
         ? 'forced_done'
         : 'status',
-    from: task.status,
+    from: workOrder.status,
     to: next,
     actorId: session.userId,
     actorEmail: session.email,
   })
 
-  revalidateTask(taskId)
+  revalidateWorkOrder(workOrderId)
   return { success: `Moved to ${next.replace('_', ' ')}.` }
 }
 
@@ -491,31 +491,31 @@ export async function changePriorityAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const session = await requireOrgUser({ write: true })
-  const taskId = trim(formData.get('task_id'))
+  const workOrderId = trim(formData.get('work_order_id'))
   const next = trim(formData.get('priority'))
   if (!isPriority(next)) return { error: 'Invalid priority.' }
   void prev
-  const task = await loadTaskForOrg(session.organization.id, taskId)
-  if (!task) return { error: 'Task not found.' }
-  if (task.priority === next) return { success: 'No change.' }
+  const workOrder = await loadWorkOrderForOrg(session.organization.id, workOrderId)
+  if (!workOrder) return { error: 'Work order not found.' }
+  if (workOrder.priority === next) return { success: 'No change.' }
 
   const admin = createAdminClient()
   const { error } = await admin
-    .from('tasks')
+    .from('work_orders')
     .update({ priority: next, updated_at: new Date().toISOString() })
-    .eq('id', taskId)
+    .eq('id', workOrderId)
     .eq('org_id', session.organization.id)
   if (error) return { error: error.message }
   await logActivity({
-    taskId,
+    workOrderId,
     orgId: session.organization.id,
     kind: 'priority',
-    from: task.priority,
+    from: workOrder.priority,
     to: next,
     actorId: session.userId,
     actorEmail: session.email,
   })
-  revalidateTask(taskId)
+  revalidateWorkOrder(workOrderId)
   return { success: 'Priority updated.' }
 }
 
@@ -524,12 +524,12 @@ export async function changeAssigneeAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const session = await requireOrgUser({ write: true })
-  const taskId = trim(formData.get('task_id'))
+  const workOrderId = trim(formData.get('work_order_id'))
   const raw = trim(formData.get('assignee_id'))
   const nextId = raw === '' ? null : raw
   void prev
-  const task = await loadTaskForOrg(session.organization.id, taskId)
-  if (!task) return { error: 'Task not found.' }
+  const workOrder = await loadWorkOrderForOrg(session.organization.id, workOrderId)
+  if (!workOrder) return { error: 'Work order not found.' }
 
   if (nextId) {
     const admin = createAdminClient()
@@ -542,26 +542,26 @@ export async function changeAssigneeAction(
     if (!data) return { error: 'Assignee is not in this organization.' }
   }
 
-  if ((task.assignee_id ?? null) === nextId) return { success: 'No change.' }
+  if ((workOrder.assignee_id ?? null) === nextId) return { success: 'No change.' }
 
   const admin = createAdminClient()
   const { error } = await admin
-    .from('tasks')
+    .from('work_orders')
     .update({ assignee_id: nextId, updated_at: new Date().toISOString() })
-    .eq('id', taskId)
+    .eq('id', workOrderId)
     .eq('org_id', session.organization.id)
   if (error) return { error: error.message }
 
   await logActivity({
-    taskId,
+    workOrderId,
     orgId: session.organization.id,
     kind: nextId ? 'assigned' : 'unassigned',
-    from: task.assignee_id,
+    from: workOrder.assignee_id,
     to: nextId,
     actorId: session.userId,
     actorEmail: session.email,
   })
-  revalidateTask(taskId)
+  revalidateWorkOrder(workOrderId)
   return { success: nextId ? 'Assignee updated.' : 'Unassigned.' }
 }
 
@@ -573,17 +573,17 @@ export async function addCommentAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const session = await requireOrgUser({ write: true })
-  const taskId = trim(formData.get('task_id'))
+  const workOrderId = trim(formData.get('work_order_id'))
   const body = trim(formData.get('body'))
   void prev
   if (!body) return { error: 'Write something.' }
   if (body.length > 2000) return { error: 'Comment is too long.' }
-  const task = await loadTaskForOrg(session.organization.id, taskId)
-  if (!task) return { error: 'Task not found.' }
+  const workOrder = await loadWorkOrderForOrg(session.organization.id, workOrderId)
+  if (!workOrder) return { error: 'Work order not found.' }
 
   const admin = createAdminClient()
-  const { error } = await admin.from('task_comments').insert({
-    task_id: taskId,
+  const { error } = await admin.from('work_order_comments').insert({
+    work_order_id: workOrderId,
     org_id: session.organization.id,
     body,
     author_id: session.userId,
@@ -592,23 +592,23 @@ export async function addCommentAction(
   if (error) return { error: error.message }
 
   await logActivity({
-    taskId,
+    workOrderId,
     orgId: session.organization.id,
     kind: 'comment',
     actorId: session.userId,
     actorEmail: session.email,
   })
 
-  revalidateTask(taskId)
+  revalidateWorkOrder(workOrderId)
   return { success: 'Comment posted.' }
 }
 
 // ----------------------------------------------------------------------------
-// Evidence — add attachments to an existing task (progress / after photos)
+// Evidence — add attachments to an existing work order (progress / after photos)
 // ----------------------------------------------------------------------------
 export type AddEvidenceInput = {
-  taskId: string
-  phase: TaskAttachmentPhase
+  workOrderId: string
+  phase: WorkOrderAttachmentPhase
   attachments: AttachmentInput[]
 }
 
@@ -619,24 +619,24 @@ export async function addEvidenceAction(
   if (!['before', 'progress', 'after'].includes(input.phase)) {
     return { ok: false, error: 'Invalid phase.' }
   }
-  const task = await loadTaskForOrg(session.organization.id, input.taskId)
-  if (!task) return { ok: false, error: 'Task not found.' }
+  const workOrder = await loadWorkOrderForOrg(session.organization.id, input.workOrderId)
+  if (!workOrder) return { ok: false, error: 'Work order not found.' }
   if (input.attachments.length === 0) {
     return { ok: false, error: 'Pick a photo or video first.' }
   }
-  const property = session.properties.find((p) => p.id === task.property_id)
+  const property = session.properties.find((p) => p.id === workOrder.property_id)
   if (!property) return { ok: false, error: 'Property not found.' }
-  const expectedPrefix = `${property.r2_prefix}_tasks/${task.id}/`
+  const expectedPrefix = `${property.r2_prefix}_work-orders/${workOrder.id}/`
   for (const a of input.attachments) {
     if (!a.r2Key.startsWith(expectedPrefix)) {
-      return { ok: false, error: 'Attachment key does not belong to this task.' }
+      return { ok: false, error: 'Attachment key does not belong to this work order.' }
     }
   }
 
   const admin = createAdminClient()
-  const { error } = await admin.from('task_attachments').insert(
+  const { error } = await admin.from('work_order_attachments').insert(
     input.attachments.map((a) => ({
-      task_id: task.id,
+      work_order_id: workOrder.id,
       org_id: session.organization.id,
       kind: a.kind,
       r2_key: a.r2Key,
@@ -651,7 +651,7 @@ export async function addEvidenceAction(
   if (error) return { ok: false, error: error.message }
 
   await logActivity({
-    taskId: task.id,
+    workOrderId: workOrder.id,
     orgId: session.organization.id,
     kind: 'attachment',
     to: input.phase,
@@ -659,7 +659,7 @@ export async function addEvidenceAction(
     actorEmail: session.email,
   })
 
-  revalidateTask(task.id)
+  revalidateWorkOrder(workOrder.id)
   return { ok: true }
 }
 
@@ -668,7 +668,7 @@ export async function deleteAttachmentAction(formData: FormData) {
   const id = trim(formData.get('id'))
   const admin = createAdminClient()
   const { data: row } = await admin
-    .from('task_attachments')
+    .from('work_order_attachments')
     .select('*')
     .eq('id', id)
     .eq('org_id', session.organization.id)
@@ -676,36 +676,36 @@ export async function deleteAttachmentAction(formData: FormData) {
   if (!row) return
 
   await admin
-    .from('task_attachments')
+    .from('work_order_attachments')
     .delete()
     .eq('id', id)
     .eq('org_id', session.organization.id)
   await r2DeleteObject(row.r2_key)
   if (row.poster_key) await r2DeleteObject(row.poster_key)
-  revalidateTask(row.task_id)
+  revalidateWorkOrder(row.work_order_id)
 }
 
 // ----------------------------------------------------------------------------
-// Delete task — owner only, hard delete with R2 cleanup.
+// Delete work order — owner only, hard delete with R2 cleanup.
 // ----------------------------------------------------------------------------
-export async function deleteTaskAction(formData: FormData) {
+export async function deleteWorkOrderAction(formData: FormData) {
   const session = await requireOrgUser({ write: true })
   if (session.profile.role !== 'org_owner') {
-    redirect('/tasks?error=not_authorized')
+    redirect('/work-orders?error=not_authorized')
   }
   const id = trim(formData.get('id'))
-  const task = await loadTaskForOrg(session.organization.id, id)
-  if (!task) redirect('/tasks?error=not_found')
+  const workOrder = await loadWorkOrderForOrg(session.organization.id, id)
+  if (!workOrder) redirect('/work-orders?error=not_found')
 
   const admin = createAdminClient()
   const { data: attachments } = await admin
-    .from('task_attachments')
+    .from('work_order_attachments')
     .select('r2_key, poster_key')
-    .eq('task_id', task.id)
+    .eq('work_order_id', workOrder.id)
     .eq('org_id', session.organization.id)
 
   await admin
-    .from('tasks')
+    .from('work_orders')
     .delete()
     .eq('id', id)
     .eq('org_id', session.organization.id)
@@ -715,6 +715,6 @@ export async function deleteTaskAction(formData: FormData) {
     if (a.poster_key) await r2DeleteObject(a.poster_key)
   }
 
-  revalidatePath('/tasks')
-  redirect('/tasks')
+  revalidatePath('/work-orders')
+  redirect('/work-orders')
 }

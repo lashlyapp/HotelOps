@@ -4,12 +4,12 @@ import { requireOrgUser } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type {
   Profile,
-  Task,
-  TaskAttachment,
-  TaskStatus,
+  WorkOrder,
+  WorkOrderAttachment,
+  WorkOrderStatus,
 } from '@/lib/supabase/types'
 import { Board } from './_components/board'
-import type { TaskCardData } from './_components/card'
+import type { WorkOrderCardData } from './_components/card'
 import { PRIORITY_ORDER, STATUS_ORDER } from './_lib/labels'
 
 type SearchParams = Promise<{
@@ -17,7 +17,7 @@ type SearchParams = Promise<{
   mine?: string
 }>
 
-export default async function TasksBoardPage({
+export default async function WorkOrdersBoardPage({
   searchParams,
 }: {
   searchParams: SearchParams
@@ -52,47 +52,47 @@ export default async function TasksBoardPage({
 
   const admin = createAdminClient()
   let q = admin
-    .from('tasks')
+    .from('work_orders')
     .select('*')
     .eq('org_id', session.organization.id)
   if (activeProperty.id) q = q.eq('property_id', activeProperty.id)
   if (mine) q = q.eq('assignee_id', session.userId)
-  const { data: taskRows } = await q.order('created_at', { ascending: false })
-  const tasks = (taskRows ?? []) as Task[]
-  const taskIds = tasks.map((t) => t.id)
+  const { data: workOrderRows } = await q.order('created_at', { ascending: false })
+  const workOrders = (workOrderRows ?? []) as WorkOrder[]
+  const workOrderIds = workOrders.map((t) => t.id)
 
-  // Batched fetches keyed by task_id — single round trip each regardless of
-  // task count (Supabase IN clauses are happy up to a few hundred ids; we
+  // Batched fetches keyed by work_order_id — single round trip each regardless of
+  // work order count (Supabase IN clauses are happy up to a few hundred ids; we
   // limit upstream at the property tab to keep this comfortable).
-  const attachmentsByTask = new Map<string, TaskAttachment[]>()
-  const commentCountByTask = new Map<string, number>()
+  const attachmentsByWorkOrder = new Map<string, WorkOrderAttachment[]>()
+  const commentCountByWorkOrder = new Map<string, number>()
   const assigneeNameById = new Map<string, string>()
 
-  if (taskIds.length > 0) {
+  if (workOrderIds.length > 0) {
     const [{ data: attachments }, { data: comments }] = await Promise.all([
       admin
-        .from('task_attachments')
+        .from('work_order_attachments')
         .select('*')
-        .in('task_id', taskIds)
+        .in('work_order_id', workOrderIds)
         .order('created_at', { ascending: true }),
       admin
-        .from('task_comments')
-        .select('task_id')
-        .in('task_id', taskIds),
+        .from('work_order_comments')
+        .select('work_order_id')
+        .in('work_order_id', workOrderIds),
     ])
-    for (const att of (attachments ?? []) as TaskAttachment[]) {
-      const list = attachmentsByTask.get(att.task_id) ?? []
+    for (const att of (attachments ?? []) as WorkOrderAttachment[]) {
+      const list = attachmentsByWorkOrder.get(att.work_order_id) ?? []
       list.push(att)
-      attachmentsByTask.set(att.task_id, list)
+      attachmentsByWorkOrder.set(att.work_order_id, list)
     }
     for (const c of comments ?? []) {
-      const n = commentCountByTask.get(c.task_id) ?? 0
-      commentCountByTask.set(c.task_id, n + 1)
+      const n = commentCountByWorkOrder.get(c.work_order_id) ?? 0
+      commentCountByWorkOrder.set(c.work_order_id, n + 1)
     }
 
     const assigneeIds = [
       ...new Set(
-        tasks
+        workOrders
           .map((t) => t.assignee_id)
           .filter((id): id is string => typeof id === 'string'),
       ),
@@ -109,31 +109,31 @@ export default async function TasksBoardPage({
   }
 
   // Group + sort: priority first, then newest, within each status column.
-  const groups: Record<TaskStatus, TaskCardData[]> = {
+  const groups: Record<WorkOrderStatus, WorkOrderCardData[]> = {
     open: [],
     in_progress: [],
     waiting: [],
     done: [],
   }
   const propertyById = new Map(session.properties.map((p) => [p.id, p]))
-  for (const task of tasks) {
-    groups[task.status].push({
-      task,
-      attachments: attachmentsByTask.get(task.id) ?? [],
-      property: propertyById.get(task.property_id),
-      assigneeLabel: task.assignee_id
-        ? assigneeNameById.get(task.assignee_id) ?? 'Assigned'
+  for (const workOrder of workOrders) {
+    groups[workOrder.status].push({
+      workOrder,
+      attachments: attachmentsByWorkOrder.get(workOrder.id) ?? [],
+      property: propertyById.get(workOrder.property_id),
+      assigneeLabel: workOrder.assignee_id
+        ? assigneeNameById.get(workOrder.assignee_id) ?? 'Assigned'
         : null,
-      commentCount: commentCountByTask.get(task.id) ?? 0,
+      commentCount: commentCountByWorkOrder.get(workOrder.id) ?? 0,
     })
   }
   for (const status of STATUS_ORDER) {
     groups[status].sort((a, b) => {
-      const p = PRIORITY_ORDER[a.task.priority] - PRIORITY_ORDER[b.task.priority]
+      const p = PRIORITY_ORDER[a.workOrder.priority] - PRIORITY_ORDER[b.workOrder.priority]
       if (p !== 0) return p
       return (
-        new Date(b.task.created_at).getTime() -
-        new Date(a.task.created_at).getTime()
+        new Date(b.workOrder.created_at).getTime() -
+        new Date(a.workOrder.created_at).getTime()
       )
     })
   }
@@ -146,12 +146,12 @@ export default async function TasksBoardPage({
         mine={mine}
       />
 
-      {tasks.length === 0 ? (
+      {workOrders.length === 0 ? (
         <Card>
           <CardBody className="text-sm text-muted">
-            No tasks yet.{' '}
+            No work orders yet.{' '}
             <Link
-              href="/tasks/new"
+              href="/work-orders/new"
               className="focus-ring rounded-sm font-medium text-fg underline"
             >
               Capture the first one
@@ -182,7 +182,7 @@ function Toolbar({
     const m = opts.mine ?? mine
     if (m) params.set('mine', '1')
     const qs = params.toString()
-    return qs ? `/tasks?${qs}` : '/tasks'
+    return qs ? `/work-orders?${qs}` : '/work-orders'
   }
 
   return (

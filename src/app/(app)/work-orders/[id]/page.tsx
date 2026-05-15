@@ -6,12 +6,12 @@ import { requireOrgUser } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type {
   Profile,
-  Task,
-  TaskActivity,
-  TaskAttachment,
-  TaskComment,
+  WorkOrder,
+  WorkOrderActivity,
+  WorkOrderAttachment,
+  WorkOrderComment,
 } from '@/lib/supabase/types'
-import { deleteTaskAction } from '../actions'
+import { deleteWorkOrderAction } from '../actions'
 import { ActivityList } from '../_components/activity-list'
 import { CommentForm } from '../_components/comment-form'
 import { EvidenceUploader } from '../_components/evidence-uploader'
@@ -26,7 +26,7 @@ import {
 } from '../_lib/labels'
 import { formatDateTime } from '../_lib/time'
 
-export default async function TaskDetailPage({
+export default async function WorkOrderDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>
@@ -35,14 +35,14 @@ export default async function TaskDetailPage({
   const session = await requireOrgUser()
 
   const admin = createAdminClient()
-  const { data: taskRow } = await admin
-    .from('tasks')
+  const { data: workOrderRow } = await admin
+    .from('work_orders')
     .select('*')
     .eq('id', id)
     .eq('org_id', session.organization.id)
     .maybeSingle()
-  if (!taskRow) notFound()
-  const task = taskRow as Task
+  if (!workOrderRow) notFound()
+  const workOrder = workOrderRow as WorkOrder
 
   const [
     { data: attachmentsRows },
@@ -51,19 +51,19 @@ export default async function TaskDetailPage({
     { data: memberRows },
   ] = await Promise.all([
     admin
-      .from('task_attachments')
+      .from('work_order_attachments')
       .select('*')
-      .eq('task_id', task.id)
+      .eq('work_order_id', workOrder.id)
       .order('created_at', { ascending: true }),
     admin
-      .from('task_comments')
+      .from('work_order_comments')
       .select('*')
-      .eq('task_id', task.id)
+      .eq('work_order_id', workOrder.id)
       .order('created_at', { ascending: true }),
     admin
-      .from('task_activity')
+      .from('work_order_activity')
       .select('*')
-      .eq('task_id', task.id)
+      .eq('work_order_id', workOrder.id)
       .order('created_at', { ascending: true }),
     admin
       .from('profiles')
@@ -71,12 +71,12 @@ export default async function TaskDetailPage({
       .eq('org_id', session.organization.id),
   ])
 
-  const attachments = (attachmentsRows ?? []) as TaskAttachment[]
-  const comments = (commentRows ?? []) as TaskComment[]
-  const activity = (activityRows ?? []) as TaskActivity[]
+  const attachments = (attachmentsRows ?? []) as WorkOrderAttachment[]
+  const comments = (commentRows ?? []) as WorkOrderComment[]
+  const activity = (activityRows ?? []) as WorkOrderActivity[]
   const members = (memberRows ?? []) as Pick<Profile, 'id' | 'full_name'>[]
   const profilesById = new Map(members.map((m) => [m.id, m]))
-  const property = session.properties.find((p) => p.id === task.property_id)
+  const property = session.properties.find((p) => p.id === workOrder.property_id)
   const hasAfterEvidence = attachments.some((a) => a.phase === 'after')
   const isOwner = session.profile.role === 'org_owner'
 
@@ -84,7 +84,7 @@ export default async function TaskDetailPage({
     <div className="p-4 sm:p-8 space-y-6 max-w-6xl">
       <div>
         <Link
-          href="/tasks"
+          href="/work-orders"
           className="focus-ring rounded-sm text-xs text-muted hover:text-fg"
         >
           ← Back to board
@@ -92,13 +92,13 @@ export default async function TaskDetailPage({
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-xs text-subtle">
-              <span className="font-mono uppercase">{task.reference}</span>
+              <span className="font-mono uppercase">{workOrder.reference}</span>
               <span>·</span>
-              <span>{CATEGORY_LABELS[task.category]}</span>
-              {task.location ? (
+              <span>{CATEGORY_LABELS[workOrder.category]}</span>
+              {workOrder.location ? (
                 <>
                   <span>·</span>
-                  <span>{task.location}</span>
+                  <span>{workOrder.location}</span>
                 </>
               ) : null}
               {property ? (
@@ -109,25 +109,25 @@ export default async function TaskDetailPage({
               ) : null}
             </div>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight text-fg">
-              {task.title}
+              {workOrder.title}
             </h1>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              <Badge tone={STATUS_TONE[task.status]}>
-                {STATUS_LABELS[task.status]}
+              <Badge tone={STATUS_TONE[workOrder.status]}>
+                {STATUS_LABELS[workOrder.status]}
               </Badge>
-              <Badge tone={PRIORITY_TONE[task.priority]}>
-                {PRIORITY_LABELS[task.priority]} priority
+              <Badge tone={PRIORITY_TONE[workOrder.priority]}>
+                {PRIORITY_LABELS[workOrder.priority]} priority
               </Badge>
             </div>
           </div>
           {isOwner ? (
-            <form action={deleteTaskAction}>
-              <input type="hidden" name="id" value={task.id} />
+            <form action={deleteWorkOrderAction}>
+              <input type="hidden" name="id" value={workOrder.id} />
               <button
                 type="submit"
                 className="focus-ring rounded-sm text-xs text-muted hover:text-danger-fg"
               >
-                Delete task
+                Delete work order
               </button>
             </form>
           ) : null}
@@ -136,14 +136,14 @@ export default async function TaskDetailPage({
 
       <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
         <div className="space-y-6 min-w-0">
-          {task.description ? (
+          {workOrder.description ? (
             <Card>
               <CardBody className="space-y-2">
                 <p className="text-xs uppercase tracking-wider text-subtle">
                   Notes
                 </p>
                 <p className="whitespace-pre-wrap text-sm text-fg">
-                  {task.description}
+                  {workOrder.description}
                 </p>
               </CardBody>
             </Card>
@@ -161,10 +161,10 @@ export default async function TaskDetailPage({
                     Add more
                   </h4>
                   <EvidenceUploader
-                    taskId={task.id}
+                    workOrderId={workOrder.id}
                     propertyId={property.id}
                     initialPhase={
-                      task.status === 'done' ? 'after' : 'progress'
+                      workOrder.status === 'done' ? 'after' : 'progress'
                     }
                   />
                 </div>
@@ -183,7 +183,7 @@ export default async function TaskDetailPage({
                 profilesById={profilesById}
               />
               <div className="border-t border-border-subtle pt-5">
-                <CommentForm taskId={task.id} />
+                <CommentForm workOrderId={workOrder.id} />
               </div>
             </CardBody>
           </Card>
@@ -193,10 +193,10 @@ export default async function TaskDetailPage({
           <Card>
             <CardBody>
               <StatusControls
-                taskId={task.id}
-                status={task.status}
-                priority={task.priority}
-                assigneeId={task.assignee_id}
+                workOrderId={workOrder.id}
+                status={workOrder.status}
+                priority={workOrder.priority}
+                assigneeId={workOrder.assignee_id}
                 assignees={members}
                 isOwner={isOwner}
                 hasAfterEvidence={hasAfterEvidence}
@@ -208,18 +208,18 @@ export default async function TaskDetailPage({
             <CardBody className="space-y-2 text-xs text-muted">
               <p>
                 Reported{' '}
-                <span className="text-fg">{formatDateTime(task.created_at)}</span>
+                <span className="text-fg">{formatDateTime(workOrder.created_at)}</span>
               </p>
-              {task.created_by_email ? (
+              {workOrder.created_by_email ? (
                 <p>
-                  By <span className="text-fg">{task.created_by_email}</span>
+                  By <span className="text-fg">{workOrder.created_by_email}</span>
                 </p>
               ) : null}
-              {task.resolved_at ? (
+              {workOrder.resolved_at ? (
                 <p>
                   Resolved{' '}
                   <span className="text-fg">
-                    {formatDateTime(task.resolved_at)}
+                    {formatDateTime(workOrder.resolved_at)}
                   </span>
                 </p>
               ) : null}

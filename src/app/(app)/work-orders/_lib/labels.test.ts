@@ -15,7 +15,7 @@ import {
 } from './labels'
 import { formatAge } from './time'
 
-describe('tasks labels', () => {
+describe('work order labels', () => {
   it('every status enum value has a label, order entry, and tone', () => {
     for (const s of STATUSES) {
       assert.ok(STATUS_LABELS[s], `missing label for ${s}`)

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-export default function TasksLayout({
+export default function WorkOrdersLayout({
   children,
 }: {
   children: React.ReactNode
@@ -14,7 +14,7 @@ export default function TasksLayout({
               Maintenance &amp; service
             </p>
             <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-fg">
-              Task board
+              Work order board
             </h1>
             <p className="mt-1 max-w-xl text-sm text-muted">
               Photo and video-first ticketing for non-routine work — a dripping
@@ -22,10 +22,10 @@ export default function TasksLayout({
             </p>
           </div>
           <Link
-            href="/tasks/new"
+            href="/work-orders/new"
             className="focus-ring inline-flex h-10 items-center justify-center self-start rounded-md bg-primary px-4 text-sm font-medium text-primary-fg hover:bg-primary-hover"
           >
-            + New task
+            + New work order
           </Link>
         </div>
       </header>

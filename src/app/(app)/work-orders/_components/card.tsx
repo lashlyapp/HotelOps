@@ -4,8 +4,8 @@ import { Badge } from '@/components/ui/badge'
 import { r2PublicUrl } from '@/lib/r2/client'
 import type {
   Property,
-  Task,
-  TaskAttachment,
+  WorkOrder,
+  WorkOrderAttachment,
 } from '@/lib/supabase/types'
 import {
   CATEGORY_LABELS,
@@ -14,9 +14,9 @@ import {
 } from '../_lib/labels'
 import { formatAge } from '../_lib/time'
 
-export type TaskCardData = {
-  task: Task
-  attachments: TaskAttachment[]
+export type WorkOrderCardData = {
+  workOrder: WorkOrder
+  attachments: WorkOrderAttachment[]
   property?: Property
   assigneeLabel?: string | null
   commentCount?: number
@@ -28,13 +28,13 @@ export type TaskCardData = {
  * a title. Falls back to a category-tinted placeholder if no media was
  * attached, with a small warning glyph nudging the user to upload proof.
  */
-export function TaskCard({
-  task,
+export function WorkOrderCard({
+  workOrder,
   attachments,
   property,
   assigneeLabel,
   commentCount,
-}: TaskCardData) {
+}: WorkOrderCardData) {
   const first = pickThumbAttachment(attachments)
   const thumbUrl = first
     ? (first.poster_key ? r2PublicUrl(first.poster_key) : r2PublicUrl(first.r2_key))
@@ -44,7 +44,7 @@ export function TaskCard({
 
   return (
     <Link
-      href={`/tasks/${task.id}`}
+      href={`/work-orders/${workOrder.id}`}
       className="focus-ring block overflow-hidden rounded-md border border-border-subtle bg-surface hover:border-border-default"
     >
       <div className="aspect-[4/3] relative w-full overflow-hidden bg-surface-muted">
@@ -92,8 +92,8 @@ export function TaskCard({
           </span>
         ) : null}
         <span className="absolute left-1.5 top-1.5">
-          <Badge tone={PRIORITY_TONE[task.priority]}>
-            {PRIORITY_LABELS[task.priority]}
+          <Badge tone={PRIORITY_TONE[workOrder.priority]}>
+            {PRIORITY_LABELS[workOrder.priority]}
           </Badge>
         </span>
       </div>
@@ -101,15 +101,15 @@ export function TaskCard({
       <div className="space-y-2 p-3">
         <div className="flex items-start justify-between gap-2">
           <h3 className="text-sm font-medium leading-snug text-fg line-clamp-2">
-            {task.title}
+            {workOrder.title}
           </h3>
           <span className="shrink-0 text-[10px] font-mono uppercase text-subtle">
-            {task.reference}
+            {workOrder.reference}
           </span>
         </div>
         <div className="text-xs text-muted">
-          {CATEGORY_LABELS[task.category]}
-          {task.location ? <> · {task.location}</> : null}
+          {CATEGORY_LABELS[workOrder.category]}
+          {workOrder.location ? <> · {workOrder.location}</> : null}
           {property ? <> · {property.name}</> : null}
         </div>
         <div className="flex items-center justify-between gap-2 text-[11px] text-subtle">
@@ -140,7 +140,7 @@ export function TaskCard({
               </span>
             ) : null}
           </div>
-          <span>{formatAge(task.created_at)}</span>
+          <span>{formatAge(workOrder.created_at)}</span>
         </div>
       </div>
     </Link>
@@ -148,8 +148,8 @@ export function TaskCard({
 }
 
 function pickThumbAttachment(
-  attachments: TaskAttachment[],
-): TaskAttachment | undefined {
+  attachments: WorkOrderAttachment[],
+): WorkOrderAttachment | undefined {
   if (attachments.length === 0) return undefined
   // Prefer the earliest 'before' photo so the headline image matches what
   // the reporter saw. Falls back to the earliest of anything.

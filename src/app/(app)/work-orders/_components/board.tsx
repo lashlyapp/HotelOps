@@ -1,16 +1,16 @@
 import { Card } from '@/components/ui/card'
-import type { TaskStatus } from '@/lib/supabase/types'
+import type { WorkOrderStatus } from '@/lib/supabase/types'
 import {
   STATUS_COLUMN_DESCRIPTION,
   STATUS_LABELS,
   STATUS_ORDER,
 } from '../_lib/labels'
-import { TaskCard, type TaskCardData } from './card'
+import { WorkOrderCard, type WorkOrderCardData } from './card'
 
 export function Board({
   groups,
 }: {
-  groups: Record<TaskStatus, TaskCardData[]>
+  groups: Record<WorkOrderStatus, WorkOrderCardData[]>
 }) {
   return (
     <div
@@ -31,18 +31,18 @@ function Column({
   status,
   items,
 }: {
-  status: TaskStatus
-  items: TaskCardData[]
+  status: WorkOrderStatus
+  items: WorkOrderCardData[]
 }) {
   return (
     <section
-      aria-labelledby={`tasks-col-${status}`}
+      aria-labelledby={`work-orders-col-${status}`}
       className="flex min-h-0 flex-col"
     >
       <header className="mb-3 flex items-baseline justify-between">
         <div>
           <h2
-            id={`tasks-col-${status}`}
+            id={`work-orders-col-${status}`}
             className="text-sm font-semibold uppercase tracking-wider text-fg"
           >
             {STATUS_LABELS[status]}
@@ -64,7 +64,7 @@ function Column({
             </div>
           </Card>
         ) : (
-          items.map((data) => <TaskCard key={data.task.id} {...data} />)
+          items.map((data) => <WorkOrderCard key={data.workOrder.id} {...data} />)
         )}
       </div>
     </section>

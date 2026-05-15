@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { addCommentAction, type ActionResult } from '../actions'
 
-export function CommentForm({ taskId }: { taskId: string }) {
+export function CommentForm({ workOrderId }: { workOrderId: string }) {
   const [state, formAction, pending] = useActionState<ActionResult, FormData>(
     addCommentAction,
     {},
@@ -19,7 +19,7 @@ export function CommentForm({ taskId }: { taskId: string }) {
 
   return (
     <form ref={ref} action={formAction} className="space-y-2">
-      <input type="hidden" name="task_id" value={taskId} />
+      <input type="hidden" name="work_order_id" value={workOrderId} />
       <textarea
         name="body"
         rows={3}

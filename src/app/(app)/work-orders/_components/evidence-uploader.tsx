@@ -3,38 +3,38 @@
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
-import type { TaskAttachmentPhase } from '@/lib/supabase/types'
+import type { WorkOrderAttachmentPhase } from '@/lib/supabase/types'
 import { addEvidenceAction } from '../actions'
 import {
   CaptureUploader,
   type UploadedAttachment,
 } from './capture-uploader'
 
-const PHASE_LABELS: Record<TaskAttachmentPhase, string> = {
+const PHASE_LABELS: Record<WorkOrderAttachmentPhase, string> = {
   before: 'Before',
   progress: 'Progress',
   after: 'After',
 }
-const PHASE_HELP: Record<TaskAttachmentPhase, string> = {
+const PHASE_HELP: Record<WorkOrderAttachmentPhase, string> = {
   before:
     'Initial state. Add this if the original photos missed something.',
   progress:
     'Work in progress — useful when waiting on parts or handing off shift.',
   after:
-    'Proof of completion. Required to mark the task done.',
+    'Proof of completion. Required to mark the work order done.',
 }
 
 export function EvidenceUploader({
-  taskId,
+  workOrderId,
   propertyId,
   initialPhase = 'after',
 }: {
-  taskId: string
+  workOrderId: string
   propertyId: string
-  initialPhase?: TaskAttachmentPhase
+  initialPhase?: WorkOrderAttachmentPhase
 }) {
   const router = useRouter()
-  const [phase, setPhase] = useState<TaskAttachmentPhase>(initialPhase)
+  const [phase, setPhase] = useState<WorkOrderAttachmentPhase>(initialPhase)
   const [attachments, setAttachments] = useState<UploadedAttachment[]>([])
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -48,7 +48,7 @@ export function EvidenceUploader({
     }
     startTransition(async () => {
       const result = await addEvidenceAction({
-        taskId,
+        workOrderId,
         phase,
         attachments: attachments.map((a) => ({
           kind: a.kind,
@@ -71,7 +71,7 @@ export function EvidenceUploader({
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="flex flex-wrap gap-1 text-sm">
-        {(['before', 'progress', 'after'] as TaskAttachmentPhase[]).map((p) => (
+        {(['before', 'progress', 'after'] as WorkOrderAttachmentPhase[]).map((p) => (
           <button
             key={p}
             type="button"
@@ -92,7 +92,7 @@ export function EvidenceUploader({
 
       <CaptureUploader
         propertyId={propertyId}
-        taskId={taskId}
+        workOrderId={workOrderId}
         onChange={setAttachments}
       />
 

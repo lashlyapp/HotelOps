@@ -402,11 +402,12 @@ export type TenantSignupRequest = {
 }
 
 // ----------------------------------------------------------------------------
-// Maintenance & service tasks (Kanban) — see docs/tasks-spec.md
+// Work orders (Kanban) — see docs/work-orders-spec.md.
+// Was historically named "tasks"; renamed in migration 20260514080000.
 // ----------------------------------------------------------------------------
-export type TaskStatus = 'open' | 'in_progress' | 'waiting' | 'done'
-export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent'
-export type TaskCategory =
+export type WorkOrderStatus = 'open' | 'in_progress' | 'waiting' | 'done'
+export type WorkOrderPriority = 'low' | 'normal' | 'high' | 'urgent'
+export type WorkOrderCategory =
   | 'plumbing'
   | 'electrical'
   | 'hvac'
@@ -431,19 +432,19 @@ export type TaskCategory =
   | 'it'
   | 'other'
 
-export type TaskAttachmentKind = 'photo' | 'video'
-export type TaskAttachmentPhase = 'before' | 'progress' | 'after'
+export type WorkOrderAttachmentKind = 'photo' | 'video'
+export type WorkOrderAttachmentPhase = 'before' | 'progress' | 'after'
 
-export type Task = {
+export type WorkOrder = {
   id: string
   org_id: string
   property_id: string
   reference: string
   title: string
   description: string | null
-  status: TaskStatus
-  priority: TaskPriority
-  category: TaskCategory
+  status: WorkOrderStatus
+  priority: WorkOrderPriority
+  category: WorkOrderCategory
   location: string | null
   assignee_id: string | null
   created_by: string | null
@@ -454,25 +455,25 @@ export type Task = {
   updated_at: string
 }
 
-export type TaskAttachment = {
+export type WorkOrderAttachment = {
   id: string
-  task_id: string
+  work_order_id: string
   org_id: string
-  kind: TaskAttachmentKind
+  kind: WorkOrderAttachmentKind
   r2_key: string
   poster_key: string | null
   filename: string
   content_type: string | null
   size_bytes: number
   caption: string | null
-  phase: TaskAttachmentPhase
+  phase: WorkOrderAttachmentPhase
   uploaded_by: string | null
   created_at: string
 }
 
-export type TaskComment = {
+export type WorkOrderComment = {
   id: string
-  task_id: string
+  work_order_id: string
   org_id: string
   body: string
   author_id: string | null
@@ -480,7 +481,7 @@ export type TaskComment = {
   created_at: string
 }
 
-export type TaskActivityKind =
+export type WorkOrderActivityKind =
   | 'created'
   | 'assigned'
   | 'unassigned'
@@ -491,11 +492,11 @@ export type TaskActivityKind =
   | 'forced_done'
   | 'deleted'
 
-export type TaskActivity = {
+export type WorkOrderActivity = {
   id: string
-  task_id: string
+  work_order_id: string
   org_id: string
-  kind: TaskActivityKind
+  kind: WorkOrderActivityKind
   from_value: string | null
   to_value: string | null
   note: string | null
@@ -504,9 +505,9 @@ export type TaskActivity = {
   created_at: string
 }
 
-export type TaskTag = {
+export type WorkOrderTag = {
   id: string
-  task_id: string
+  work_order_id: string
   org_id: string
   tag: string
   created_at: string

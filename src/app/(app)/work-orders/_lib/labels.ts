@@ -1,17 +1,17 @@
 import type {
-  TaskCategory,
-  TaskPriority,
-  TaskStatus,
+  WorkOrderCategory,
+  WorkOrderPriority,
+  WorkOrderStatus,
 } from '@/lib/supabase/types'
 
-export const STATUS_LABELS: Record<TaskStatus, string> = {
+export const STATUS_LABELS: Record<WorkOrderStatus, string> = {
   open: 'Open',
   in_progress: 'In progress',
   waiting: 'Waiting',
   done: 'Done',
 }
 
-export const STATUS_ORDER: TaskStatus[] = [
+export const STATUS_ORDER: WorkOrderStatus[] = [
   'open',
   'in_progress',
   'waiting',
@@ -19,7 +19,7 @@ export const STATUS_ORDER: TaskStatus[] = [
 ]
 
 export const STATUS_TONE: Record<
-  TaskStatus,
+  WorkOrderStatus,
   'neutral' | 'info' | 'warning' | 'success' | 'danger'
 > = {
   open: 'neutral',
@@ -28,21 +28,21 @@ export const STATUS_TONE: Record<
   done: 'success',
 }
 
-export const STATUS_COLUMN_DESCRIPTION: Record<TaskStatus, string> = {
+export const STATUS_COLUMN_DESCRIPTION: Record<WorkOrderStatus, string> = {
   open: 'Newly reported, not yet picked up',
   in_progress: 'Someone is actively working on it',
   waiting: 'Blocked on parts, a vendor, or a guest',
   done: 'Resolved with proof attached',
 }
 
-export const PRIORITY_LABELS: Record<TaskPriority, string> = {
+export const PRIORITY_LABELS: Record<WorkOrderPriority, string> = {
   low: 'Low',
   normal: 'Normal',
   high: 'High',
   urgent: 'Urgent',
 }
 
-export const PRIORITY_ORDER: Record<TaskPriority, number> = {
+export const PRIORITY_ORDER: Record<WorkOrderPriority, number> = {
   urgent: 0,
   high: 1,
   normal: 2,
@@ -50,7 +50,7 @@ export const PRIORITY_ORDER: Record<TaskPriority, number> = {
 }
 
 export const PRIORITY_TONE: Record<
-  TaskPriority,
+  WorkOrderPriority,
   'neutral' | 'info' | 'warning' | 'danger'
 > = {
   low: 'neutral',
@@ -59,7 +59,7 @@ export const PRIORITY_TONE: Record<
   urgent: 'danger',
 }
 
-export const CATEGORY_LABELS: Record<TaskCategory, string> = {
+export const CATEGORY_LABELS: Record<WorkOrderCategory, string> = {
   plumbing: 'Plumbing',
   electrical: 'Electrical',
   hvac: 'HVAC',
@@ -86,7 +86,7 @@ export const CATEGORY_LABELS: Record<TaskCategory, string> = {
 }
 
 // Ordered for the picker so the most common categories sit at the top.
-export const CATEGORY_ORDER: TaskCategory[] = [
+export const CATEGORY_ORDER: WorkOrderCategory[] = [
   'guest_request',
   'plumbing',
   'electrical',
@@ -112,6 +112,6 @@ export const CATEGORY_ORDER: TaskCategory[] = [
   'other',
 ]
 
-export const STATUSES: TaskStatus[] = ['open', 'in_progress', 'waiting', 'done']
-export const PRIORITIES: TaskPriority[] = ['low', 'normal', 'high', 'urgent']
-export const CATEGORIES: TaskCategory[] = CATEGORY_ORDER
+export const STATUSES: WorkOrderStatus[] = ['open', 'in_progress', 'waiting', 'done']
+export const PRIORITIES: WorkOrderPriority[] = ['low', 'normal', 'high', 'urgent']
+export const CATEGORIES: WorkOrderCategory[] = CATEGORY_ORDER

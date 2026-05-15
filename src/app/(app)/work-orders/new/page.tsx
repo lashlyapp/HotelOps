@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { Card, CardBody } from '@/components/ui/card'
 import { requireOrgUser } from '@/lib/auth/session'
-import { NewTaskForm } from '../_components/new-task-form'
+import { NewWorkOrderForm } from '../_components/new-work-order-form'
 
 type SearchParams = Promise<{ property?: string }>
 
-export default async function NewTaskPage({
+export default async function NewWorkOrderPage({
   searchParams,
 }: {
   searchParams: SearchParams
@@ -20,13 +20,13 @@ export default async function NewTaskPage({
     <div className="p-4 sm:p-8 space-y-5 max-w-3xl">
       <div>
         <Link
-          href="/tasks"
+          href="/work-orders"
           className="focus-ring rounded-sm text-xs text-muted hover:text-fg"
         >
           ← Back to board
         </Link>
         <h2 className="mt-2 text-lg font-semibold tracking-tight text-fg">
-          Capture a new task
+          Capture a new work order
         </h2>
         <p className="mt-1 text-sm text-muted">
           Snap a photo or a short clip first. Pick a category. Hit save.
@@ -35,7 +35,7 @@ export default async function NewTaskPage({
 
       <Card>
         <CardBody>
-          <NewTaskForm
+          <NewWorkOrderForm
             properties={session.properties}
             defaultPropertyId={defaultProperty?.id}
           />

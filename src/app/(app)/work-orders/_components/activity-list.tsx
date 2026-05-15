@@ -1,7 +1,7 @@
 import type {
   Profile,
-  TaskActivity,
-  TaskComment,
+  WorkOrderActivity,
+  WorkOrderComment,
 } from '@/lib/supabase/types'
 import {
   CATEGORY_LABELS,
@@ -11,16 +11,16 @@ import {
 import { formatDateTime } from '../_lib/time'
 
 type Entry =
-  | { kind: 'activity'; row: TaskActivity }
-  | { kind: 'comment'; row: TaskComment }
+  | { kind: 'activity'; row: WorkOrderActivity }
+  | { kind: 'comment'; row: WorkOrderComment }
 
 export function ActivityList({
   activity,
   comments,
   profilesById,
 }: {
-  activity: TaskActivity[]
-  comments: TaskComment[]
+  activity: WorkOrderActivity[]
+  comments: WorkOrderComment[]
   profilesById: Map<string, Pick<Profile, 'id' | 'full_name'>>
 }) {
   const entries: Entry[] = [
@@ -78,12 +78,12 @@ export function ActivityList({
   )
 }
 
-function describeActivity(row: TaskActivity): React.ReactNode {
+function describeActivity(row: WorkOrderActivity): React.ReactNode {
   switch (row.kind) {
     case 'created':
       return (
         <span className="text-muted">
-          created task <span className="font-mono text-fg">{row.to_value}</span>
+          created work order <span className="font-mono text-fg">{row.to_value}</span>
         </span>
       )
     case 'status':
@@ -125,9 +125,9 @@ function describeActivity(row: TaskActivity): React.ReactNode {
         </span>
       )
     case 'assigned':
-      return <span className="text-muted">assigned the task</span>
+      return <span className="text-muted">assigned the work order</span>
     case 'unassigned':
-      return <span className="text-muted">unassigned the task</span>
+      return <span className="text-muted">unassigned the work order</span>
     case 'attachment':
       return (
         <span className="text-muted">
