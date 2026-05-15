@@ -267,7 +267,7 @@ export default function PricingPage() {
               />
               <Faq
                 q="What if I only want maintenance, or only signage?"
-                a="You can. The base subscription includes maintenance work orders, events, IT Hub, media, and three signage screens at $100/property. Add Signage Unlimited or Guest Experience only if you want them — toggle on /billing, billed prorated."
+                a="You can. The base subscription includes maintenance work orders, events & catering, IT Hub, media, and three signage screens at $100/property. Add Signage Unlimited or Guest Experience only if you want them — toggle on /billing, billed prorated."
               />
               <Faq
                 q="How is the signage add-on different from Yodeck or OptiSigns?"
