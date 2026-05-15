@@ -1,5 +1,7 @@
 import 'server-only'
 import type Stripe from 'stripe'
+import { TRIAL_STORAGE_BYTES } from '@/lib/billing/trial'
+import { STORAGE_BLOCK_BYTES } from '@/lib/storage/usage'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ADDONS, type AddonKey } from './addon-config'
 import { stripe } from './client'
@@ -238,6 +240,17 @@ export async function startSubscriptionForProperty(
     ? null
     : new Date(Date.now() + graceDays * 24 * 60 * 60 * 1000)
   await syncToDb(admin, property.id, org.id, customerId, subscription, dueAt)
+
+  // Trial → paid conversion: the signup flow created this property with
+  // a 10 GB cap (TRIAL_STORAGE_BYTES); the base plan includes 25 GB. Lift
+  // the quota now so the customer isn't suddenly sitting in their first
+  // overage block the moment they add a card. Idempotent — only bumps
+  // when the current quota matches the trial cap.
+  await admin
+    .from('properties')
+    .update({ storage_quota_bytes: STORAGE_BLOCK_BYTES })
+    .eq('id', property.id)
+    .eq('storage_quota_bytes', TRIAL_STORAGE_BYTES)
 
   return {
     kind: 'created',

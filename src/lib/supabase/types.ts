@@ -11,6 +11,11 @@ export type Organization = {
   // 20260514070000_org_addon_flags.sql for the data model.
   signage_unlimited_addon_active: boolean
   guest_experience_addon_active: boolean
+  // Self-serve trial window — see 20260515000000_self_service_trial.sql
+  // and src/lib/billing/trial.ts. Null on tenants created via the
+  // admin path (no trial).
+  trial_started_at: string | null
+  trial_ends_at: string | null
 }
 
 export type Profile = {

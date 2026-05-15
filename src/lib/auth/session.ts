@@ -118,21 +118,27 @@ const loadOrgSession = cache(async (): Promise<OrgSession> => {
 
   const propertyList = (properties ?? []) as Property[]
   const subs = (subscriptions as BillingSubscription[] | null) ?? []
-  const gate = computeOrgGate(subs, propertyList.length > 0)
+  const org = organization as Organization
+  const trialEndsAt = org.trial_ends_at
+  const gate = computeOrgGate(subs, propertyList.length > 0, trialEndsAt)
 
   // Build the per-property gate map. A property with no matching
   // subscription gets computePropertyGate(null), which restricts that
   // property only — the org keeps operating on its other properties.
+  // Trial state is the same across all of the org's properties.
   const subByProperty = new Map<string, BillingSubscription>()
   for (const s of subs) subByProperty.set(s.property_id, s)
   const propertyGates: Record<string, BillingGate> = {}
   for (const p of propertyList) {
-    propertyGates[p.id] = computePropertyGate(subByProperty.get(p.id) ?? null)
+    propertyGates[p.id] = computePropertyGate(
+      subByProperty.get(p.id) ?? null,
+      trialEndsAt,
+    )
   }
 
   return {
     ...base,
-    organization: organization as Organization,
+    organization: org,
     properties: propertyList,
     gate,
     propertyGates,

@@ -4,46 +4,52 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { PRIVACY_POLICY_LAST_UPDATED } from '@/app/privacy/page'
 import { TERMS_OF_SERVICE_LAST_UPDATED } from '@/app/terms/page'
+import { validatePassword } from '@/lib/auth/password'
+import { TRIAL_DAYS, TRIAL_STORAGE_BYTES } from '@/lib/billing/trial'
 import { BRAND } from '@/lib/brand'
-import {
-  sendSignupNotification,
-  sendSignupVerificationEmail,
-} from '@/lib/email/send'
+import { sendWelcomeEmail } from '@/lib/email/send'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
+import { slugify, uniqueSlug } from '@/lib/utils/slugify'
 
 export type SignupActionResult = { error?: string }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-// Rate limits. The window is short and the cap is generous enough not to
-// trip a legitimate group of hotels signing up from the same office, but
-// strict enough that an attacker can't flood the table or spam a victim's
-// inbox with verification emails.
+// Per-IP / per-email throttle. Self-serve provisioning creates a real
+// auth user + org so we want a tight cap; legitimate hotel owners
+// don't sign up multiple times in 15 minutes.
 const RATE_WINDOW_MINUTES = 15
 const RATE_LIMIT_PER_IP = 5
 const RATE_LIMIT_PER_EMAIL = 2
 
+/**
+ * Self-serve signup. Creates the auth user, org, owner profile, one
+ * starter property scoped to the {@link TRIAL_STORAGE_BYTES} cap, and
+ * opens a {@link TRIAL_DAYS}-day no-credit-card trial window — then
+ * signs the user in and redirects to /dashboard.
+ *
+ * Errors short-circuit with a typed result so the form can render
+ * inline messages without a page round-trip.
+ */
 export async function submitSignupRequest(
   _prev: SignupActionResult,
   formData: FormData,
 ): Promise<SignupActionResult> {
-  // Honeypot: bots fill every field, real users don't see this one
-  // (it's hidden in the form). Silently 200 if it's set so the bot
-  // thinks it succeeded and stops retrying.
   const honeypot = String(formData.get('website') ?? '')
   if (honeypot.trim()) {
-    redirect('/signup/thanks')
+    // Bot. Silently 200 so they stop retrying.
+    redirect('/login')
   }
 
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
+  const password = String(formData.get('password') ?? '')
   const fullName = String(formData.get('full_name') ?? '').trim()
   const hotelName = String(formData.get('hotel_name') ?? '').trim()
-  const phone = String(formData.get('phone') ?? '').trim() || null
-  const message = String(formData.get('message') ?? '').trim() || null
   const consent = formData.get('consent') === 'yes'
 
-  if (!email || !fullName || !hotelName) {
-    return { error: 'Email, your name, and hotel name are required.' }
+  if (!email || !fullName || !hotelName || !password) {
+    return { error: 'Email, password, your name, and hotel name are required.' }
   }
   if (!EMAIL_RE.test(email)) {
     return { error: 'Please enter a valid email address.' }
@@ -51,9 +57,8 @@ export async function submitSignupRequest(
   if (fullName.length > 200 || hotelName.length > 200) {
     return { error: 'That looks too long — keep names under 200 characters.' }
   }
-  if (message && message.length > 2000) {
-    return { error: 'Please keep your message under 2,000 characters.' }
-  }
+  const pwCheck = validatePassword(password)
+  if (!pwCheck.ok) return { error: pwCheck.error }
   if (!consent) {
     return {
       error: 'Please agree to the Terms of Service and Privacy Policy to continue.',
@@ -61,10 +66,6 @@ export async function submitSignupRequest(
   }
 
   const ipAddress = await getClientIp()
-
-  // Rate limits. We use the service-role client because the public
-  // anon client can't see rows it didn't insert (RLS), and the count
-  // here needs to span all submissions.
   const admin = createAdminClient()
   const since = new Date(
     Date.now() - RATE_WINDOW_MINUTES * 60 * 1000,
@@ -89,156 +90,156 @@ export async function submitSignupRequest(
     .gte('created_at', since)
   if ((emailCount ?? 0) >= RATE_LIMIT_PER_EMAIL) {
     return {
-      error: `We’ve already received recent signups for ${email}. Check your inbox for a verification email, or try again later.`,
+      error: `We’ve already received recent signups for ${email}. Try logging in, or wait a few minutes.`,
     }
   }
 
-  // Generate a high-entropy verification token. The row stays invisible
-  // to admins until the prospect clicks the link in the email we send.
-  const token = generateUrlSafeToken(32)
-  const verifyUrl = `${getSiteUrl()}/signup/verify?token=${encodeURIComponent(token)}`
+  // Account-takeover guard. The form is publicly writable; without
+  // this an attacker could submit a victim's email and trigger a
+  // password reset on their existing account.
+  if (await emailHasAuthUser(email)) {
+    return {
+      error: `${email} already has a ${BRAND.name} account. Log in or reset your password instead.`,
+    }
+  }
 
-  // Anon client respects the RLS policy (status='pending' on insert).
-  // We can't write ip_address / email_verification_token via the anon
-  // client because they're not in the policy's WITH CHECK — so use
-  // the service-role admin client to do the insert.
-  const { error } = await admin.from('tenant_signup_requests').insert({
+  // ---- Provision: org → property → auth user → profile, in order.
+  // Each step is rolled back if a later one fails so a partial
+  // signup doesn't leave dangling rows.
+  const { data: existingOrgs } = await admin
+    .from('organizations')
+    .select('slug')
+  const taken = new Set((existingOrgs ?? []).map((o) => o.slug))
+  const orgSlug = uniqueSlug(slugify(hotelName) || 'hotel', (s) => taken.has(s))
+
+  const trialStart = new Date()
+  const trialEnd = new Date(
+    trialStart.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000,
+  )
+
+  const { data: org, error: orgErr } = await admin
+    .from('organizations')
+    .insert({
+      slug: orgSlug,
+      name: hotelName,
+      trial_started_at: trialStart.toISOString(),
+      trial_ends_at: trialEnd.toISOString(),
+    })
+    .select('id')
+    .single()
+  if (orgErr || !org) {
+    console.error('[signup] org insert failed', orgErr)
+    return { error: 'Something went wrong creating your account. Please try again.' }
+  }
+
+  const propertySlug = uniqueSlug(
+    slugify(hotelName) || 'main',
+    () => false, // brand-new org, no existing property slugs
+  )
+  const { error: propErr } = await admin.from('properties').insert({
+    org_id: org.id,
+    slug: propertySlug,
+    name: hotelName,
+    r2_prefix: `${orgSlug}/${propertySlug}/`,
+    storage_quota_bytes: TRIAL_STORAGE_BYTES,
+  })
+  if (propErr) {
+    console.error('[signup] property insert failed', propErr)
+    await admin.from('organizations').delete().eq('id', org.id)
+    return { error: 'Something went wrong creating your account. Please try again.' }
+  }
+
+  // email_confirm=true → user can sign in immediately. Email verification
+  // is the standard Supabase Auth flow if they reset their password later;
+  // we prefer zero-friction PLG over verifying first.
+  const { data: created, error: userErr } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: fullName },
+  })
+  if (userErr || !created.user) {
+    console.error('[signup] auth user create failed', userErr)
+    await admin.from('organizations').delete().eq('id', org.id)
+    return { error: userErr?.message ?? 'Could not create your login. Please try again.' }
+  }
+  const userId = created.user.id
+
+  const { error: profileErr } = await admin.from('profiles').upsert({
+    id: userId,
+    org_id: org.id,
+    role: 'org_owner',
+    full_name: fullName,
+  })
+  if (profileErr) {
+    console.error('[signup] profile upsert failed', profileErr)
+    await admin.auth.admin.deleteUser(userId)
+    await admin.from('organizations').delete().eq('id', org.id)
+    return { error: 'Something went wrong setting up your profile. Please try again.' }
+  }
+
+  // Audit trail in the existing signup-requests table — also captures
+  // the ToS/Privacy version they agreed to at this moment.
+  await admin.from('tenant_signup_requests').insert({
     email,
     full_name: fullName,
     hotel_name: hotelName,
-    phone,
-    message,
     ip_address: ipAddress,
-    email_verification_token: token,
-    email_verification_sent_at: new Date().toISOString(),
+    status: 'approved',
+    approved_org_id: org.id,
+    approved_at: new Date().toISOString(),
     agreed_at: new Date().toISOString(),
     agreed_terms_version: TERMS_OF_SERVICE_LAST_UPDATED,
     agreed_privacy_version: PRIVACY_POLICY_LAST_UPDATED,
+    email_verified_at: new Date().toISOString(),
   })
-  if (error) {
-    console.error('[signup] insert failed', error)
-    return {
-      error:
-        'Something went wrong saving your request. Please email ' +
-        BRAND.supportEmail +
-        ' and we’ll follow up directly.',
-    }
-  }
 
-  // Send the verification email. If email isn't configured we still
-  // succeed — the row is auto-marked verified during dev so the admin
-  // notification still goes out, but in production this branch should
-  // never hit.
-  const verifSent = await sendSignupVerificationEmail({
+  // Welcome email is best-effort — failure does not roll back the signup.
+  // The trial works without it, but the email is a useful conversion
+  // touchpoint so we attempt it on every signup.
+  void sendWelcomeEmail({
     to: email,
     recipientName: fullName,
-    hotelName,
-    verifyUrl,
+    orgName: hotelName,
+    roleLabel: 'the owner',
+    inviterName: null,
   }).catch((err) => {
-    console.warn('[signup] verification email failed', err)
-    return false
+    console.warn('[signup] welcome email failed', err)
   })
-  if (!verifSent) {
-    // Dev fallback: no email configured → auto-verify and notify admin
-    // immediately so the local /admin flow still works end-to-end.
-    await admin
-      .from('tenant_signup_requests')
-      .update({
-        email_verified_at: new Date().toISOString(),
-        email_verification_token: null,
-      })
-      .eq('email_verification_token', token)
-    try {
-      await sendSignupNotification({
-        email,
-        fullName,
-        hotelName,
-        phone,
-        message,
-      })
-    } catch (err) {
-      console.warn('[signup] admin notification failed', err)
-    }
+
+  // Sign the user in via the anon (cookie-bound) client so they land
+  // on /dashboard already authenticated.
+  const supabase = await createClient()
+  const { error: signInErr } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+  if (signInErr) {
+    // The account exists; route them to /login with a helpful message
+    // instead of failing the whole signup.
+    console.warn('[signup] auto sign-in failed', signInErr)
+    redirect('/login?signed_up=1')
   }
 
-  redirect('/signup/thanks')
+  redirect('/dashboard?welcome=trial')
 }
 
-/**
- * Mark a signup row's email as verified and dispatch the admin
- * notification. Called by the GET /signup/verify route handler when
- * the user clicks the link in their email.
- *
- * Returns true on first successful verification, false if the token
- * is unknown / already used / expired.
- */
-export async function verifySignupEmail(token: string): Promise<boolean> {
-  if (!token || token.length < 16) return false
+async function emailHasAuthUser(email: string): Promise<boolean> {
   const admin = createAdminClient()
-
-  const { data: row } = await admin
-    .from('tenant_signup_requests')
-    .select('*')
-    .eq('email_verification_token', token)
-    .maybeSingle()
-  if (!row) return false
-  if (row.email_verified_at) return true // already verified; idempotent
-
-  // 24 hour expiry on the verification link.
-  const sentAt = row.email_verification_sent_at
-    ? new Date(row.email_verification_sent_at).getTime()
-    : 0
-  if (Date.now() - sentAt > 24 * 60 * 60 * 1000) return false
-
-  await admin
-    .from('tenant_signup_requests')
-    .update({
-      email_verified_at: new Date().toISOString(),
-      email_verification_token: null,
-    })
-    .eq('id', row.id)
-
-  // Now that the email is confirmed, ping the platform admin so they
-  // can review on /admin.
-  try {
-    await sendSignupNotification({
-      email: row.email,
-      fullName: row.full_name,
-      hotelName: row.hotel_name,
-      phone: row.phone,
-      message: row.message,
-    })
-  } catch (err) {
-    console.warn('[signup] admin notification (post-verify) failed', err)
-  }
-
-  return true
+  // listUsers is paginated; the same convention used elsewhere in this
+  // codebase assumes <200 users which is plenty for v1.
+  const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 })
+  return (data?.users ?? []).some(
+    (u) => u.email?.toLowerCase() === email.toLowerCase(),
+  )
 }
 
 async function getClientIp(): Promise<string | null> {
-  // Vercel / Cloudflare both set x-forwarded-for with the client IP
-  // as the first comma-separated entry. Trust the first hop only.
   const h = await headers()
   const forwarded = h.get('x-forwarded-for')
   if (forwarded) {
     const first = forwarded.split(',')[0]?.trim()
     if (first) return first
   }
-  const real = h.get('x-real-ip')
-  return real ?? null
-}
-
-function getSiteUrl(): string {
-  // For verification-email links we want the canonical site URL (the
-  // recipient may open the email on a different device/browser from the
-  // one they used to submit the form, so request origin isn't reliable).
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
-  ).replace(/\/+$/, '')
-}
-
-function generateUrlSafeToken(byteLength = 32): string {
-  const bytes = new Uint8Array(byteLength)
-  crypto.getRandomValues(bytes)
-  return Buffer.from(bytes).toString('base64url')
+  return h.get('x-real-ip')
 }

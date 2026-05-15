@@ -41,16 +41,15 @@ export default async function SignupPage() {
         <section className="mx-auto max-w-2xl px-6 py-16">
           <div className="text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Get started
+              Start free
             </p>
             <h1 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-              Sign up for {BRAND.name}
+              Try {BRAND.name} free for 7 days
             </h1>
             <p className="mt-4 text-base text-muted leading-relaxed">
-              Tell us a little about your hotel and we’ll be in touch within
-              one business day to get you set up. We onboard you personally so
-              you’re running on day one — no setup wizard, no months of
-              implementation.
+              Full access. No credit card. 10 GB of media included. Set up your
+              property in under two minutes and start running it like a pro
+              today.
             </p>
           </div>
 
