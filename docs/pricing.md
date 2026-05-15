@@ -142,3 +142,75 @@ Customer who only wants the base: ~$360 of competing tools for $100.
    `transfer_lookup_key: true` and the same lookup key string. Existing
    subscriptions stay grandfathered; new subscriptions pick up the new
    amount automatically.
+
+## Background reconciliation
+
+Billing state lives in two places: Stripe (source of truth) and our
+`billing_subscriptions` table (mirror). Three independent paths keep
+the mirror honest:
+
+1. **Stripe webhook** — primary. Fires within seconds of any
+   `customer.subscription.*` event. Implemented in
+   `src/app/api/stripe/webhook/route.ts` → `syncSubscriptionToDb`.
+2. **Post-login reconcile** — fires after the login response goes out
+   via Next's `after()`. Implemented in `src/app/login/actions.ts` →
+   `reconcileOrgSubscriptions`. Catches anything the webhook missed
+   before the user reaches `/billing` on their next session. Zero
+   added login latency.
+3. **Nightly cron** — `/api/cron/billing-reconcile`, scheduled at
+   **02:00 UTC daily** in `vercel.json`. Last line of defense. Walks
+   every org with a Stripe customer and runs the same reconciler.
+
+### Why three paths?
+
+Each one fixes a failure mode the next can't cover on its own:
+
+- **Webhook alone** isn't enough because Stripe doesn't guarantee
+  delivery indefinitely (it gives up after several days of retries),
+  and our schema or code can race a webhook (we hit this once already
+  with the legacy `UNIQUE(stripe_customer_id)` constraint).
+- **Login reconcile alone** isn't enough for orgs whose owner is
+  inactive for a stretch while staff are still operating the property
+  — a missed webhook + a new property added by staff would mean
+  incorrect invoices until the owner returns.
+- **Cron alone** would mean up to 24 hours of wrong state on `/billing`,
+  which erodes trust the moment an operator sees stale numbers.
+
+### Why nightly, not hourly?
+
+Hourly was overkill once the login reconcile shipped — the login path
+handles the common case (active user, mid-day deploy, fresh property),
+and the cron only needs to cover the genuinely-stale-account scenario.
+Daily at 02:00 UTC keeps the safety net while doing meaningful work
+only when something is actually broken — the reconciler fast-paths to
+a no-op in the steady state. A nightly run also produces one log line
+per day per org (`reconciler: scanned N, healed 0`) which is decent
+evidence-of-correctness without flooding logs.
+
+### What the reconciler does
+
+`src/lib/stripe/reconcile.ts:reconcileOrgSubscriptions(orgId, customerId)`:
+
+1. Fast-path: counts properties vs. mirrored subs + compares each
+   `billing_subscriptions.<addon>_active` to `organizations.<addon>_addon_active`.
+   Returns immediately if everything matches (no Stripe call).
+2. Slow path: lists every Subscription on the org's Stripe Customer.
+3. For each Stripe sub, resolves the matching property by metadata,
+   then slug, then `description` fallback. Heals
+   `subscription.metadata` in place if it was stale.
+4. Re-mirrors via `syncSubscriptionToDb` so the local row matches Stripe.
+5. **Second pass**: for each (property, addon) pair, makes Stripe's
+   SubscriptionItem state match the org-level flag — adds items if the
+   flag is on but they're missing, removes them if the flag is off
+   but they exist. Both with `proration_behavior: 'create_prorations'`.
+
+### How to verify it's working
+
+- Vercel → Project → Logs → filter for `/api/cron/billing-reconcile`
+  to see the daily run. Healthy response is `{ ok: true, scanned: N,
+  failures: [] }`.
+- Vercel → Project → Logs → filter for `[billing] reconcile:` for any
+  failure detail (per-org messages, never abort the whole pass).
+- To force a run manually, call the route with the cron secret:
+  `curl -H "Authorization: Bearer $CRON_SECRET"
+   https://app.myhotelops.com/api/cron/billing-reconcile`.
