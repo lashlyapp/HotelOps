@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { orgIdFromMetadata, propertyIdFromMetadata } from './webhook'
+import type Stripe from 'stripe'
+import {
+  buildPropertyMemo,
+  orgIdFromMetadata,
+  propertyIdFromMetadata,
+  subscriptionIdFromInvoice,
+} from './webhook'
 
 describe('orgIdFromMetadata', () => {
   it('returns null when metadata is null/undefined', () => {
@@ -55,6 +61,90 @@ describe('propertyIdFromMetadata', () => {
     assert.equal(
       propertyIdFromMetadata({ app: 'lashly', property_id: 'prop_abc' }),
       null,
+    )
+  })
+})
+
+describe('subscriptionIdFromInvoice', () => {
+  it('returns the subscription id when parent is subscription_details (string ref)', () => {
+    const inv = {
+      parent: {
+        type: 'subscription_details',
+        subscription_details: { subscription: 'sub_abc' },
+      },
+    } as unknown as Stripe.Invoice
+    assert.equal(subscriptionIdFromInvoice(inv), 'sub_abc')
+  })
+
+  it('returns the subscription id when parent is subscription_details (object ref)', () => {
+    const inv = {
+      parent: {
+        type: 'subscription_details',
+        subscription_details: { subscription: { id: 'sub_xyz' } },
+      },
+    } as unknown as Stripe.Invoice
+    assert.equal(subscriptionIdFromInvoice(inv), 'sub_xyz')
+  })
+
+  it('returns null for invoices without subscription parent', () => {
+    const inv = { parent: null } as unknown as Stripe.Invoice
+    assert.equal(subscriptionIdFromInvoice(inv), null)
+  })
+})
+
+describe('buildPropertyMemo', () => {
+  it('renders the full address block when every field is populated', () => {
+    const memo = buildPropertyMemo({
+      name: 'Hotel ABC',
+      address_line1: '123 Main St',
+      address_line2: 'Suite 4',
+      city: 'Sacramento',
+      state: 'California',
+      postal_code: '95816',
+      country: 'US',
+      email: 'front@hotel-abc.com',
+    })
+    assert.equal(
+      memo,
+      [
+        'For property: Hotel ABC',
+        '123 Main St',
+        'Suite 4',
+        'Sacramento, California 95816',
+        'US',
+        'front@hotel-abc.com',
+      ].join('\n'),
+    )
+  })
+
+  it('falls back to just the name when no address fields are set', () => {
+    const memo = buildPropertyMemo({
+      name: 'Hotel Bare',
+      address_line1: null,
+      address_line2: null,
+      city: null,
+      state: null,
+      postal_code: null,
+      country: null,
+      email: null,
+    })
+    assert.equal(memo, 'For property: Hotel Bare')
+  })
+
+  it('omits empty city/state/postal pieces without leaving stray separators', () => {
+    const memo = buildPropertyMemo({
+      name: 'Hotel Partial',
+      address_line1: '5 Loop Rd',
+      address_line2: null,
+      city: 'Reno',
+      state: null,
+      postal_code: '89501',
+      country: 'US',
+      email: null,
+    })
+    assert.equal(
+      memo,
+      ['For property: Hotel Partial', '5 Loop Rd', 'Reno 89501', 'US'].join('\n'),
     )
   })
 })
