@@ -3,17 +3,27 @@ import { redirect } from 'next/navigation'
 import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
 import { Card, CardBody } from '@/components/ui/card'
+import { OTP_LENGTH, OTP_TTL_MINUTES } from '@/lib/auth/otp-constants'
 import { BRAND } from '@/lib/brand'
 import { createClient } from '@/lib/supabase/server'
-import { SignupForm } from './_components/signup-form'
+import { VerifyForm } from './_components/verify-form'
 
-export default async function SignupPage() {
-  // Already-authenticated users have an account; bounce them home.
+type SearchParams = Promise<{ email?: string }>
+
+export default async function SignupVerifyPage({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (user) redirect('/dashboard')
+
+  const { email: emailParam } = await searchParams
+  const email = (emailParam ?? '').trim().toLowerCase()
+  if (!email) redirect('/signup')
 
   return (
     <div className="flex flex-1 flex-col">
@@ -22,49 +32,42 @@ export default async function SignupPage() {
           <Wordmark size="md" href="/" />
           <div className="flex items-center gap-1">
             <Link
-              href="/"
+              href="/signup"
               className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
             >
-              ← Back to home
-            </Link>
-            <Link
-              href="/login"
-              className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-fg hover:bg-surface-muted"
-            >
-              Log in
+              ← Start over
             </Link>
           </div>
         </div>
       </header>
 
       <main className="flex-1">
-        <section className="mx-auto max-w-2xl px-6 py-16">
+        <section className="mx-auto max-w-md px-6 py-16">
           <div className="text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Start free
+              Verify your email
             </p>
-            <h1 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-              Try {BRAND.name} free for 7 days
+            <h1 className="mt-3 text-2xl sm:text-3xl font-semibold tracking-tight text-fg">
+              Enter your {OTP_LENGTH}-digit code
             </h1>
-            <p className="mt-4 text-base text-muted leading-relaxed">
-              Full access. No credit card. 10 GB of media included. We’ll email
-              you a verification code to confirm your address — takes under a
-              minute end to end.
+            <p className="mt-4 text-sm text-muted leading-relaxed">
+              We sent a code to <strong className="text-fg">{email}</strong>.
+              It expires in {OTP_TTL_MINUTES} minutes.
             </p>
           </div>
 
-          <Card className="mt-10">
+          <Card className="mt-8">
             <CardBody className="p-6 sm:p-8">
-              <SignupForm />
+              <VerifyForm email={email} />
             </CardBody>
           </Card>
 
           <p className="mt-6 text-center text-xs text-subtle">
-            Already have an account?{' '}
-            <Link href="/login" className="font-medium text-fg hover:underline">
-              Log in
+            Wrong email?{' '}
+            <Link href="/signup" className="font-medium text-fg hover:underline">
+              Start over
             </Link>
-            .
+            . Need help? <a href={`mailto:${BRAND.supportEmail}`} className="font-medium text-fg hover:underline">{BRAND.supportEmail}</a>
           </p>
         </section>
       </main>

@@ -17,14 +17,9 @@ type WelcomeArgs = {
 }
 
 /**
- * Send a welcome email to a newly-added team member.
- *
- * Does NOT include the password — that's shared by the inviter through a
- * secure channel. The email just confirms the account and links to /login.
- *
- * No-op (logs a warning) if RESEND_API_KEY is not configured. Returns whether
- * the email was actually dispatched so the caller can surface the right
- * confirmation copy.
+ * Send a welcome email to a newly-added team member. Used by org
+ * owners + platform admins inviting users; NOT used for self-serve
+ * signup (see {@link sendTrialWelcomeEmail} for that).
  */
 export async function sendWelcomeEmail(args: WelcomeArgs): Promise<boolean> {
   const resend = getResend()
@@ -35,10 +30,7 @@ export async function sendWelcomeEmail(args: WelcomeArgs): Promise<boolean> {
     return false
   }
 
-  const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.myhotelops.com'
-  ).replace(/\/+$/, '')
-
+  const siteUrl = getSiteUrl()
   const greeting = args.recipientName ? `Hi ${args.recipientName},` : 'Hi there,'
   const inviterPhrase = args.inviterName
     ? `${args.inviterName} added you to`
@@ -64,38 +56,206 @@ export async function sendWelcomeEmail(args: WelcomeArgs): Promise<boolean> {
     `— ${BRAND.name}`,
   ].join('\n')
 
-  const html = `
-    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#1c1917;font-size:14px;line-height:1.6">
-      <p>${escapeHtml(greeting)}</p>
-      <p>${escapeHtml(inviterPhrase)} <strong>${escapeHtml(args.orgName)}</strong> on ${escapeHtml(BRAND.name)} as <strong>${escapeHtml(args.roleLabel)}</strong>.</p>
-      <p>
-        <a href="${ctaUrl}" style="display:inline-block;background:#18181b;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:500">${escapeHtml(ctaLabel)}</a>
-      </p>
-      <p style="color:#57534e">Email: <code>${escapeHtml(args.to)}</code></p>
-      <p style="color:#57534e">${escapeHtml(passwordLine)}</p>
-      <p style="color:#a8a29e;font-size:12px;margin-top:32px">— ${escapeHtml(BRAND.name)}</p>
-    </div>
-  `.trim()
+  const html = wrapEmailHtml(`
+    <p>${escapeHtml(greeting)}</p>
+    <p>${escapeHtml(inviterPhrase)} <strong>${escapeHtml(args.orgName)}</strong> on ${escapeHtml(BRAND.name)} as <strong>${escapeHtml(args.roleLabel)}</strong>.</p>
+    <p>${ctaButton(ctaUrl, ctaLabel)}</p>
+    <p style="color:#57534e">Email: <code>${escapeHtml(args.to)}</code></p>
+    <p style="color:#57534e">${escapeHtml(passwordLine)}</p>
+    ${signoff()}
+  `)
 
-  try {
-    const { error } = await resend.emails.send({
-      from: getEmailFrom(),
-      to: args.to,
-      subject,
-      text,
-      html,
-    })
-    if (error) {
-      console.error('[email] resend error', error)
-      return false
-    }
-    return true
-  } catch (err) {
-    console.error('[email] resend threw', err)
-    return false
-  }
+  return sendOrLog(resend, { to: args.to, subject, text, html }, 'welcome')
 }
 
+// ---------------------------------------------------------------------------
+// Self-serve signup: OTP code email
+// ---------------------------------------------------------------------------
+type SignupOtpArgs = {
+  to: string
+  recipientName: string
+  hotelName: string
+  code: string
+  ttlMinutes: number
+}
+
+/**
+ * Send the 6-digit code the /signup form asks the user to enter to
+ * prove they own the email address. The code itself is in giant type
+ * in both the text and HTML so it's trivially copy/pasteable on
+ * mobile clients.
+ */
+export async function sendSignupOtpEmail(args: SignupOtpArgs): Promise<boolean> {
+  const resend = getResend()
+  if (!resend) {
+    console.warn('[email] RESEND_API_KEY not set; skipping signup OTP email')
+    return false
+  }
+
+  const subject = `Your ${BRAND.name} verification code: ${args.code}`
+  const text = [
+    `Hi ${args.recipientName},`,
+    '',
+    `Your verification code for ${BRAND.name} is:`,
+    '',
+    `    ${args.code}`,
+    '',
+    `Enter it on the signup page to finish creating ${args.hotelName}.`,
+    `The code expires in ${args.ttlMinutes} minutes. If you didn't request this, you can safely ignore the email.`,
+    '',
+    `— ${BRAND.name}`,
+  ].join('\n')
+
+  const html = wrapEmailHtml(`
+    <p>Hi ${escapeHtml(args.recipientName)},</p>
+    <p>Your verification code for ${escapeHtml(BRAND.name)} is:</p>
+    <p style="text-align:center;margin:24px 0">
+      <span style="display:inline-block;font-family:'SF Mono','Menlo','Consolas',monospace;font-size:32px;font-weight:600;letter-spacing:8px;background:#f5f5f4;color:#1c1917;padding:14px 24px;border-radius:8px;border:1px solid #e7e5e4">${escapeHtml(args.code)}</span>
+    </p>
+    <p>Enter it on the signup page to finish creating <strong>${escapeHtml(args.hotelName)}</strong>.</p>
+    <p style="color:#57534e;font-size:12px">The code expires in ${args.ttlMinutes} minutes. If you didn't request this, you can safely ignore this email.</p>
+    ${signoff()}
+  `)
+
+  return sendOrLog(resend, { to: args.to, subject, text, html }, 'signup OTP')
+}
+
+// ---------------------------------------------------------------------------
+// Self-serve signup: trial welcome (sent the moment the OTP is verified)
+// ---------------------------------------------------------------------------
+type TrialWelcomeArgs = {
+  to: string
+  recipientName: string
+  hotelName: string
+  trialDays: number
+  storageGb: number
+}
+
+/**
+ * Sent the instant signup completes. Tone is "you're in, here's what
+ * to do first" — explicit countdown, explicit storage cap, and a CTA
+ * back to the dashboard so the email doubles as a recovery link for
+ * the rare user who closes the tab.
+ */
+export async function sendTrialWelcomeEmail(args: TrialWelcomeArgs): Promise<boolean> {
+  const resend = getResend()
+  if (!resend) {
+    console.warn(
+      '[email] RESEND_API_KEY not set; skipping trial-welcome email to ' + args.to,
+    )
+    return false
+  }
+
+  const siteUrl = getSiteUrl()
+  const dashboardUrl = `${siteUrl}/dashboard`
+  const billingUrl = `${siteUrl}/billing`
+
+  const subject = `Welcome to ${BRAND.name} — your ${args.trialDays}-day trial is live`
+  const text = [
+    `Hi ${args.recipientName},`,
+    '',
+    `${args.hotelName} is set up on ${BRAND.name}. Your free trial gives you full access for ${args.trialDays} days — no credit card needed, ${args.storageGb} GB of media included.`,
+    '',
+    `Open your dashboard: ${dashboardUrl}`,
+    '',
+    'What to try first:',
+    '  • Add your team from the Team page',
+    '  • Upload your first floor plans / photos to Media',
+    '  • Create a work order to see the Kanban board in action',
+    '',
+    `Ready to convert? Add a payment method any time: ${billingUrl}`,
+    '',
+    `— ${BRAND.name}`,
+  ].join('\n')
+
+  const html = wrapEmailHtml(`
+    <p>Hi ${escapeHtml(args.recipientName)},</p>
+    <p><strong>${escapeHtml(args.hotelName)}</strong> is set up on ${escapeHtml(BRAND.name)}. Your free trial gives you full access for <strong>${args.trialDays} days</strong> — no credit card needed, <strong>${args.storageGb} GB</strong> of media included.</p>
+    <p>${ctaButton(dashboardUrl, 'Open your dashboard')}</p>
+    <p style="margin-top:24px"><strong>What to try first</strong></p>
+    <ul style="color:#1c1917;padding-left:18px;line-height:1.7">
+      <li>Add your team from the Team page</li>
+      <li>Upload your first floor plans / photos to Media</li>
+      <li>Create a work order to see the Kanban board in action</li>
+    </ul>
+    <p style="color:#57534e">Ready to convert? <a href="${billingUrl}" style="color:#1c1917;text-decoration:underline">Add a payment method</a> any time.</p>
+    ${signoff()}
+  `)
+
+  return sendOrLog(resend, { to: args.to, subject, text, html }, 'trial welcome')
+}
+
+// ---------------------------------------------------------------------------
+// Trial expiry nudges (T-3 days and T+0)
+// ---------------------------------------------------------------------------
+type TrialReminderArgs = {
+  to: string
+  recipientName: string
+  hotelName: string
+  daysLeft: number
+}
+
+/** Sent at T-3 days. Soft nudge; no scare tactics. */
+export async function sendTrialReminderEmail(args: TrialReminderArgs): Promise<boolean> {
+  const resend = getResend()
+  if (!resend) return false
+
+  const siteUrl = getSiteUrl()
+  const billingUrl = `${siteUrl}/billing`
+  const subject = `Your ${BRAND.name} trial ends in ${args.daysLeft} day${args.daysLeft === 1 ? '' : 's'}`
+  const text = [
+    `Hi ${args.recipientName},`,
+    '',
+    `Your ${BRAND.name} trial for ${args.hotelName} ends in ${args.daysLeft} day${args.daysLeft === 1 ? '' : 's'}. Add a payment method to keep editing — your data stays where it is regardless.`,
+    '',
+    `Open Billing: ${billingUrl}`,
+    '',
+    `— ${BRAND.name}`,
+  ].join('\n')
+  const html = wrapEmailHtml(`
+    <p>Hi ${escapeHtml(args.recipientName)},</p>
+    <p>Your ${escapeHtml(BRAND.name)} trial for <strong>${escapeHtml(args.hotelName)}</strong> ends in <strong>${args.daysLeft} day${args.daysLeft === 1 ? '' : 's'}</strong>. Add a payment method to keep editing — your data stays where it is regardless.</p>
+    <p>${ctaButton(billingUrl, 'Open Billing')}</p>
+    ${signoff()}
+  `)
+  return sendOrLog(resend, { to: args.to, subject, text, html }, 'trial reminder')
+}
+
+type TrialExpiredArgs = {
+  to: string
+  recipientName: string
+  hotelName: string
+}
+
+/** Sent at T+0 the day the trial ends. App is read-only at this point. */
+export async function sendTrialExpiredEmail(args: TrialExpiredArgs): Promise<boolean> {
+  const resend = getResend()
+  if (!resend) return false
+
+  const siteUrl = getSiteUrl()
+  const billingUrl = `${siteUrl}/billing`
+  const subject = `Your ${BRAND.name} trial has ended — your data is safe`
+  const text = [
+    `Hi ${args.recipientName},`,
+    '',
+    `Your ${BRAND.name} trial for ${args.hotelName} ended today. We've moved your account to read-only and we're holding all of your data — add a payment method any time to keep editing.`,
+    '',
+    `Open Billing: ${billingUrl}`,
+    '',
+    `— ${BRAND.name}`,
+  ].join('\n')
+  const html = wrapEmailHtml(`
+    <p>Hi ${escapeHtml(args.recipientName)},</p>
+    <p>Your ${escapeHtml(BRAND.name)} trial for <strong>${escapeHtml(args.hotelName)}</strong> ended today. We've moved your account to read-only and we're holding all of your data — add a payment method any time to keep editing.</p>
+    <p>${ctaButton(billingUrl, 'Open Billing')}</p>
+    ${signoff()}
+  `)
+  return sendOrLog(resend, { to: args.to, subject, text, html }, 'trial expired')
+}
+
+// ---------------------------------------------------------------------------
+// HTML helpers
+// ---------------------------------------------------------------------------
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -105,153 +265,50 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;')
 }
 
-type SignupNotificationArgs = {
-  email: string
-  fullName: string
-  hotelName: string
-  phone: string | null
-  message: string | null
+function wrapEmailHtml(inner: string): string {
+  return `
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#1c1917;font-size:14px;line-height:1.6">
+      ${inner.trim()}
+    </div>
+  `.trim()
 }
 
-/**
- * Notify the platform admin (BRAND.supportEmail) when a new public signup
- * request lands so they can review it on /admin. Best-effort: no-op + warn
- * if RESEND_API_KEY isn't set so the signup form still works in dev.
- */
-export async function sendSignupNotification(
-  args: SignupNotificationArgs,
-): Promise<boolean> {
-  const resend = getResend()
-  if (!resend) {
-    console.warn('[email] RESEND_API_KEY not set; skipping signup notification')
-    return false
-  }
+function ctaButton(href: string, label: string): string {
+  return `<a href="${href}" style="display:inline-block;background:#1c1917;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:500">${escapeHtml(label)}</a>`
+}
 
-  const siteUrl = (
+function signoff(): string {
+  return `<p style="color:#a8a29e;font-size:12px;margin-top:32px">— ${escapeHtml(BRAND.name)}</p>`
+}
+
+function getSiteUrl(): string {
+  return (
     process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.myhotelops.com'
   ).replace(/\/+$/, '')
-  const adminUrl = `${siteUrl}/admin`
-
-  const subject = `[${BRAND.name}] New signup: ${args.hotelName}`
-  const lines = [
-    `New signup request on ${BRAND.name}:`,
-    '',
-    `Hotel: ${args.hotelName}`,
-    `Name:  ${args.fullName}`,
-    `Email: ${args.email}`,
-    args.phone ? `Phone: ${args.phone}` : null,
-    args.message ? `\nMessage:\n${args.message}` : null,
-    '',
-    `Review at: ${adminUrl}`,
-  ].filter((l): l is string => l !== null)
-  const text = lines.join('\n')
-
-  const html = `
-    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#1c1917;font-size:14px;line-height:1.6">
-      <p>New signup request on <strong>${escapeHtml(BRAND.name)}</strong>:</p>
-      <table style="border-collapse:collapse;margin:12px 0">
-        <tr><td style="padding:4px 12px 4px 0;color:#57534e">Hotel</td><td style="padding:4px 0"><strong>${escapeHtml(args.hotelName)}</strong></td></tr>
-        <tr><td style="padding:4px 12px 4px 0;color:#57534e">Name</td><td style="padding:4px 0">${escapeHtml(args.fullName)}</td></tr>
-        <tr><td style="padding:4px 12px 4px 0;color:#57534e">Email</td><td style="padding:4px 0"><a href="mailto:${escapeHtml(args.email)}">${escapeHtml(args.email)}</a></td></tr>
-        ${args.phone ? `<tr><td style="padding:4px 12px 4px 0;color:#57534e">Phone</td><td style="padding:4px 0">${escapeHtml(args.phone)}</td></tr>` : ''}
-      </table>
-      ${args.message ? `<p style="color:#57534e;white-space:pre-wrap;border-left:3px solid #e7e5e4;padding:4px 12px;margin:12px 0">${escapeHtml(args.message)}</p>` : ''}
-      <p>
-        <a href="${adminUrl}" style="display:inline-block;background:#18181b;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:500">Review on /admin</a>
-      </p>
-    </div>
-  `.trim()
-
-  try {
-    const { error } = await resend.emails.send({
-      from: getEmailFrom(),
-      to: BRAND.supportEmail,
-      subject,
-      text,
-      html,
-      replyTo: args.email,
-    })
-    if (error) {
-      console.error('[email] resend error (signup notification)', error)
-      return false
-    }
-    return true
-  } catch (err) {
-    console.error('[email] resend threw (signup notification)', err)
-    return false
-  }
 }
 
-type SignupVerificationArgs = {
-  to: string
-  recipientName: string
-  hotelName: string
-  verifyUrl: string
-}
+type SendArgs = { to: string; subject: string; text: string; html: string }
 
-/**
- * Send the email-verification link a /signup submitter clicks to confirm
- * ownership of the address. We don't show the row on /admin until they
- * verify — closes the "attacker submits a victim's email and the admin
- * sees a real-looking request" gap.
- *
- * Returns whether the email was actually dispatched. Caller decides
- * how to react if RESEND_API_KEY isn't set (in dev / before email is
- * wired up, the signup still completes and the row is auto-verified).
- */
-export async function sendSignupVerificationEmail(
-  args: SignupVerificationArgs,
+async function sendOrLog(
+  resend: NonNullable<ReturnType<typeof getResend>>,
+  args: SendArgs,
+  kind: string,
 ): Promise<boolean> {
-  const resend = getResend()
-  if (!resend) {
-    console.warn(
-      '[email] RESEND_API_KEY not set; skipping signup verification email',
-    )
-    return false
-  }
-
-  const subject = `Confirm your email to finish signing up for ${BRAND.name}`
-  const greeting = `Hi ${args.recipientName},`
-  const text = [
-    greeting,
-    '',
-    `Thanks for signing up ${args.hotelName} for ${BRAND.name}.`,
-    `Click the link below to confirm this email address so our team can review your request:`,
-    '',
-    args.verifyUrl,
-    '',
-    'The link expires in 24 hours. If you didn’t request this, you can ignore the email.',
-    '',
-    `— ${BRAND.name}`,
-  ].join('\n')
-
-  const html = `
-    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#1c1917;font-size:14px;line-height:1.6">
-      <p>${escapeHtml(greeting)}</p>
-      <p>Thanks for signing up <strong>${escapeHtml(args.hotelName)}</strong> for ${escapeHtml(BRAND.name)}. Confirm this email address so our team can review your request:</p>
-      <p>
-        <a href="${args.verifyUrl}" style="display:inline-block;background:#18181b;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:500">Confirm email</a>
-      </p>
-      <p style="color:#57534e;font-size:12px">The link expires in 24 hours. If you didn’t request this, you can ignore the email.</p>
-      <p style="color:#a8a29e;font-size:12px;margin-top:32px">— ${escapeHtml(BRAND.name)}</p>
-    </div>
-  `.trim()
-
   try {
     const { error } = await resend.emails.send({
       from: getEmailFrom(),
       to: args.to,
-      subject,
-      text,
-      html,
+      subject: args.subject,
+      text: args.text,
+      html: args.html,
     })
     if (error) {
-      console.error('[email] resend error (signup verification)', error)
+      console.error(`[email] resend error (${kind})`, error)
       return false
     }
     return true
   } catch (err) {
-    console.error('[email] resend threw (signup verification)', err)
+    console.error(`[email] resend threw (${kind})`, err)
     return false
   }
 }

@@ -101,6 +101,54 @@ Listed so we stop talking ourselves into adding fees:
 - **API usage** — no API exposed yet; when it ships, it's per-property,
   not per-call
 
+## Free trial (self-serve)
+
+Anyone with a work email can sign up at `/signup` and get a 7-day, no-
+credit-card, 10 GB trial. Length, storage cap, and seat limit live in
+`src/lib/billing/trial.ts` and `ownerAddPropertyAction` — change them
+without a migration. The trial is an acquisition surface, not a
+pricing tier: there is no public "free plan".
+
+What the trial includes:
+
+- **7 days** of full access — same feature set as paid base plan.
+- **1 property** — adding a second is blocked by
+  `ownerAddPropertyAction` until a payment method is on file.
+- **10 GB** of media on that property — same storage plumbing as paid
+  (`properties.storage_quota_bytes`); on conversion the quota is
+  lifted to 25 GB by `startSubscriptionForProperty`.
+- **All the base-plan features** — Media catalog, Events, Work
+  orders, IT Hub, Signage starter, Arrival. Add-ons are toggled off
+  by default; turning them on requires a paid subscription.
+
+Bot protection:
+
+- Honeypot field on the form.
+- Per-IP / per-email rate limit (5 / 3 per 15 minutes).
+- Mandatory **6-digit email OTP** before the auth user / org are
+  created — a bot that can't read email cannot finish signup.
+- Account-takeover guard: refuses signups for emails that already
+  have an auth user.
+- Password held AES-256-GCM-encrypted in `signup_pending` between OTP
+  request and verification (key from `SIGNUP_ENCRYPTION_KEY`). The
+  row is deleted the moment the auth user is created.
+
+Lifecycle emails (sent by `/api/cron/trial-expiry`, hourly):
+
+- **Welcome** — the instant verification succeeds. Dashboard CTA + an
+  unauthenticated link back in case the user closes the tab.
+- **T-3 days** — soft nudge. Stamps `trial_reminder_t3_sent_at`.
+- **T+0 expiry** — "your data is safe, add a card to keep editing".
+  Stamps `trial_expired_email_sent_at`. The org flips to read-only at
+  the same moment via the billing gate.
+
+Conversion is the same flow as any other "Start subscription" — there
+is no separate trial→paid endpoint. When `startSubscriptionForProperty`
+creates the org's first subscription it also stamps
+`organizations.trial_converted_at` (which the admin dashboard reads
+to compute conversion rate) and bumps the property's storage quota
+from 10 GB to the 25 GB base.
+
 ## Volume discounts
 
 Not yet. The clean per-property unit price is the marketing weapon —

@@ -252,6 +252,17 @@ export async function startSubscriptionForProperty(
     .eq('id', property.id)
     .eq('storage_quota_bytes', TRIAL_STORAGE_BYTES)
 
+  // Stamp the org's trial → paid conversion timestamp once. Only on
+  // the first subscription (when trial_converted_at is still null);
+  // subsequent property subs leave the value alone. The admin
+  // dashboard reads this to compute conversion metrics.
+  await admin
+    .from('organizations')
+    .update({ trial_converted_at: new Date().toISOString() })
+    .eq('id', org.id)
+    .is('trial_converted_at', null)
+    .not('trial_ends_at', 'is', null)
+
   return {
     kind: 'created',
     orgId: org.id,

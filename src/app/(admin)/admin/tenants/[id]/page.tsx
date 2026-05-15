@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requirePlatformAdmin } from '@/lib/auth/session'
+import { computeTrialState } from '@/lib/billing/trial'
 import { r2PublicUrl } from '@/lib/r2/client'
 import { listMediaForPropertyCached } from '@/lib/r2/list'
 import { computeLibraryStats, formatBytes, formatRelative } from '@/lib/r2/stats'
@@ -79,6 +80,8 @@ export default async function TenantDetailPage({
       </div>
 
       <OrgNameSection orgId={organization.id} initialName={organization.name} />
+
+      <TrialInfoCard org={organization} />
 
       <BillingSection
         orgId={organization.id}
@@ -233,6 +236,74 @@ function formatLocation(p: Property): string | null {
   const parts = [p.city, p.state].filter(Boolean) as string[]
   if (parts.length === 0) return null
   return parts.join(', ')
+}
+
+/**
+ * Show the org's trial state at a glance: when it started, when it
+ * ends, whether reminder/expiry emails have already fired, and
+ * whether/when the org converted. Hidden entirely for tenants that
+ * never had a trial (admin-provisioned tenants), so the card doesn't
+ * add noise to the detail page in the common pre-PLG case.
+ */
+function TrialInfoCard({ org }: { org: Organization }) {
+  if (!org.trial_ends_at) return null
+  const state = computeTrialState(org.trial_ends_at)
+  const stateLabel = org.trial_converted_at
+    ? 'Converted'
+    : state.kind === 'active'
+      ? `${state.daysLeft} day${state.daysLeft === 1 ? '' : 's'} left`
+      : state.kind === 'expired'
+        ? 'Expired (no card)'
+        : '—'
+  const tone: BadgeProps['tone'] = org.trial_converted_at
+    ? 'success'
+    : state.kind === 'active'
+      ? state.daysLeft <= 3
+        ? 'warning'
+        : 'info'
+      : state.kind === 'expired'
+        ? 'danger'
+        : 'neutral'
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Trial</CardTitle>
+      </CardHeader>
+      <CardBody>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+          <div>
+            <dt className="text-xs text-subtle">Status</dt>
+            <dd className="mt-0.5"><Badge tone={tone}>{stateLabel}</Badge></dd>
+          </div>
+          <div>
+            <dt className="text-xs text-subtle">Started</dt>
+            <dd className="mt-0.5 text-fg">{formatDate(org.trial_started_at)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-subtle">Ends</dt>
+            <dd className="mt-0.5 text-fg">{formatDate(org.trial_ends_at)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-subtle">Converted</dt>
+            <dd className="mt-0.5 text-fg">{formatDate(org.trial_converted_at)}</dd>
+          </div>
+        </dl>
+        <p className="mt-3 text-xs text-subtle">
+          T-3 nudge: {formatDate(org.trial_reminder_t3_sent_at) || 'not sent'} ·
+          Expiry email: {formatDate(org.trial_expired_email_sent_at) || 'not sent'}
+        </p>
+      </CardBody>
+    </Card>
+  )
+}
+
+function formatDate(value: string | null): string {
+  if (!value) return '—'
+  return new Date(value).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 async function loadTenant(orgId: string) {

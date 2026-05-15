@@ -113,7 +113,7 @@ export function SignupForm() {
       ) : null}
 
       <Button type="submit" className="w-full" size="lg" disabled={pending}>
-        {pending ? 'Creating your trial…' : 'Start free 7-day trial'}
+        {pending ? 'Sending verification code…' : 'Send verification code'}
       </Button>
 
       <p className="text-center text-xs text-subtle">

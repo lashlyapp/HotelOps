@@ -16,6 +16,14 @@ export type Organization = {
   // admin path (no trial).
   trial_started_at: string | null
   trial_ends_at: string | null
+  // Trial lifecycle bookkeeping — see 20260515010000_signup_otp_and_admin.sql.
+  // *_email_sent_at columns dedupe the /api/cron/trial-expiry sender.
+  // trial_converted_at is stamped by startSubscriptionForProperty on
+  // the first paid sub and powers the admin dashboard's conversion
+  // metrics.
+  trial_reminder_t3_sent_at: string | null
+  trial_expired_email_sent_at: string | null
+  trial_converted_at: string | null
 }
 
 export type Profile = {
@@ -387,7 +395,25 @@ export type EventActivity = {
 }
 
 // ----------------------------------------------------------------------------
-// Public signup requests (the /signup form)
+// Self-serve signup: in-flight OTP verification rows
+// ----------------------------------------------------------------------------
+export type SignupPending = {
+  id: string
+  email: string
+  full_name: string
+  hotel_name: string
+  password_enc: string
+  otp_hash: string
+  attempts: number
+  expires_at: string
+  ip_address: string | null
+  resends: number
+  resent_at: string | null
+  created_at: string
+}
+
+// ----------------------------------------------------------------------------
+// Public signup requests (the /signup form audit log)
 // ----------------------------------------------------------------------------
 export type TenantSignupStatus = 'pending' | 'approved' | 'rejected'
 
