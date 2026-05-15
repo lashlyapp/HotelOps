@@ -478,7 +478,7 @@ function PricingMini() {
   return (
     <Card>
       <CardBody className="space-y-3">
-        <Row label="Base" sub="Work Orders, Events, IT Hub, Media, 3 signage screens">
+        <Row label="Base" sub="Work Orders, Events & Catering, IT Hub, Media, 3 signage screens">
           $100
         </Row>
         <Row label="Signage Unlimited" sub="optional · unlimited screens">

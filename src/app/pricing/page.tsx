@@ -8,7 +8,7 @@ import { BRAND } from '@/lib/brand'
 export const metadata: Metadata = {
   title: `Pricing — ${BRAND.name}`,
   description:
-    'Flat per-property pricing for hotel operations software. $100/property/month base with Work Orders, Events, IT Hub, and Media. Optional add-ons for unlimited signage and guest experience.',
+    'Flat per-property pricing for hotel operations software. $100/property/month base with Work Orders, Events & Catering, IT Hub, and Media. Optional add-ons for unlimited signage and guest experience.',
   alternates: { canonical: `https://www.${BRAND.domain}/pricing` },
   openGraph: {
     type: 'website',
@@ -57,7 +57,7 @@ export default function PricingPage() {
               body="Everything every property needs on day one — maintenance work orders, event proposals, IT records, media library, and 3 signage screens."
               features={[
                 'Work Orders (Kanban with photo/video evidence)',
-                'Events (inquiry → proposal → invoice)',
+                'Events & Catering (inquiry → proposal → invoice)',
                 'IT Hub (Wi-Fi, vendor logins, equipment)',
                 'Media catalog with global CDN',
                 '3 signage screens included',
@@ -267,7 +267,7 @@ export default function PricingPage() {
               />
               <Faq
                 q="What if I only want maintenance, or only signage?"
-                a="You can. The base subscription includes maintenance work orders, events, IT Hub, media, and three signage screens at $100/property. Add Signage Unlimited or Guest Experience only if you want them — toggle on /billing, billed prorated."
+                a="You can. The base subscription includes maintenance work orders, events & catering, IT Hub, media, and three signage screens at $100/property. Add Signage Unlimited or Guest Experience only if you want them — toggle on /billing, billed prorated."
               />
               <Faq
                 q="How is the signage add-on different from Yodeck or OptiSigns?"
