@@ -192,47 +192,106 @@ function EnrollmentPanel({
 }
 
 function FactorList({ factors }: { factors: EnrolledFactor[] }) {
+  // Track which factor (if any) the user has clicked "Remove" on so
+  // we can swap that row for the password-confirm form. Only one
+  // confirmation can be open at a time.
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+
+  return (
+    <ul className="rounded-md border border-border-subtle divide-y divide-border-subtle">
+      {factors.map((f) => (
+        <li key={f.id} className="px-3 py-2.5 text-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="font-medium text-fg">
+                {f.friendlyName ?? 'Authenticator app'}
+              </p>
+              <p className="text-xs text-subtle">
+                Added{' '}
+                {new Date(f.createdAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </p>
+            </div>
+            {confirmingId !== f.id ? (
+              <button
+                type="button"
+                onClick={() => setConfirmingId(f.id)}
+                className="focus-ring rounded-sm text-xs font-medium text-danger-fg hover:underline"
+              >
+                Remove
+              </button>
+            ) : null}
+          </div>
+          {confirmingId === f.id ? (
+            <UnenrollConfirmForm
+              factorId={f.id}
+              onCancel={() => setConfirmingId(null)}
+            />
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/**
+ * Inline password-confirm form rendered when the user clicks
+ * "Remove" on a factor. Server action verifies the password against
+ * a throwaway Supabase client (so the current aal2 session isn't
+ * disturbed) before unenrolling.
+ */
+function UnenrollConfirmForm({
+  factorId,
+  onCancel,
+}: {
+  factorId: string
+  onCancel: () => void
+}) {
   const [state, action, pending] = useActionState(
     unenrollMfaAction,
     unenrollInitial,
   )
   return (
-    <ul className="space-y-2 rounded-md border border-border-subtle">
-      {factors.map((f) => (
-        <li
-          key={f.id}
-          className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm"
-        >
-          <div>
-            <p className="font-medium text-fg">
-              {f.friendlyName ?? 'Authenticator app'}
-            </p>
-            <p className="text-xs text-subtle">
-              Added{' '}
-              {new Date(f.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-              })}
-            </p>
-          </div>
-          <form action={action}>
-            <input type="hidden" name="factor_id" value={f.id} />
-            <button
-              type="submit"
-              disabled={pending}
-              className="focus-ring rounded-sm text-xs font-medium text-danger-fg hover:underline disabled:opacity-50"
-            >
-              {pending ? 'Removing…' : 'Remove'}
-            </button>
-          </form>
-        </li>
-      ))}
+    <form action={action} className="mt-3 space-y-2">
+      <input type="hidden" name="factor_id" value={factorId} />
+      <p className="text-xs text-muted leading-relaxed">
+        Enter your current password to confirm. After this, sign-in will only
+        require your password.
+      </p>
+      <Input
+        name="password"
+        type="password"
+        autoComplete="current-password"
+        required
+        autoFocus
+        placeholder="Current password"
+      />
       {state.error ? (
-        <li className="px-3 pb-2 text-xs text-danger-fg">{state.error}</li>
+        <p className="text-xs text-danger-fg">{state.error}</p>
       ) : state.success ? (
-        <li className="px-3 pb-2 text-xs text-success-fg">{state.success}</li>
+        <p className="text-xs text-success-fg">{state.success}</p>
       ) : null}
-    </ul>
+      <div className="flex items-center gap-2">
+        <Button
+          type="submit"
+          variant="danger"
+          size="sm"
+          disabled={pending}
+        >
+          {pending ? 'Removing…' : 'Confirm and remove'}
+        </Button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={pending}
+          className="focus-ring rounded-sm text-xs font-medium text-muted hover:text-fg disabled:opacity-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
   )
 }

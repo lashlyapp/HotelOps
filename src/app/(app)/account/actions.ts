@@ -9,6 +9,7 @@ import {
   unenrollFactor,
 } from '@/lib/auth/mfa'
 import { validatePassword } from '@/lib/auth/password'
+import { verifyPasswordForEmail } from '@/lib/auth/reauth'
 import { requireOrgUser, requireUser } from '@/lib/auth/session'
 import { stripe } from '@/lib/stripe/client'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -321,18 +322,40 @@ export async function confirmMfaEnrollmentAction(
 }
 
 /**
- * Remove a TOTP factor. When this is the only verified factor, the
- * account drops back to password-only auth. Re-enrolling later
- * creates a new factor; old recovery codes (if any) are wiped at the
- * Supabase layer.
+ * Remove a TOTP factor. Requires the user to re-enter their current
+ * password — disabling MFA is a security-sensitive action and we
+ * don't want a brief unattended-laptop window to be enough to strip
+ * the second factor off the account.
+ *
+ * Re-auth uses {@link verifyPasswordForEmail} (a throwaway Supabase
+ * client) so the user's existing aal2 session is preserved through
+ * the check; only after the password matches do we call
+ * {@link unenrollFactor}. When the unenrolled factor is the only
+ * one the account has, MFA is fully off and future sign-ins skip
+ * the challenge step.
  */
 export async function unenrollMfaAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireUser()
+  const session = await requireUser()
   const factorId = String(formData.get('factor_id') ?? '').trim()
+  const password = String(formData.get('password') ?? '')
   if (!factorId) return { error: 'Missing factor id.' }
+  if (!password) {
+    return { error: 'Enter your current password to disable two-factor authentication.' }
+  }
+
+  const ok = await verifyPasswordForEmail(session.email, password).catch(
+    (err) => {
+      console.error('[mfa] reauth check threw', err)
+      return false
+    },
+  )
+  if (!ok) {
+    return { error: 'That password is not correct.' }
+  }
+
   try {
     await unenrollFactor(factorId)
   } catch (err) {
