@@ -147,7 +147,24 @@ export async function POST(request: Request) {
       const checkout = await stripe().checkout.sessions.create({
         mode: 'setup',
         customer: customerId,
-        payment_method_types: ['card'],
+        // Omitting payment_method_types lets Checkout pick the
+        // optimal set for the visitor's country automatically —
+        // SEPA Direct Debit in the EU, iDEAL in NL, Bancontact in
+        // BE, BLIK in PL, etc. Requires the methods to be enabled
+        // in the Stripe Dashboard → Settings → Payment methods.
+        // Cards are always available.
+        // Stripe collects + validates the billing address in its
+        // country-aware UI (UK shows postcode + county, JP shows
+        // 〒 + 都道府県, etc.) and mirrors it to the Customer.
+        billing_address_collection: 'required',
+        // Mirror the Stripe-collected name + address back onto the
+        // Customer so subsequent invoices use them.
+        customer_update: { address: 'auto', name: 'auto' },
+        // B2B customers (EU VAT, AU ABN, UK VAT, etc.) can enter
+        // their tax ID for reverse-charge / exemption handling.
+        // Stripe Tax uses it automatically when computing per-invoice
+        // tax.
+        tax_id_collection: { enabled: true },
         success_url: successUrl,
         cancel_url: cancelUrl,
         custom_fields: [autopayCustomField()],
@@ -202,6 +219,11 @@ export async function POST(request: Request) {
           ...(setupFeePriceId ? [{ price: setupFeePriceId, quantity: 1 }] : []),
           ...orgAddons.map((a) => ({ price: a.priceId, quantity: 1 })),
         ],
+        // payment_method_types intentionally omitted so Checkout
+        // shows the optimal set per visitor country (see above).
+        billing_address_collection: 'required',
+        customer_update: { address: 'auto', name: 'auto' },
+        tax_id_collection: { enabled: true },
         custom_fields: [autopayCustomField()],
         subscription_data: {
           // Stripe caps Subscription.description at 500 chars; property.name
