@@ -176,6 +176,118 @@
     "ctaSub": "No credit card. 10 GB included.",
     "ctaButton": "Start free trial"
   },
+  "features": {
+    "eyebrow": "Everything included",
+    "title": "Built like the boutique back office actually works.",
+    "sub": "The full surface area, in one place. No per-module pricing — every feature below is in the $100/property base or one of the two flat-rate add-ons. Nothing here costs extra by seat, by screen, or by room.",
+    "categories": [
+      {
+        "title": "Operations",
+        "items": [
+          {
+            "name": "Work Orders",
+            "description": "Photo-first maintenance tickets on a Kanban board. Every status change is time-stamped, every fix has visual evidence in the audit log."
+          },
+          {
+            "name": "Events & Catering",
+            "description": "Inquiry → proposal → invoice in one place. Send a branded PDF in minutes; track payments without a separate billing tool."
+          },
+          {
+            "name": "IT Hub",
+            "description": "Wi-Fi credentials, vendor logins, equipment serial numbers, warranty dates — searchable, role-gated, one source of truth."
+          },
+          {
+            "name": "Vendor Directory",
+            "description": "Plumbers, electricians, linen suppliers, food vendors — names, contacts, contracts, and last-called dates in one Rolodex."
+          }
+        ]
+      },
+      {
+        "title": "Guest-facing",
+        "items": [
+          {
+            "name": "Branded Arrival Page",
+            "description": "Per-room QR card that opens to your hotel's brand, your Wi-Fi, your room-service menus. No guest account, no app to download."
+          },
+          {
+            "name": "Digital Signage",
+            "description": "Any browser-capable TV becomes a display. Schedule by day, hour, or zone. Three screens included; unlimited via the add-on."
+          },
+          {
+            "name": "Emergency Broadcast",
+            "description": "Take over every screen at a property in one click. Pre-built templates for fire, weather, evacuation; custom messages anytime."
+          },
+          {
+            "name": "Guest Issue Intake",
+            "description": "Guests scan a QR and report problems in their language. Tickets land in the same Kanban board as staff-reported work orders."
+          }
+        ]
+      },
+      {
+        "title": "Media & content",
+        "items": [
+          {
+            "name": "Global Media CDN",
+            "description": "Photos and videos served from the edge worldwide. Same fast load in Tokyo, Lisbon, or Toronto. 10 GB included on every plan."
+          },
+          {
+            "name": "Floor Plans & Documents",
+            "description": "One canonical place for layouts, equipment manuals, vendor warranties, brand guidelines. Versioned, downloadable, never lost in chat."
+          },
+          {
+            "name": "Branded Text Cards",
+            "description": "Build sign content in-app with your brand color and typography. No Canva, no PowerPoint round-trip."
+          },
+          {
+            "name": "Restaurant & Room Service Menus",
+            "description": "Editable menus that auto-publish to the arrival page and signage. Update once, every surface refreshes."
+          }
+        ]
+      },
+      {
+        "title": "Team & multi-property",
+        "items": [
+          {
+            "name": "Unlimited Team Members",
+            "description": "Front desk, housekeeping, engineering, ownership — every staff member at every property included, no per-seat charges, ever."
+          },
+          {
+            "name": "Role-based Access",
+            "description": "Owners, GMs, managers, line staff — each role sees only what they need. Granular permissions per property, per module."
+          },
+          {
+            "name": "Multi-property Console",
+            "description": "Switch between properties in one click. Same login, same workflows. Group-level dashboards roll up automatically."
+          },
+          {
+            "name": "Two-factor Authentication",
+            "description": "Optional 2FA per user via any authenticator app. Owners can require it org-wide; recovery flow handled through admin support."
+          }
+        ]
+      },
+      {
+        "title": "Billing & trust",
+        "items": [
+          {
+            "name": "Per-property Pricing",
+            "description": "No per-seat, no per-screen, no per-room math. One flat number per property, predictable forever."
+          },
+          {
+            "name": "Local-currency Billing",
+            "description": "Sign up in your language; get invoiced in USD, EUR, GBP, MXN, AUD, JPY, KRW, VND, or SGD. No FX conversion surprises."
+          },
+          {
+            "name": "No Contracts",
+            "description": "Cancel from your account any time. No annual commitments, no notice periods, no exit interviews."
+          },
+          {
+            "name": "7-day Free Trial",
+            "description": "Full feature access for 7 days. No credit card to start; your data persists if you convert and exports if you don't."
+          }
+        ]
+      }
+    ]
+  },
   "destinations": {
     "eyebrow": "Markets we're built for",
     "title": "Made for boutique hotels everywhere.",

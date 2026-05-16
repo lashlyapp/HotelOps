@@ -6,6 +6,7 @@ import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
 import { AsianDestinationsBand } from '@/components/marketing/asian-destinations-band'
 import { DestinationsBand } from '@/components/marketing/destinations-band'
+import { FeatureGrid } from '@/components/marketing/feature-grid'
 import { UseCasesBand } from '@/components/marketing/use-cases-band'
 import { Card, CardBody } from '@/components/ui/card'
 import { BRAND } from '@/lib/brand'
@@ -309,6 +310,9 @@ export default async function HomePage() {
             </p>
           </div>
         </section>
+
+        {/* ─── Full feature catalog: 5 categories × 4 features ────────── */}
+        <FeatureGrid t={t.features} />
 
         {/* ─── Destinations: city-targeted cards in local languages ──── */}
         <DestinationsBand t={t} />

@@ -176,6 +176,118 @@
     "ctaSub": "Sans carte bancaire. 10 Go inclus.",
     "ctaButton": "Démarrer l'essai gratuit"
   },
+  "features": {
+    "eyebrow": "Tout est inclus",
+    "title": "Conçu comme un back-office boutique fonctionne réellement.",
+    "sub": "Toute la surface, en un seul endroit. Pas de tarification par module — chaque fonctionnalité ci-dessous est dans la base à 100$/propriété ou dans l'une des deux options à tarif forfaitaire. Rien ici ne coûte plus par siège, par écran ou par chambre.",
+    "categories": [
+      {
+        "title": "Exploitation",
+        "items": [
+          {
+            "name": "Bons de Travail",
+            "description": "Tickets de maintenance avec photo d'abord sur un tableau Kanban. Chaque changement de statut horodaté, chaque réparation a une preuve visuelle dans le journal d'audit."
+          },
+          {
+            "name": "Événements et Restauration",
+            "description": "Demande → proposition → facture en un seul endroit. Envoyez un PDF à votre marque en minutes ; suivez les paiements sans outil de facturation séparé."
+          },
+          {
+            "name": "Hub IT",
+            "description": "Identifiants Wi-Fi, logins fournisseurs, numéros de série d'équipements, dates de garantie — consultables, avec permissions par rôle, une seule source de vérité."
+          },
+          {
+            "name": "Annuaire Fournisseurs",
+            "description": "Plombiers, électriciens, linge, alimentation — noms, contacts, contrats, dernières dates d'appel dans un seul Rolodex."
+          }
+        ]
+      },
+      {
+        "title": "Côté client",
+        "items": [
+          {
+            "name": "Page d'Accueil de Marque",
+            "description": "Carte QR par chambre qui s'ouvre sur votre marque, votre Wi-Fi, vos menus de service. Pas de compte client, pas d'app à télécharger."
+          },
+          {
+            "name": "Affichage Numérique",
+            "description": "Tout TV compatible avec navigateur devient un écran. Planifiez par jour, heure ou zone. Trois écrans inclus ; illimités avec l'option."
+          },
+          {
+            "name": "Diffusion d'Urgence",
+            "description": "Prenez le contrôle de chaque écran d'une propriété en un clic. Modèles préconçus pour incendie, météo, évacuation ; messages personnalisés à tout moment."
+          },
+          {
+            "name": "Réception des Problèmes Clients",
+            "description": "Les clients scannent un QR et signalent les problèmes dans leur langue. Les tickets arrivent dans le même tableau Kanban que les bons du personnel."
+          }
+        ]
+      },
+      {
+        "title": "Médias et contenu",
+        "items": [
+          {
+            "name": "CDN Médias Global",
+            "description": "Photos et vidéos servies depuis l'edge mondialement. Même chargement rapide à Tokyo, Lisbonne ou Toronto. 10 Go inclus dans chaque forfait."
+          },
+          {
+            "name": "Plans et Documents",
+            "description": "Un endroit canonique pour les plans, manuels d'équipement, garanties fournisseurs, guides de marque. Versionnés, téléchargeables, jamais perdus dans le chat."
+          },
+          {
+            "name": "Cartes Texte de Marque",
+            "description": "Créez du contenu d'affichage dans l'app avec votre couleur et typographie. Pas de Canva, pas d'aller-retour PowerPoint."
+          },
+          {
+            "name": "Menus Restaurant et Room Service",
+            "description": "Menus modifiables qui se publient automatiquement sur la page d'accueil et l'affichage. Mettez à jour une fois, chaque surface se rafraîchit."
+          }
+        ]
+      },
+      {
+        "title": "Équipe et multi-propriétés",
+        "items": [
+          {
+            "name": "Membres d'Équipe Illimités",
+            "description": "Réception, ménage, ingénierie, propriété — chaque employé de chaque propriété inclus, sans frais par siège, jamais."
+          },
+          {
+            "name": "Accès par Rôle",
+            "description": "Propriétaires, GMs, managers, personnel — chaque rôle ne voit que ce dont il a besoin. Permissions granulaires par propriété, par module."
+          },
+          {
+            "name": "Console Multi-propriétés",
+            "description": "Passez d'une propriété à l'autre en un clic. Même login, mêmes flux. Tableaux de bord au niveau du groupe automatiques."
+          },
+          {
+            "name": "Authentification à Deux Facteurs",
+            "description": "2FA optionnelle par utilisateur via toute app d'authentification. Les propriétaires peuvent l'exiger pour toute l'organisation ; flux de récupération géré via le support admin."
+          }
+        ]
+      },
+      {
+        "title": "Facturation et confiance",
+        "items": [
+          {
+            "name": "Tarification par Propriété",
+            "description": "Pas de calcul par siège, par écran ou par chambre. Un nombre forfaitaire par propriété, prévisible pour toujours."
+          },
+          {
+            "name": "Facturation en Devise Locale",
+            "description": "Inscrivez-vous dans votre langue ; facturé en USD, EUR, GBP, MXN, AUD, JPY, KRW, VND ou SGD. Aucune surprise de change."
+          },
+          {
+            "name": "Sans Contrat",
+            "description": "Annulez depuis votre compte à tout moment. Sans engagement annuel, sans préavis, sans entretien de sortie."
+          },
+          {
+            "name": "Essai Gratuit 7 Jours",
+            "description": "Accès complet aux fonctionnalités pendant 7 jours. Sans carte pour commencer ; vos données persistent si vous convertissez et s'exportent sinon."
+          }
+        ]
+      }
+    ]
+  },
   "destinations": {
     "eyebrow": "Les marchés pour lesquels nous sommes faits",
     "title": "Pour les hôtels boutique, partout.",

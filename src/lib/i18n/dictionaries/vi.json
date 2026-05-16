@@ -176,6 +176,118 @@
     "ctaSub": "Không cần thẻ tín dụng. Bao gồm 10 GB.",
     "ctaButton": "Bắt đầu dùng thử miễn phí"
   },
+  "features": {
+    "eyebrow": "Tất cả bao gồm",
+    "title": "Được xây dựng theo cách back-office boutique thực sự hoạt động.",
+    "sub": "Toàn bộ bề mặt, ở một nơi. Không có giá theo mô-đun — mọi tính năng dưới đây đều nằm trong nền tảng $100/tài sản hoặc một trong hai bổ sung giá đồng nhất. Không có gì ở đây tốn thêm theo chỗ ngồi, theo màn hình, hay theo phòng.",
+    "categories": [
+      {
+        "title": "Vận hành",
+        "items": [
+          {
+            "name": "Phiếu Công Việc",
+            "description": "Phiếu bảo trì ưu tiên ảnh trên bảng Kanban. Mọi thay đổi trạng thái có dấu thời gian, mọi sửa chữa có bằng chứng trực quan trong nhật ký kiểm toán."
+          },
+          {
+            "name": "Sự Kiện & Tiệc",
+            "description": "Yêu cầu → đề xuất → hóa đơn ở một nơi. Gửi PDF có thương hiệu trong vài phút; theo dõi thanh toán mà không cần công cụ lập hóa đơn riêng."
+          },
+          {
+            "name": "Hub IT",
+            "description": "Thông tin Wi-Fi, đăng nhập nhà cung cấp, số sê-ri thiết bị, ngày bảo hành — có thể tìm kiếm, kiểm soát theo vai trò, một nguồn sự thật duy nhất."
+          },
+          {
+            "name": "Danh bạ Nhà Cung Cấp",
+            "description": "Thợ ống nước, thợ điện, nhà cung cấp khăn, nhà cung cấp thực phẩm — tên, liên hệ, hợp đồng, ngày liên lạc cuối cùng trong một Rolodex."
+          }
+        ]
+      },
+      {
+        "title": "Hướng đến khách",
+        "items": [
+          {
+            "name": "Trang Đón Khách Có Thương Hiệu",
+            "description": "Thẻ QR cho mỗi phòng mở ra thương hiệu khách sạn, Wi-Fi, thực đơn dịch vụ phòng. Không có tài khoản khách, không có ứng dụng để tải xuống."
+          },
+          {
+            "name": "Biển Hiển Thị Kỹ Thuật Số",
+            "description": "Bất kỳ TV nào hỗ trợ trình duyệt đều trở thành màn hình hiển thị. Lập lịch theo ngày, giờ, hoặc khu vực. Ba màn hình bao gồm; không giới hạn qua bổ sung."
+          },
+          {
+            "name": "Phát Sóng Khẩn Cấp",
+            "description": "Tiếp quản mọi màn hình tại một tài sản trong một cú nhấp. Mẫu được xây dựng sẵn cho cháy, thời tiết, sơ tán; thông điệp tùy chỉnh bất cứ lúc nào."
+          },
+          {
+            "name": "Tiếp Nhận Vấn Đề Khách",
+            "description": "Khách quét QR và báo cáo vấn đề bằng ngôn ngữ của họ. Phiếu rơi vào cùng bảng Kanban như phiếu công việc do nhân viên báo cáo."
+          }
+        ]
+      },
+      {
+        "title": "Phương tiện và nội dung",
+        "items": [
+          {
+            "name": "CDN Phương Tiện Toàn Cầu",
+            "description": "Ảnh và video được phục vụ từ edge trên toàn thế giới. Cùng tải nhanh tại Tokyo, Lisbon, hay Toronto. 10 GB bao gồm trong mọi gói."
+          },
+          {
+            "name": "Sơ Đồ Tầng & Tài Liệu",
+            "description": "Một nơi chuẩn cho bố cục, hướng dẫn thiết bị, bảo hành nhà cung cấp, hướng dẫn thương hiệu. Có phiên bản, có thể tải xuống, không bao giờ mất trong chat."
+          },
+          {
+            "name": "Thẻ Văn Bản Có Thương Hiệu",
+            "description": "Xây dựng nội dung biển hiển thị trong ứng dụng với màu sắc và kiểu chữ của bạn. Không cần Canva, không cần đi-về với PowerPoint."
+          },
+          {
+            "name": "Thực Đơn Nhà Hàng & Dịch Vụ Phòng",
+            "description": "Thực đơn có thể chỉnh sửa tự động xuất bản trên trang đón khách và biển hiển thị. Cập nhật một lần, mọi bề mặt làm mới."
+          }
+        ]
+      },
+      {
+        "title": "Nhóm và đa tài sản",
+        "items": [
+          {
+            "name": "Thành Viên Nhóm Không Giới Hạn",
+            "description": "Lễ tân, dọn phòng, kỹ thuật, chủ sở hữu — mọi nhân viên ở mọi tài sản đều được bao gồm, không có phí theo chỗ ngồi, không bao giờ."
+          },
+          {
+            "name": "Truy Cập Dựa Trên Vai Trò",
+            "description": "Chủ sở hữu, GM, quản lý, nhân viên tuyến đầu — mỗi vai trò chỉ thấy những gì họ cần. Quyền chi tiết theo tài sản, theo mô-đun."
+          },
+          {
+            "name": "Bảng Điều Khiển Đa Tài Sản",
+            "description": "Chuyển đổi giữa các tài sản trong một cú nhấp. Cùng đăng nhập, cùng quy trình. Bảng điều khiển cấp nhóm tự động tổng hợp."
+          },
+          {
+            "name": "Xác Thực Hai Yếu Tố",
+            "description": "2FA tùy chọn cho mỗi người dùng qua bất kỳ ứng dụng xác thực nào. Chủ sở hữu có thể yêu cầu trên toàn tổ chức; luồng khôi phục được xử lý qua hỗ trợ quản trị."
+          }
+        ]
+      },
+      {
+        "title": "Thanh toán và niềm tin",
+        "items": [
+          {
+            "name": "Giá Theo Tài Sản",
+            "description": "Không tính toán theo chỗ ngồi, theo màn hình, theo phòng. Một con số đồng nhất cho mỗi tài sản, có thể dự đoán mãi mãi."
+          },
+          {
+            "name": "Thanh Toán Tiền Tệ Địa Phương",
+            "description": "Đăng ký bằng ngôn ngữ của bạn; được lập hóa đơn bằng USD, EUR, GBP, MXN, AUD, JPY, KRW, VND, hoặc SGD. Không có bất ngờ chuyển đổi ngoại tệ."
+          },
+          {
+            "name": "Không Hợp Đồng",
+            "description": "Hủy từ tài khoản của bạn bất cứ lúc nào. Không cam kết hàng năm, không thời gian thông báo, không phỏng vấn rời."
+          },
+          {
+            "name": "Dùng Thử Miễn Phí 7 Ngày",
+            "description": "Truy cập đầy đủ tính năng trong 7 ngày. Không cần thẻ tín dụng để bắt đầu; dữ liệu của bạn tồn tại nếu chuyển đổi và xuất nếu không."
+          }
+        ]
+      }
+    ]
+  },
   "destinations": {
     "eyebrow": "Thị trường chúng tôi được xây dựng cho",
     "title": "Được làm cho khách sạn boutique ở mọi nơi.",
