@@ -274,8 +274,8 @@
             "description": "Sin matemática por puesto, por pantalla o por habitación. Un número plano por propiedad, predecible para siempre."
           },
           {
-            "name": "Facturación en Moneda Local",
-            "description": "Regístrate en tu idioma; recibe facturas en USD, EUR, GBP, MXN, AUD, JPY, KRW, VND o SGD. Sin sorpresas de cambio de divisa."
+            "name": "Facturación en USD, Tarjetas de Todo el Mundo",
+            "description": "Una sola moneda de facturación: dólares estadounidenses. Cualquier tarjeta de crédito funciona desde cualquier país — tu banco gestiona la conversión de divisa. Stripe Tax añade el IVA / impuesto local correcto según tu país."
           },
           {
             "name": "Sin Contratos",
@@ -292,32 +292,32 @@
   "destinations": {
     "eyebrow": "Mercados para los que estamos hechos",
     "title": "Para hoteles boutique en todas partes.",
-    "sub": "Lisboa, Barcelona, París, Ciudad de México — los barrios donde los hoteles independientes y de pequeños grupos realmente operan. Facturación en moneda local, registro en tu idioma, la misma base operativa en cada destino."
+    "sub": "Lisboa, Barcelona, París, Ciudad de México — los barrios donde los hoteles independientes y de pequeños grupos realmente operan. Regístrate en tu idioma, la misma base operativa en cada destino. Facturado en USD; cualquier tarjeta de crédito funciona."
   },
   "asianDestinations": {
     "eyebrow": "Ahora en APAC",
     "title": "Hecho también para la escena boutique en Asia.",
-    "sub": "Tokio, Seúl, Hanói, Singapur — hoteles de diseño, ryokans, propiedades lifestyle y pequeños grupos de lujo. Regístrate en tu idioma, factura en tu moneda y opera con la misma base que usamos para boutiques en Europa y América.",
+    "sub": "Tokio, Seúl, Hanói, Singapur — hoteles de diseño, ryokans, propiedades lifestyle y pequeños grupos de lujo. Regístrate en tu idioma y opera con la misma base que usamos para boutiques en Europa y América. Facturado en USD; cualquier tarjeta de crédito funciona.",
     "items": [
       {
         "city": "Tokio",
         "country": "Japón",
-        "blurb": "Hoteles de diseño en Shibuya, ryokans en Asakusa, propiedades lifestyle en Ginza — facturación en JPY, registro en 日本語, la misma base de mantenimiento, eventos y señalización."
+        "blurb": "Hoteles de diseño en Shibuya, ryokans en Asakusa, propiedades lifestyle en Ginza — registro en 日本語, la misma base de mantenimiento, eventos y señalización."
       },
       {
         "city": "Seúl",
         "country": "Corea del Sur",
-        "blurb": "Boutiques de Gangnam, hostales de Itaewon, sucursales de resorts en Jeju — facturación en KRW, registro en 한국어, una suscripción por propiedad."
+        "blurb": "Boutiques de Gangnam, hostales de Itaewon, sucursales de resorts en Jeju — registro en 한국어, una suscripción por propiedad."
       },
       {
         "city": "Hanói",
         "country": "Vietnam",
-        "blurb": "Boutiques del Old Quarter, hoteles patrimoniales en Hội An, propiedades de playa en Da Nang — facturación en VND, registro en Tiếng Việt, precio plano por propiedad que escala."
+        "blurb": "Boutiques del Old Quarter, hoteles patrimoniales en Hội An, propiedades de playa en Da Nang — registro en Tiếng Việt, precio plano por propiedad que escala."
       },
       {
         "city": "Singapur",
         "country": "Singapur",
-        "blurb": "Hoteles shophouse en Chinatown, propiedades lifestyle en Tanjong Pagar, grupos de diseño por toda la isla — facturación en SGD, registro en inglés, sin sorpresas por pantalla."
+        "blurb": "Hoteles shophouse en Chinatown, propiedades lifestyle en Tanjong Pagar, grupos de diseño por toda la isla — registro en inglés, sin sorpresas por pantalla."
       }
     ]
   },

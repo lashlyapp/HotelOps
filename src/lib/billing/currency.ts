@@ -1,26 +1,48 @@
 /**
- * Currencies the platform bills in. The list lives in sync with the
- * CHECK constraint on organizations.currency (see migration
- * 20260515020000_org_currency.sql) — to launch a new market, add the
- * code in BOTH places in the same PR.
+ * Currencies the platform CAN bill in (per the CHECK constraint on
+ * organizations.currency). However, **v1 strategy is USD-only**: every
+ * customer regardless of locale gets a USD Stripe Price. International
+ * customers pay with any credit card from anywhere; their bank handles
+ * the FX conversion at the standard rate, and Stripe Tax adds the
+ * correct local VAT/GST/sales tax on top of the USD invoice.
  *
- * The full per-currency rollout requires creating Stripe Prices with
- * lookup keys suffixed by the currency (e.g.
- * `hotelops_per_property_monthly_eur`). USD keeps the bare key
- * (`hotelops_per_property_monthly`) so existing US customers don't
- * need any Price migration when we add a new currency.
+ * Why USD-only at this stage:
+ *  - B2B SaaS norm: Linear, Vercel, Cal.com, GitHub, Webflow all do
+ *    this. Customers in their target segment don't bounce on USD.
+ *  - Boutique hotel owners are sophisticated B2B buyers — they're
+ *    already paying their PMS, OTA settlements, and Stripe Connect
+ *    in USD. USD invoicing is friction-free for them.
+ *  - Maintaining 9+ currencies of Stripe Prices is premature for a
+ *    company with single-digit customers. Each new currency = N more
+ *    Stripe Prices to create, keep in sync on every price change,
+ *    and reason about during pricing experiments.
+ *
+ * The other codes (eur, gbp, mxn, aud, jpy, krw, vnd, sgd) are kept
+ * in SUPPORTED_CURRENCIES because the CHECK constraint already
+ * accepts them and removing them is a destructive schema change.
+ * They're dormant — no LOCALE_TO_CURRENCY mapping points at them
+ * and no Stripe Prices exist with their `_<currency>` lookup keys.
+ *
+ * To activate a non-USD currency in the future (e.g. EUR after the
+ * EU customer base hits ~10+):
+ *  1. Add the locale → currency mapping in LOCALE_TO_CURRENCY.
+ *  2. Create the Stripe Prices in the Dashboard with lookup keys
+ *     `hotelops_*_<currency>` (currencyAwareLookupKey already
+ *     handles the suffix on the read side).
+ *  3. Update the marketing copy that currently says "billed in USD"
+ *     to acknowledge the new currency option.
  */
 
 export const SUPPORTED_CURRENCIES = [
   'usd',
+  // The codes below are accepted by the DB constraint but dormant.
+  // No LOCALE_TO_CURRENCY mapping points at them and no Stripe Prices
+  // exist with the `_<currency>` lookup-key suffix. See the comment
+  // block above for the activation procedure.
   'eur',
   'gbp',
   'mxn',
   'aud',
-  // APAC additions. SGD is in the list even though no locale maps
-  // to it — Singapore visitors land in English, and operators can
-  // hand-set SGD via admin tooling until we wire geo-aware currency
-  // hinting (Stripe Tax has this; it's a separate workstream).
   'jpy',
   'krw',
   'vnd',
@@ -31,16 +53,15 @@ export type Currency = (typeof SUPPORTED_CURRENCIES)[number]
 export const DEFAULT_CURRENCY: Currency = 'usd'
 
 /** Mapping from the marketing-site locale to the currency we default
- *  the org to at signup. Conservative defaults — the operator can
- *  override later via a customer-success workflow if a Spanish-
- *  speaking customer wants to be billed in USD or vice versa. */
+ *  the org to at signup. Currently USD-only — every locale falls back
+ *  to USD. See the strategy comment at the top of this file. */
 const LOCALE_TO_CURRENCY: Record<string, Currency> = {
   en: 'usd',
-  es: 'eur',
-  fr: 'eur',
-  ja: 'jpy',
-  ko: 'krw',
-  vi: 'vnd',
+  es: 'usd',
+  fr: 'usd',
+  ja: 'usd',
+  ko: 'usd',
+  vi: 'usd',
 }
 
 /** Resolve the default currency for a given locale. Falls back to
