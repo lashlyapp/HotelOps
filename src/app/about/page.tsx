@@ -1,8 +1,8 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
+import { SharpHeroImage } from '@/components/marketing/sharp-hero-image'
 import { Card, CardBody } from '@/components/ui/card'
 import { BRAND, BRAND_ADDRESS_LINES } from '@/lib/brand'
 import { getDictionary } from '@/lib/i18n/dictionaries'
@@ -103,13 +103,11 @@ export default async function AboutPage() {
               </h1>
             </div>
             <div className="relative aspect-[5/4] overflow-hidden rounded-2xl border border-border-subtle bg-surface-muted">
-              <Image
+              <SharpHeroImage
                 src={HERO_IMAGE}
                 alt="Hotel reception desk with brass service bell"
-                fill
                 priority
                 sizes="(min-width: 1024px) 540px, (min-width: 640px) 90vw, 100vw"
-                className="object-cover"
               />
             </div>
           </div>

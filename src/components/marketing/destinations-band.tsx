@@ -56,7 +56,7 @@ const DESTINATIONS: Destination[] = [
     city: 'Lisboa',
     neighborhoods: 'Alfama · Chiado · Bairro Alto',
     headline: 'Hotéis boutique em Lisboa',
-    sub: "MyHotelOps para a Baixa, Alfama e Chiado — e cada propriedade entre eles. Tudo o que o seu PMS não faz, num só lugar.",
+    sub: 'MyHotelOps para Baixa, Alfama e Chiado — e todas as propriedades entre elas. Tudo o que o seu PMS não faz, em um só lugar.',
   },
   {
     slug: 'barcelona',
@@ -66,7 +66,7 @@ const DESTINATIONS: Destination[] = [
     city: 'Barcelona',
     neighborhoods: 'El Born · Gòtic · Eixample',
     headline: 'Hoteles boutique en Barcelona',
-    sub: 'MyHotelOps para El Born, Gòtic y Eixample — y cada propiedad entre ellos. Todo lo que tu PMS no hace, en un solo lugar.',
+    sub: 'MyHotelOps para El Born, el Gòtic y el Eixample — y cada propiedad entre ellos. Todo lo que tu PMS no hace, en un solo lugar.',
   },
   {
     slug: 'paris',
@@ -76,7 +76,7 @@ const DESTINATIONS: Destination[] = [
     city: 'Paris',
     neighborhoods: 'Le Marais · Saint-Germain · Montmartre',
     headline: 'Hôtels boutique à Paris',
-    sub: "MyHotelOps pour Le Marais, Saint-Germain et Montmartre — et chaque propriété entre les deux. Tout ce que votre PMS ne fait pas, au même endroit.",
+    sub: 'MyHotelOps pour Le Marais, Saint-Germain et Montmartre — et toutes les propriétés entre ces quartiers. Tout ce que votre PMS ne fait pas, au même endroit.',
   },
   {
     slug: 'mexico-city',
@@ -86,7 +86,7 @@ const DESTINATIONS: Destination[] = [
     city: 'Ciudad de México',
     neighborhoods: 'Roma · Condesa · Polanco',
     headline: 'Hoteles boutique en Ciudad de México',
-    sub: 'MyHotelOps para Roma, Condesa y Polanco — y cada propiedad entre ellas. Todo lo que tu PMS no hace, en un solo lugar.',
+    sub: 'MyHotelOps para Roma, Condesa y Polanco — y cada propiedad entre esas zonas. Todo lo que tu PMS no hace, en un solo lugar.',
   },
 ]
 

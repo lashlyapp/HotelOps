@@ -102,6 +102,7 @@ const nextConfig: NextConfig = {
     '/api/blog/guide-download': ['./assets/downloads/**'],
   },
   images: {
+    qualities: [75, 95],
     remotePatterns: [
       ...(cdn
         ? [

@@ -188,6 +188,7 @@
   },
   "features": {
     "navLabel": "Features",
+    "allLabel": "All features",
     "eyebrow": "Everything included",
     "title": "Built like the boutique back office actually works.",
     "sub": "The full surface area, in one place. No per-module pricing — every feature below is in the $100/property base or one of the two flat-rate add-ons. Nothing here costs extra by seat, by screen, or by room.",
@@ -300,14 +301,14 @@
     ]
   },
   "destinations": {
-    "eyebrow": "Markets we're built for",
-    "title": "Made for boutique hotels everywhere.",
-    "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Sign up in your language, the same back-office stack everywhere."
+    "eyebrow": "Built for boutique hotels worldwide",
+    "title": "Made for independent and small-group hotels everywhere.",
+    "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Get started in your language and use the same operational stack everywhere. Billed in USD, and most major credit cards are supported."
   },
   "asianDestinations": {
-    "eyebrow": "Now serving APAC",
-    "title": "Built for the boutique scene across Asia, too.",
-    "sub": "Tokyo, Seoul, Hanoi, Singapore — design hotels, ryokans, lifestyle properties, and small luxury groups. Sign up in your language and run the same operational stack we run for boutiques in Europe and the Americas.",
+    "eyebrow": "Now serving Asia-Pacific",
+    "title": "Built for boutique hotels across Asia, too.",
+    "sub": "Tokyo, Seoul, Hanoi, Singapore — from design hotels and ryokans to lifestyle properties and small luxury groups. Get started in your language and run the same operational stack we support for boutiques in Europe and the Americas. Billed in USD, and most major credit cards are supported.",
     "items": [
       {
         "city": "Tokyo",
@@ -353,21 +354,24 @@
   "useCases": {
     "eyebrow": "How customers use it",
     "title": "Three boutiques, three different daily wins.",
-    "sub": "These are real customers running on MyHotelOps today. Names withheld at their request — boutique operators value their privacy and we honor it. The use cases are theirs.",
+    "sub": "The workflows MyHotelOps was built to handle.",
     "items": [
       {
         "headline": "Cut maintenance lag from days to hours",
-        "type": "32-room boutique · East Coast US",
+        "type": "32-room boutique",
+        "region": "Lisbon, Portugal",
         "body": "Front desk used to email engineering; tickets sat in inboxes. With photo-first work orders the cycle from guest report → completed fix dropped from a 2-3 day median to under 4 hours. Owner finally has a Kanban view of every open issue across the property in one place."
       },
       {
         "headline": "Replaced four separate SaaS subscriptions",
-        "type": "Two-property design hotel group · West Coast US",
+        "type": "Two-property design hotel group",
+        "region": "Mexico City, Mexico",
         "body": "Cancelled their maintenance ticketing tool, their event-banquet platform, their digital signage subscription, and their guest concierge app. Net spend dropped about $400/property/mo with all the same workflows still running — just consolidated under one $188 line item."
       },
       {
         "headline": "Onboarded GM in an afternoon, not a week",
-        "type": "Small group hotelier · Pacific Northwest",
+        "type": "Small group hotelier",
+        "region": "Tokyo, Japan",
         "body": "New GM started on a Tuesday. By end of day they had work orders, vendor contacts, the Wi-Fi credentials, the printable arrival cards, and the events pipeline all in one tab. Owner used to budget two weeks for new-GM ramp and now allocates one afternoon."
       }
     ],

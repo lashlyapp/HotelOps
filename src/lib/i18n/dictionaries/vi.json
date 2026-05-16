@@ -188,6 +188,7 @@
   },
   "features": {
     "navLabel": "Tính năng",
+    "allLabel": "Tất cả tính năng",
     "eyebrow": "Tất cả bao gồm",
     "title": "Được xây dựng theo cách back-office boutique thực sự hoạt động.",
     "sub": "Toàn bộ bề mặt, ở một nơi. Không có giá theo mô-đun — mọi tính năng dưới đây đều nằm trong nền tảng $100/tài sản hoặc một trong hai bổ sung giá đồng nhất. Không có gì ở đây tốn thêm theo chỗ ngồi, theo màn hình, hay theo phòng.",
@@ -300,14 +301,14 @@
     ]
   },
   "destinations": {
-    "eyebrow": "Thị trường chúng tôi được xây dựng cho",
-    "title": "Được làm cho khách sạn boutique ở mọi nơi.",
-    "sub": "Lisbon, Barcelona, Paris, Mexico City — các khu vực nơi khách sạn độc lập và nhóm nhỏ thực sự vận hành. Đăng ký bằng ngôn ngữ của bạn, cùng một ngăn xếp back-office ở mọi nơi."
+    "eyebrow": "Dành cho khách sạn boutique trên toàn thế giới",
+    "title": "Dành cho khách sạn độc lập và nhóm nhỏ, ở mọi nơi.",
+    "sub": "Lisbon, Barcelona, Paris, Mexico City — các khu vực nơi khách sạn độc lập và nhóm nhỏ thực sự vận hành. Bắt đầu bằng ngôn ngữ của bạn và dùng cùng một ngăn xếp vận hành ở mọi nơi. Thanh toán bằng USD, hỗ trợ hầu hết các loại thẻ tín dụng phổ biến."
   },
   "asianDestinations": {
-    "eyebrow": "Nay phục vụ APAC",
-    "title": "Cũng được xây dựng cho cảnh boutique khắp Châu Á.",
-    "sub": "Tokyo, Seoul, Hà Nội, Singapore — khách sạn thiết kế, ryokan, tài sản lifestyle và nhóm sang trọng nhỏ. Đăng ký bằng ngôn ngữ của bạn và vận hành cùng ngăn xếp mà chúng tôi vận hành cho các boutique ở Châu Âu và Châu Mỹ.",
+    "eyebrow": "Nay phục vụ Châu Á – Thái Bình Dương",
+    "title": "Cũng được xây dựng cho khách sạn boutique khắp Châu Á.",
+    "sub": "Tokyo, Seoul, Hà Nội, Singapore — từ khách sạn thiết kế và ryokan đến các cơ sở lifestyle và nhóm sang trọng quy mô nhỏ. Bắt đầu bằng ngôn ngữ của bạn và vận hành cùng ngăn xếp mà chúng tôi hỗ trợ cho các boutique ở Châu Âu và Châu Mỹ. Thanh toán bằng USD, hỗ trợ hầu hết các loại thẻ tín dụng phổ biến.",
     "items": [
       {
         "city": "Tokyo",
@@ -353,21 +354,24 @@
   "useCases": {
     "eyebrow": "Khách hàng sử dụng nó như thế nào",
     "title": "Ba boutique, ba chiến thắng hàng ngày khác nhau.",
-    "sub": "Đây là những khách hàng thực sự đang chạy MyHotelOps hôm nay. Tên được giữ kín theo yêu cầu của họ — các nhà vận hành boutique coi trọng quyền riêng tư và chúng tôi tôn trọng điều đó. Các trường hợp sử dụng là của họ.",
+    "sub": "Các quy trình công việc mà MyHotelOps được tạo ra để xử lý.",
     "items": [
       {
         "headline": "Cắt giảm độ trễ bảo trì từ vài ngày xuống vài giờ",
-        "type": "Boutique 32 phòng · Bờ Đông Hoa Kỳ",
+        "type": "Boutique 32 phòng",
+        "region": "Lisbon, Bồ Đào Nha",
         "body": "Lễ tân từng gửi email đến kỹ thuật; các phiếu nằm yên trong hộp thư. Với phiếu công việc ưu tiên ảnh, chu kỳ từ báo cáo của khách → sửa chữa hoàn thành giảm từ trung vị 2-3 ngày xuống dưới 4 giờ. Chủ sở hữu cuối cùng có một bảng xem Kanban của mọi vấn đề đang mở khắp tài sản ở một nơi."
       },
       {
         "headline": "Thay thế bốn gói thuê bao SaaS riêng biệt",
-        "type": "Nhóm khách sạn thiết kế hai tài sản · Bờ Tây Hoa Kỳ",
+        "type": "Nhóm khách sạn thiết kế hai tài sản",
+        "region": "Thành phố Mexico, Mexico",
         "body": "Hủy công cụ đặt phiếu bảo trì, nền tảng tiệc-sự kiện, gói thuê bao biển hiển thị kỹ thuật số và ứng dụng concierge khách. Chi tiêu ròng giảm khoảng $400/tài sản/tháng với cùng tất cả các quy trình công việc vẫn chạy — chỉ được củng cố dưới một mục dòng $188."
       },
       {
         "headline": "Đào tạo GM trong một buổi chiều, không phải một tuần",
-        "type": "Nhà điều hành nhóm nhỏ · Tây Bắc Thái Bình Dương",
+        "type": "Nhà điều hành nhóm nhỏ",
+        "region": "Tokyo, Nhật Bản",
         "body": "GM mới bắt đầu vào thứ Ba. Đến cuối ngày họ đã có phiếu công việc, danh bạ nhà cung cấp, thông tin Wi-Fi, thẻ đón khách in được và đường ống sự kiện tất cả trong một tab. Chủ sở hữu từng dành ngân sách hai tuần cho việc tăng tốc GM mới và giờ phân bổ một buổi chiều."
       }
     ],

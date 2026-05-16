@@ -1,4 +1,4 @@
-import Image from 'next/image'
+import { SharpHeroImage } from '@/components/marketing/sharp-hero-image'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { Wordmark } from '@/components/brand/wordmark'
@@ -137,12 +137,11 @@ export default async function BlogIndexPage() {
                   className="focus-ring group block overflow-hidden rounded-2xl border border-border-subtle bg-surface transition-colors hover:border-border"
                 >
                   <div className="relative aspect-[5/3] overflow-hidden bg-surface-muted">
-                    <Image
+                    <SharpHeroImage
                       src={post.heroImage}
                       alt={post.heroAlt}
-                      fill
                       sizes="(min-width: 1024px) 480px, (min-width: 640px) 50vw, 100vw"
-                      className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02]"
+                      className="transition-transform duration-500 ease-out group-hover:scale-[1.02]"
                     />
                   </div>
                   <div className="space-y-3 p-6">

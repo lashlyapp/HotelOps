@@ -1,4 +1,4 @@
-import Image from 'next/image'
+import { SharpHeroImage } from '@/components/marketing/sharp-hero-image'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -181,13 +181,11 @@ export default async function BlogPostPage({ params }: { params: Params }) {
 
           <div className="mx-auto max-w-5xl px-6">
             <div className="relative aspect-[5/2] overflow-hidden rounded-2xl border border-border-subtle bg-surface-muted">
-              <Image
+              <SharpHeroImage
                 src={meta.heroImage}
                 alt={meta.heroAlt}
-                fill
                 priority
                 sizes="(min-width: 1024px) 960px, 100vw"
-                className="object-cover"
               />
             </div>
           </div>

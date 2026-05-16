@@ -42,6 +42,9 @@ export function UseCasesBand({
               <p className="text-xs font-medium uppercase tracking-wider text-subtle">
                 {item.type}
               </p>
+              <p className="mt-1 text-xs italic text-subtle">
+                {item.region}
+              </p>
               <h3 className="mt-3 text-lg font-semibold text-fg leading-snug">
                 {item.headline}
               </h3>
