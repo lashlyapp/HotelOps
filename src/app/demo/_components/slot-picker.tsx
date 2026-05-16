@@ -1,13 +1,20 @@
 'use client'
 
 import { useActionState, useMemo, useState } from 'react'
+import { OTP_LENGTH, OTP_TTL_MINUTES } from '@/lib/auth/otp-constants'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { Dictionary } from '@/lib/i18n/dictionaries'
 import { interpolate } from '@/lib/i18n/interpolate'
+import type { Locale } from '@/lib/i18n/locales'
 import type { SlotDay } from '@/lib/marketing/demo-slots'
-import { bookDemoSlot, type BookingActionResult } from '../actions'
+import {
+  requestDemoBookingOtp,
+  resendDemoBookingOtp,
+  verifyDemoBookingOtp,
+  type BookingActionResult,
+} from '../actions'
 
 const initial: BookingActionResult = {}
 
@@ -18,31 +25,51 @@ const TEXTAREA_CLASSES =
   'focus-ring focus:border-border-strong ' +
   'disabled:cursor-not-allowed disabled:opacity-50'
 
+const SELECT_CLASSES =
+  'w-full rounded-md border border-border-default bg-surface px-3 py-2 text-sm text-fg shadow-xs ' +
+  'transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] ' +
+  'focus-ring focus:border-border-strong'
+
+/** Languages the founder actually speaks. Drives the booking form's
+ *  preferred-language picker. Order: visitor's locale floats to top
+ *  when applicable so the prefill matches their context. */
+const SUPPORTED_CALL_LANGUAGES = ['en', 'es', 'ko', 'vi'] as const
+type CallLanguage = (typeof SUPPORTED_CALL_LANGUAGES)[number]
+
+function defaultCallLanguage(locale: Locale): CallLanguage {
+  if ((SUPPORTED_CALL_LANGUAGES as readonly string[]).includes(locale)) {
+    return locale as CallLanguage
+  }
+  return 'en'
+}
+
 /**
- * Three-step interactive picker for /demo:
+ * Four-step picker for /demo:
  *
- *   1. Date tabs across the top + slots for the active date
- *      below. Showing all 5 days × 7 slots at once overwhelmed
- *      the page — a Calendly-style date-then-slots flow keeps
- *      the visible surface to ~7 items, never 35.
- *   2. Booking form once a slot is picked.
- *   3. Success confirmation.
+ *   1. Date tabs + slots for the active date.
+ *   2. Booking form (name / email / hotel / properties /
+ *      preferred language / notes). Submitting triggers an OTP
+ *      email rather than the final notification.
+ *   3. OTP entry — visitor types the 6-digit code from email,
+ *      submitting finalizes the booking.
+ *   4. Success confirmation.
  *
- * On mount, auto-selects the first day that has at least one
- * available slot so the user lands on something actionable
- * without an extra tap. Each date tab also shows how many slots
- * are available so the choice carries context.
+ * Auto-selects the first day with availability on mount. Each date
+ * tab shows how many slots are available so the choice carries
+ * context.
  */
 export function SlotPicker({
   days,
   t,
   taken,
   selectInstruction,
+  locale,
 }: {
   days: SlotDay[]
   t: Dictionary['demo']
   taken: string
   selectInstruction: string
+  locale: Locale
 }) {
   const firstAvailableDate = useMemo(
     () =>
@@ -57,9 +84,25 @@ export function SlotPicker({
     label: string
     day: string
   } | null>(null)
-  const [state, action, pending] = useActionState(bookDemoSlot, initial)
+  const [requestState, requestAction, requestPending] = useActionState(
+    requestDemoBookingOtp,
+    initial,
+  )
+  const [verifyState, verifyAction, verifyPending] = useActionState(
+    verifyDemoBookingOtp,
+    initial,
+  )
+  const [resendState, resendAction, resendPending] = useActionState(
+    resendDemoBookingOtp,
+    initial,
+  )
 
-  if (state.success) {
+  // Three terminal states the picker can end up in:
+  //   - verifyState.success → step 4 (booked)
+  //   - requestState.otpSent → step 3 (OTP entry)
+  //   - selected → step 2 (form)
+  //   - else → step 1 (slot picker)
+  if (verifyState.success) {
     return (
       <div
         role="status"
@@ -69,15 +112,105 @@ export function SlotPicker({
           {t.booking.successHeading}
         </h3>
         <p className="mt-2 text-sm text-muted leading-relaxed">
-          {interpolate(t.booking.successBody, { email: state.success.email })}
+          {interpolate(t.booking.successBody, {
+            email: verifyState.success.email,
+          })}
         </p>
       </div>
     )
   }
 
+  // Step 3 — OTP entry.
+  if (requestState.otpSent) {
+    const { email, slotHumanLabel } = requestState.otpSent
+    const resentJustNow = resendState.resent && !resendState.error
+    return (
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-lg font-semibold text-fg">{t.otp.heading}</h3>
+          <p className="mt-1 text-sm text-muted leading-relaxed">
+            {interpolate(t.otp.subtitle, {
+              n: OTP_LENGTH,
+              email,
+              minutes: OTP_TTL_MINUTES,
+            })}
+          </p>
+          <p className="mt-1 text-xs text-subtle">{slotHumanLabel}</p>
+        </div>
+
+        <form action={verifyAction} className="space-y-4" noValidate>
+          <input type="hidden" name="email" value={email} />
+          <div className="space-y-1.5">
+            <Label htmlFor="demo-otp">{t.otp.codeLabel}</Label>
+            <Input
+              id="demo-otp"
+              name="code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={OTP_LENGTH}
+              required
+              placeholder={'•'.repeat(OTP_LENGTH)}
+              className="text-center tracking-[0.5em] font-mono text-base"
+            />
+            <p className="text-xs text-subtle">
+              {interpolate(t.otp.codeHint, { n: OTP_LENGTH })}
+            </p>
+          </div>
+
+          {verifyState.error ? (
+            <p className="text-sm text-danger-fg">{verifyState.error}</p>
+          ) : null}
+
+          <Button
+            type="submit"
+            className="w-full"
+            size="lg"
+            disabled={verifyPending}
+          >
+            {verifyPending ? t.otp.ctaVerifying : t.otp.cta}
+          </Button>
+        </form>
+
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <form action={resendAction}>
+            <input type="hidden" name="email" value={email} />
+            <button
+              type="submit"
+              disabled={resendPending}
+              className="focus-ring rounded-sm font-medium text-muted hover:text-fg disabled:opacity-50"
+            >
+              {resendPending ? t.otp.resending : t.otp.resend}
+            </button>
+          </form>
+          <button
+            type="button"
+            onClick={() => {
+              // Reset everything back to step 1 (slot picker). Cheap
+              // page reload is the cleanest way to clear all three
+              // action states without exposing reset() plumbing.
+              window.location.reload()
+            }}
+            className="focus-ring rounded-sm font-medium text-muted hover:text-fg"
+          >
+            {t.otp.startOver}
+          </button>
+        </div>
+
+        {resentJustNow ? (
+          <p className="text-xs text-subtle">{t.otp.resentRecently}</p>
+        ) : null}
+        {resendState.error ? (
+          <p className="text-xs text-danger-fg">{resendState.error}</p>
+        ) : null}
+      </div>
+    )
+  }
+
+  // Step 2 — booking form.
   if (selected) {
     return (
-      <form action={action} className="space-y-4" noValidate>
+      <form action={requestAction} className="space-y-4" noValidate>
         <input type="hidden" name="slot_id" value={selected.id} />
 
         <div className="flex items-center justify-between gap-3">
@@ -146,6 +279,25 @@ export function SlotPicker({
         </div>
 
         <div className="space-y-1.5">
+          <Label htmlFor="demo-language">{t.booking.preferredLanguage}</Label>
+          <select
+            id="demo-language"
+            name="preferred_language"
+            required
+            defaultValue={defaultCallLanguage(locale)}
+            className={SELECT_CLASSES}
+          >
+            <option value="en">{t.booking.languageEn}</option>
+            <option value="es">{t.booking.languageEs}</option>
+            <option value="ko">{t.booking.languageKo}</option>
+            <option value="vi">{t.booking.languageVi}</option>
+          </select>
+          <p className="text-xs text-subtle">
+            {t.booking.preferredLanguageHint}
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
           <Label htmlFor="demo-notes">{t.booking.notes}</Label>
           <textarea
             id="demo-notes"
@@ -157,12 +309,17 @@ export function SlotPicker({
           />
         </div>
 
-        {state.error ? (
-          <p className="text-sm text-danger-fg">{state.error}</p>
+        {requestState.error ? (
+          <p className="text-sm text-danger-fg">{requestState.error}</p>
         ) : null}
 
-        <Button type="submit" className="w-full" size="lg" disabled={pending}>
-          {pending ? t.booking.ctaSending : t.booking.cta}
+        <Button
+          type="submit"
+          className="w-full"
+          size="lg"
+          disabled={requestPending}
+        >
+          {requestPending ? t.booking.ctaSending : t.booking.cta}
         </Button>
       </form>
     )
@@ -175,9 +332,6 @@ export function SlotPicker({
 
   return (
     <div className="space-y-5">
-      {/* Horizontal date tabs. Overflow-x-auto so 5+ days still
-          scroll on narrow phones. snap-x keeps tap targets aligned
-          to whole cards as the user swipes. */}
       <div
         role="tablist"
         aria-label="Select a date"
@@ -232,7 +386,6 @@ export function SlotPicker({
 
       <p className="text-xs text-subtle">{selectInstruction}</p>
 
-      {/* Slots for the active day. */}
       {activeDay ? (
         <div className="flex flex-wrap gap-2">
           {activeDay.slots.map((slot) => {
@@ -271,9 +424,6 @@ export function SlotPicker({
   )
 }
 
-/** Day labels from demo-slots come in as e.g. "Mon, May 18". Split
- *  into ["Mon", "18"] for the two-line tab layout. Falls back to
- *  the full label if the format ever changes so we don't crash. */
 function splitDayLabel(label: string): [string, string] {
   const match = /^([A-Za-z]+),\s+\w+\s+(\d+)$/.exec(label)
   if (!match) return [label, '']

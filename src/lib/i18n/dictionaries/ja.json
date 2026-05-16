@@ -229,7 +229,7 @@
         "items": [
           {
             "name": "グローバルメディアCDN",
-            "description": "世界中のエッジから配信される写真と動画。東京、リスボン、トロントでも同じ高速読み込み。すべてのプランに10GB含まれます。"
+            "description": "世界中のエッジから配信される写真と動画。東京、リスボン、トロントでも同じ高速読み込み。すべてのプランに25GB含まれます。"
           },
           {
             "name": "フロアプランとドキュメント",
@@ -356,30 +356,63 @@
     },
     "calendar": {
       "heading": "時間を選択",
-      "intro": "Google Meet で30分の通話。すべての時間は米国東部時間 (ET) で表示。",
+      "intro": "Google Meet で30分の通話。すべての時間は米国太平洋時間 (PT) で表示。",
       "takenLabel": "予約済み",
       "selectInstruction": "利用可能な枠をタップして予約してください。",
       "fallback": "ご希望の時間がありませんか？{email} までご連絡いただければ時間を見つけます。"
     },
     "booking": {
       "heading": "{slot} を予約",
-      "subtitle": "下記のメールに Google Meet カレンダー招待を送信します。",
+      "subtitle": "メールアドレス確認のため6桁のコードを送信し、その後 Google Meet カレンダー招待を送ります。",
       "changeSlot": "時間を変更",
       "yourName": "お名前",
       "workEmail": "業務用メール",
       "hotelName": "ホテル名",
       "propertyCount": "施設数は？",
       "propertyCountPlaceholder": "例：1、3、12",
+      "preferredLanguage": "通話の希望言語",
+      "preferredLanguageHint": "可能な限り対応します — フォールバックは英語です。",
+      "languageEn": "English (英語)",
+      "languageEs": "Español (スペイン語)",
+      "languageKo": "한국어 (韓国語)",
+      "languageVi": "Tiếng Việt (ベトナム語)",
       "notes": "お伝えいただきたいことがあれば（任意）",
       "notesPlaceholder": "解決したいこと、現在のスタック、タイムゾーンの注意事項など…",
-      "cta": "予約を確定",
+      "cta": "認証コードを送信",
       "ctaSending": "送信中…",
       "successHeading": "予約完了。",
       "successBody": "{email} にすぐに Google Meet 招待を送信します。変更があれば返信してください。",
-      "errorMissing": "名前、メール、ホテル名、枠は必須です。",
+      "errorMissing": "名前、メール、ホテル名、言語、枠は必須です。",
       "errorEmail": "有効なメールアドレスを入力してください。",
       "errorSlot": "その時間枠はもう利用できません — 別の枠を選んでください。",
+      "errorLanguage": "通話の言語を選択してください。",
       "errorGeneric": "リクエストを送信できませんでした。{email} に直接メールしてください。"
+    },
+    "otp": {
+      "heading": "メールアドレスを確認",
+      "subtitle": "{email} に {n} 桁のコードを送信しました。予約を確定するために入力してください。コードは {minutes} 分で期限切れになります。",
+      "codeLabel": "認証コード",
+      "codeHint": "今送信したメールの {n} 桁のコードです。",
+      "cta": "認証して予約",
+      "ctaVerifying": "認証中…",
+      "wrongEmail": "メールアドレスが違いますか？",
+      "startOver": "やり直す",
+      "noEmail": "メールが届きませんか？",
+      "resend": "コードを再送信",
+      "resending": "送信中…",
+      "resentRecently": "新しいコードを送信しました。",
+      "errors": {
+        "codeRequired": "メールに記載のコードを入力してください。",
+        "codeLength": "コードは {n} 桁です。",
+        "codeExpired": "コードの期限が切れました。/demo からやり直してください。",
+        "codeTooManyAttempts": "コードの誤入力が多すぎます。/demo からやり直してください。",
+        "codeMismatchOne": "コードが一致しません。残り1回試行可能。",
+        "codeMismatchMany": "コードが一致しません。残り {n} 回試行可能。",
+        "codeMismatchFinal": "コードが一致しません。/demo からやり直してください。",
+        "noPending": "そのメールアドレスの保留中の予約はありません。/demo からやり直してください。",
+        "tooManyResends": "再送信回数が多すぎます。/demo からやり直してください。",
+        "resendCooldown": "次のコードをリクエストする前に少々お待ちください。"
+      }
     }
   },
   "pricing": {

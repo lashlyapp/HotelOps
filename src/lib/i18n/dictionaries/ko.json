@@ -229,7 +229,7 @@
         "items": [
           {
             "name": "글로벌 미디어 CDN",
-            "description": "전 세계 엣지에서 제공되는 사진과 비디오. 도쿄, 리스본, 토론토에서 동일한 빠른 로드. 모든 플랜에 10GB 포함."
+            "description": "전 세계 엣지에서 제공되는 사진과 비디오. 도쿄, 리스본, 토론토에서 동일한 빠른 로드. 모든 플랜에 25GB 포함."
           },
           {
             "name": "평면도 및 문서",
@@ -356,30 +356,63 @@
     },
     "calendar": {
       "heading": "시간 선택",
-      "intro": "Google Meet에서 30분 통화. 모든 시간은 미국 동부 시간(ET)으로 표시됩니다.",
+      "intro": "Google Meet에서 30분 통화. 모든 시간은 미국 태평양 시간(PT)으로 표시됩니다.",
       "takenLabel": "예약됨",
       "selectInstruction": "이용 가능한 시간대를 탭하여 예약하세요.",
       "fallback": "원하는 시간이 없으신가요? {email}로 이메일을 보내주시면 시간을 찾아드립니다."
     },
     "booking": {
       "heading": "{slot} 예약",
-      "subtitle": "아래 이메일로 Google Meet 캘린더 초대를 보내드립니다.",
+      "subtitle": "주소 확인을 위해 6자리 코드를 보낸 후 Google Meet 캘린더 초대를 보내드립니다.",
       "changeSlot": "시간 변경",
       "yourName": "성함",
       "workEmail": "업무 이메일",
       "hotelName": "호텔 이름",
       "propertyCount": "부동산 수는?",
       "propertyCountPlaceholder": "예: 1, 3, 12",
+      "preferredLanguage": "통화 선호 언어",
+      "preferredLanguageHint": "가능하면 맞춰드립니다 — 대체 언어는 영어입니다.",
+      "languageEn": "English (영어)",
+      "languageEs": "Español (스페인어)",
+      "languageKo": "한국어",
+      "languageVi": "Tiếng Việt (베트남어)",
       "notes": "알려주실 내용이 있으신가요? (선택)",
       "notesPlaceholder": "해결하고 싶은 것, 현재 스택, 시간대 주의사항…",
-      "cta": "예약 확인",
+      "cta": "인증 코드 전송",
       "ctaSending": "전송 중…",
       "successHeading": "예약 완료.",
       "successBody": "{email}로 Google Meet 초대를 곧 보내드립니다. 변경 사항이 있으면 답장해 주세요.",
-      "errorMissing": "이름, 이메일, 호텔 이름, 시간대는 필수입니다.",
+      "errorMissing": "이름, 이메일, 호텔 이름, 언어, 시간대는 필수입니다.",
       "errorEmail": "유효한 이메일 주소를 입력해 주세요.",
       "errorSlot": "해당 시간대는 더 이상 사용할 수 없습니다 — 다른 시간을 선택해 주세요.",
+      "errorLanguage": "통화 언어를 선택해 주세요.",
       "errorGeneric": "요청을 전송할 수 없습니다. {email}로 직접 이메일을 보내주세요."
+    },
+    "otp": {
+      "heading": "이메일 확인",
+      "subtitle": "{email}로 {n}자리 코드를 보냈습니다. 예약 확정을 위해 입력하세요. 코드는 {minutes}분 후 만료됩니다.",
+      "codeLabel": "인증 코드",
+      "codeHint": "방금 전송한 이메일의 {n}자리 코드입니다.",
+      "cta": "확인 후 예약",
+      "ctaVerifying": "확인 중…",
+      "wrongEmail": "이메일이 잘못되셨나요?",
+      "startOver": "처음부터",
+      "noEmail": "이메일을 받지 못하셨나요?",
+      "resend": "코드 재전송",
+      "resending": "전송 중…",
+      "resentRecently": "새 코드가 전송 중입니다.",
+      "errors": {
+        "codeRequired": "이메일의 코드를 입력하세요.",
+        "codeLength": "코드는 {n}자리입니다.",
+        "codeExpired": "코드가 만료되었습니다. /demo에서 다시 시작하세요.",
+        "codeTooManyAttempts": "잘못된 코드 시도가 너무 많습니다. /demo에서 다시 시작하세요.",
+        "codeMismatchOne": "코드가 일치하지 않습니다. 1회 시도 남음.",
+        "codeMismatchMany": "코드가 일치하지 않습니다. {n}회 시도 남음.",
+        "codeMismatchFinal": "코드가 일치하지 않습니다. /demo에서 다시 시작하세요.",
+        "noPending": "해당 이메일에 대한 보류 중 예약이 없습니다. /demo에서 다시 시작하세요.",
+        "tooManyResends": "재전송 횟수가 너무 많습니다. /demo에서 다시 시작하세요.",
+        "resendCooldown": "다음 코드를 요청하기 전에 잠시 기다려 주세요."
+      }
     }
   },
   "pricing": {

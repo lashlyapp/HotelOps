@@ -5,12 +5,12 @@ import 'server-only'
  *
  * Three deliberate UX decisions baked in:
  *
- *  1. Times are presented as US Eastern only — that's the founder's
- *     timezone. Showing local-timezone-converted slots would be nicer
- *     in theory but worse in practice: an EU prospect seeing 3 PM /
- *     4 PM their time means we're booking calls at 3 AM on our end.
- *     Better to be explicit about ET and let international prospects
- *     do the math.
+ *  1. Times are presented as US Pacific (PT) only — that's the
+ *     founder's timezone. Showing local-timezone-converted slots
+ *     would be nicer in theory but worse in practice: an EU prospect
+ *     seeing 9 AM their time means we're booking calls at midnight
+ *     on our end. Better to be explicit about PT and let
+ *     international prospects do the math.
  *
  *  2. Some slots show as taken (not selectable). Rather than randomly
  *     marking ~half as unavailable — which can read as fake —
@@ -45,8 +45,8 @@ export type SlotDay = {
   slots: Slot[]
 }
 
-/** ET clock hours offered to visitors (skips noon for lunch). */
-const SLOT_HOURS_ET = [9, 10, 11, 13, 14, 15, 16] as const
+/** PT clock hours offered to visitors (skips noon for lunch). */
+const SLOT_HOURS_PT = [9, 10, 11, 13, 14, 15, 16] as const
 
 /** Deterministic FNV-1a-ish hash. Stable across page reloads so
  *  the same visitor doesn't see availability flicker between
@@ -75,8 +75,8 @@ function nextBusinessDays(count: number, from: Date): string[] {
   return out
 }
 
-function statusForRaw(date: string, hourEt: number): SlotStatus {
-  return hashKey(`${date}:${hourEt}`) % 100 < 55 ? 'taken' : 'available'
+function statusForRaw(date: string, hourPt: number): SlotStatus {
+  return hashKey(`${date}:${hourPt}`) % 100 < 55 ? 'taken' : 'available'
 }
 
 /**
@@ -108,11 +108,11 @@ function withMixGuarantee(
 function formatHourLabel(hour24: number): string {
   const hour12 = ((hour24 + 11) % 12) + 1
   const ampm = hour24 < 12 ? 'AM' : 'PM'
-  return `${hour12}:00 ${ampm} ET`
+  return `${hour12}:00 ${ampm} PT`
 }
 
 function formatDayLabel(isoDate: string): string {
-  // Format in en-US locale because the day label uses ET-style
+  // Format in en-US locale because the day label uses
   // "Mon, May 18" abbreviations regardless of visitor locale.
   // Visitor-facing copy around it is localized; this label is
   // intentionally consistent.
@@ -127,7 +127,7 @@ function formatDayLabel(isoDate: string): string {
 export function buildDemoSlotDays(now: Date = new Date()): SlotDay[] {
   const days = nextBusinessDays(5, now)
   return days.map((date) => {
-    const raw = SLOT_HOURS_ET.map((hour) => ({
+    const raw = SLOT_HOURS_PT.map((hour) => ({
       hour,
       status: statusForRaw(date, hour),
     }))
@@ -136,7 +136,7 @@ export function buildDemoSlotDays(now: Date = new Date()): SlotDay[] {
       date,
       label: formatDayLabel(date),
       slots: balanced.map(({ hour, status }) => ({
-        id: `${date}T${String(hour).padStart(2, '0')}:00ET`,
+        id: `${date}T${String(hour).padStart(2, '0')}:00PT`,
         label: formatHourLabel(hour),
         status,
       })),
@@ -147,7 +147,7 @@ export function buildDemoSlotDays(now: Date = new Date()): SlotDay[] {
 /**
  * Parse a slot id back to its date + hour parts. Used by the
  * booking server action to render a clean human label in the
- * notification emails ("9:00 AM ET on Mon, May 18, 2026").
+ * notification emails ("9:00 AM PT on Mon, May 18, 2026").
  *
  * Returns null on garbage input — callers treat that as a bad
  * request rather than crashing.
@@ -157,7 +157,7 @@ export function parseSlotId(slotId: string): {
   hour: number
   humanLabel: string
 } | null {
-  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}):00ET$/.exec(slotId)
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}):00PT$/.exec(slotId)
   if (!m) return null
   const [, date, hourStr] = m
   const hour = Number.parseInt(hourStr, 10)

@@ -124,6 +124,7 @@ export default async function DemoPage() {
                 t={t}
                 taken={t.calendar.takenLabel}
                 selectInstruction={t.calendar.selectInstruction}
+                locale={locale}
               />
               <p className="border-t border-border-subtle pt-4 text-xs text-subtle leading-relaxed">
                 {interpolate(t.calendar.fallback, {

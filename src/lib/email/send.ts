@@ -498,7 +498,7 @@ export async function sendDemoBookingConfirmation(
     `Hi ${args.visitorName},`,
     '',
     `We've received your demo request for ${args.hotelName} at ${args.slotHumanLabel}.`,
-    `A Google Meet calendar invite is on its way — usually within an hour during business hours, otherwise next morning ET.`,
+    `A Google Meet calendar invite is on its way — usually within an hour during business hours, otherwise next morning PT.`,
     '',
     `If anything changes, just reply to this email.`,
     '',
@@ -507,7 +507,7 @@ export async function sendDemoBookingConfirmation(
   const html = wrapEmailHtml(`
     <p>Hi ${escapeHtml(args.visitorName)},</p>
     <p>We've received your demo request for <strong>${escapeHtml(args.hotelName)}</strong> at <strong>${escapeHtml(args.slotHumanLabel)}</strong>.</p>
-    <p>A Google Meet calendar invite is on its way — usually within an hour during business hours, otherwise next morning ET.</p>
+    <p>A Google Meet calendar invite is on its way — usually within an hour during business hours, otherwise next morning PT.</p>
     <p style="color:#57534e">If anything changes, just reply to this email.</p>
     <p style="color:#a8a29e;font-size:12px;margin-top:32px">— ${escapeHtml(BRAND.name)}</p>
   `)
@@ -516,4 +516,62 @@ export async function sendDemoBookingConfirmation(
     { to: args.to, subject, text, html },
     'demo confirmation',
   )
+}
+
+// ---------------------------------------------------------------------------
+// /demo OTP — confirm the visitor owns the email before we book
+// ---------------------------------------------------------------------------
+type DemoOtpArgs = {
+  to: string
+  visitorName: string
+  hotelName: string
+  slotHumanLabel: string
+  code: string
+  ttlMinutes: number
+}
+
+/**
+ * 6-digit code sent right after a /demo form submission. The form
+ * is locked in OTP-entry mode until the visitor verifies; only then
+ * do we fire the founder notification + visitor confirmation
+ * (which themselves run from {@link sendDemoBookingNotification}
+ * and {@link sendDemoBookingConfirmation}).
+ *
+ * English-only — same as the rest of the demo flow. Translating
+ * adds surface without payoff while volume is single-digit per
+ * day; revisit if /demo becomes a primary acquisition channel.
+ */
+export async function sendDemoBookingOtpEmail(args: DemoOtpArgs): Promise<boolean> {
+  const resend = getResend()
+  if (!resend) {
+    console.warn('[email] RESEND_API_KEY not set; skipping demo OTP email')
+    return false
+  }
+
+  const subject = `Your ${BRAND.name} demo verification code: ${args.code}`
+  const text = [
+    `Hi ${args.visitorName},`,
+    '',
+    `Your verification code for the ${args.hotelName} demo at ${args.slotHumanLabel} is:`,
+    '',
+    `    ${args.code}`,
+    '',
+    `Enter it on /demo to confirm your booking. The code expires in ${args.ttlMinutes} minutes.`,
+    `If you didn't request this, you can safely ignore this email.`,
+    '',
+    `— ${BRAND.name}`,
+  ].join('\n')
+
+  const html = wrapEmailHtml(`
+    <p>Hi ${escapeHtml(args.visitorName)},</p>
+    <p>Your verification code for the <strong>${escapeHtml(args.hotelName)}</strong> demo at <strong>${escapeHtml(args.slotHumanLabel)}</strong> is:</p>
+    <p style="text-align:center;margin:24px 0">
+      <span style="display:inline-block;font-family:'SF Mono','Menlo','Consolas',monospace;font-size:32px;font-weight:600;letter-spacing:8px;background:#f5f5f4;color:#1c1917;padding:14px 24px;border-radius:8px;border:1px solid #e7e5e4">${escapeHtml(args.code)}</span>
+    </p>
+    <p>Enter it on /demo to confirm your booking.</p>
+    <p style="color:#57534e;font-size:12px">The code expires in ${args.ttlMinutes} minutes. If you didn't request this, you can safely ignore this email.</p>
+    <p style="color:#a8a29e;font-size:12px;margin-top:32px">— ${escapeHtml(BRAND.name)}</p>
+  `)
+
+  return sendOrLog(resend, { to: args.to, subject, text, html }, 'demo OTP')
 }

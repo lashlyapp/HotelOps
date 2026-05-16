@@ -229,7 +229,7 @@
         "items": [
           {
             "name": "Global Media CDN",
-            "description": "Photos and videos served from the edge worldwide. Same fast load in Tokyo, Lisbon, or Toronto. 10 GB included on every plan."
+            "description": "Photos and videos served from the edge worldwide. Same fast load in Tokyo, Lisbon, or Toronto. 25 GB included on every plan."
           },
           {
             "name": "Floor Plans & Documents",
@@ -356,30 +356,63 @@
     },
     "calendar": {
       "heading": "Pick a time",
-      "intro": "30-minute calls on Google Meet. All times shown in US Eastern (ET).",
+      "intro": "30-minute calls on Google Meet. All times shown in US Pacific (PT).",
       "takenLabel": "Taken",
       "selectInstruction": "Tap an available slot to book it.",
       "fallback": "None of these work? Email {email} and we'll find a time."
     },
     "booking": {
       "heading": "Book {slot}",
-      "subtitle": "We'll send a Google Meet calendar invite to the email below.",
+      "subtitle": "We'll email you a 6-digit code to confirm your address, then send a Google Meet calendar invite.",
       "changeSlot": "Change time",
       "yourName": "Your name",
       "workEmail": "Work email",
       "hotelName": "Hotel name",
       "propertyCount": "How many properties?",
       "propertyCountPlaceholder": "e.g. 1, 3, 12",
+      "preferredLanguage": "Preferred language for the call",
+      "preferredLanguageHint": "We'll match if we can — fallback is English.",
+      "languageEn": "English",
+      "languageEs": "Español",
+      "languageKo": "한국어 (Korean)",
+      "languageVi": "Tiếng Việt (Vietnamese)",
       "notes": "Anything we should know? (optional)",
       "notesPlaceholder": "What you're hoping to solve, your current stack, time-zone caveats…",
-      "cta": "Confirm booking",
+      "cta": "Send verification code",
       "ctaSending": "Sending…",
       "successHeading": "You're booked.",
       "successBody": "We'll send a Google Meet invite to {email} shortly. Reply to it if anything changes.",
-      "errorMissing": "Name, email, hotel name, and a slot are required.",
+      "errorMissing": "Name, email, hotel name, language, and a slot are required.",
       "errorEmail": "Please enter a valid email address.",
       "errorSlot": "That time slot is no longer available — pick another.",
+      "errorLanguage": "Pick a language for the call.",
       "errorGeneric": "Couldn't send the request. Please email {email} directly."
+    },
+    "otp": {
+      "heading": "Verify your email",
+      "subtitle": "We sent a {n}-digit code to {email}. Enter it to confirm your booking. The code expires in {minutes} minutes.",
+      "codeLabel": "Verification code",
+      "codeHint": "{n} digits, from the email we just sent.",
+      "cta": "Verify and book",
+      "ctaVerifying": "Verifying…",
+      "wrongEmail": "Wrong email?",
+      "startOver": "Start over",
+      "noEmail": "Didn't get the email?",
+      "resend": "Resend code",
+      "resending": "Sending…",
+      "resentRecently": "A new code is on its way.",
+      "errors": {
+        "codeRequired": "Enter the code from your email.",
+        "codeLength": "The code is {n} digits.",
+        "codeExpired": "That code has expired. Start over from /demo.",
+        "codeTooManyAttempts": "Too many wrong codes. Start over from /demo.",
+        "codeMismatchOne": "That code doesn't match. 1 attempt left.",
+        "codeMismatchMany": "That code doesn't match. {n} attempts left.",
+        "codeMismatchFinal": "That code doesn't match. Start over from /demo.",
+        "noPending": "We don't have a pending booking for that email. Start over from /demo.",
+        "tooManyResends": "Too many resends. Start over from /demo.",
+        "resendCooldown": "Hang on a moment before requesting another code."
+      }
     }
   },
   "pricing": {
