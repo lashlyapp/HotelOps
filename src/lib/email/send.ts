@@ -575,3 +575,240 @@ export async function sendDemoBookingOtpEmail(args: DemoOtpArgs): Promise<boolea
 
   return sendOrLog(resend, { to: args.to, subject, text, html }, 'demo OTP')
 }
+
+// ---------------------------------------------------------------------------
+// Lead magnet (guide download)
+// ---------------------------------------------------------------------------
+type GuideLeadEmailArgs = {
+  to: string
+  recipientName: string
+  guideTitle: string
+  downloadUrl: string
+}
+
+/**
+ * Deliver the requested guide to the lead. The PDF lives as a static
+ * file under /public/downloads; we just link to it rather than
+ * attaching the binary. Inline attachments would inflate every send
+ * and trip more spam filters than a link to a same-domain asset
+ * does. English-only — guide content itself is English-only at
+ * launch.
+ */
+export async function sendGuideLeadEmail(
+  args: GuideLeadEmailArgs,
+): Promise<boolean> {
+  const resend = getResend()
+  if (!resend) {
+    console.warn('[email] RESEND_API_KEY not set; skipping guide email')
+    return false
+  }
+
+  const subject = `Your copy of "${args.guideTitle}" — ${BRAND.name}`
+  const text = [
+    `Hi ${args.recipientName},`,
+    '',
+    `Thanks for grabbing the guide. Here is your copy:`,
+    '',
+    args.downloadUrl,
+    '',
+    `It is a short read — about 18 minutes — and most of the moves in it can be started this week without spending anything. Save it, share it with the GM at the property down the street, or forward it to the owner if that's a separate person.`,
+    '',
+    `If you want to see what running the back office on one stack actually looks like, our 7-day free trial gives you the full thing with no credit card required: https://www.${BRAND.domain}/signup`,
+    '',
+    `— ${BRAND.name}`,
+  ].join('\n')
+
+  const html = wrapEmailHtml(`
+    <p>Hi ${escapeHtml(args.recipientName)},</p>
+    <p>Thanks for grabbing the guide. Here is your copy:</p>
+    <p style="margin:20px 0">${ctaButton(args.downloadUrl, 'Download the PDF')}</p>
+    <p>It is a short read — about 18 minutes — and most of the moves in it can be started this week without spending anything. Save it, share it with the GM at the property down the street, or forward it to the owner if that's a separate person.</p>
+    <p style="color:#57534e">If you want to see what running the back office on one stack actually looks like, our 7-day free trial gives you the full thing with no credit card required.</p>
+    <p style="margin:16px 0"><a href="https://www.${BRAND.domain}/signup" style="color:#1c1917">Start the free trial →</a></p>
+    <p style="color:#a8a29e;font-size:12px;margin-top:32px">— ${escapeHtml(BRAND.name)}</p>
+  `)
+
+  return sendOrLog(resend, { to: args.to, subject, text, html }, 'guide')
+}
+
+type GuideLeadNotificationArgs = {
+  to: string
+  cc?: string
+  visitorName: string
+  visitorEmail: string
+  hotelName: string
+  website: string | null
+  guideTitle: string
+  guideSlug: string
+  visitorLocale: string
+}
+
+/**
+ * Internal notification: someone just downloaded the gated guide.
+ * Reply-to is the visitor so the founder can follow up with a
+ * single click. The PDF link is included for the founder's own
+ * reference — opening the same artifact the lead just received
+ * speeds up that follow-up conversation.
+ */
+export async function sendGuideLeadNotification(
+  args: GuideLeadNotificationArgs,
+): Promise<boolean> {
+  const resend = getResend()
+  if (!resend) {
+    console.warn('[email] RESEND_API_KEY not set; skipping guide notification')
+    return false
+  }
+
+  const subject = `[${BRAND.name}] Guide download: ${args.hotelName}`
+  const lines = [
+    `New guide download.`,
+    '',
+    `Guide:    ${args.guideTitle}`,
+    `Slug:     ${args.guideSlug}`,
+    `Hotel:    ${args.hotelName}`,
+    `Website:  ${args.website ?? '—'}`,
+    `Name:     ${args.visitorName}`,
+    `Email:    ${args.visitorEmail}`,
+    `Locale:   ${args.visitorLocale}`,
+    '',
+    `Reply to this email to follow up — reply-to is set to the visitor.`,
+  ]
+  const text = lines.join('\n')
+
+  const html = wrapEmailHtml(`
+    <p>New guide download.</p>
+    <table style="border-collapse:collapse;margin:12px 0">
+      <tr><td style="padding:4px 12px 4px 0;color:#57534e">Guide</td><td style="padding:4px 0"><strong>${escapeHtml(args.guideTitle)}</strong></td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#57534e">Hotel</td><td style="padding:4px 0"><strong>${escapeHtml(args.hotelName)}</strong></td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#57534e">Website</td><td style="padding:4px 0">${escapeHtml(args.website ?? '—')}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#57534e">Name</td><td style="padding:4px 0">${escapeHtml(args.visitorName)}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#57534e">Email</td><td style="padding:4px 0"><a href="mailto:${escapeHtml(args.visitorEmail)}">${escapeHtml(args.visitorEmail)}</a></td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#57534e">Locale</td><td style="padding:4px 0"><code>${escapeHtml(args.visitorLocale)}</code></td></tr>
+    </table>
+    <p>Reply to this email to follow up — reply-to is set to the visitor.</p>
+  `)
+
+  try {
+    const { error } = await resend.emails.send({
+      from: getEmailFrom(),
+      to: args.to,
+      cc: args.cc,
+      replyTo: args.visitorEmail,
+      subject,
+      text,
+      html,
+    })
+    if (error) {
+      console.error('[email] resend error (guide notification)', error)
+      return false
+    }
+    return true
+  } catch (err) {
+    console.error('[email] resend threw (guide notification)', err)
+    return false
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Blog publishing cron — drip-publish notifications
+// ---------------------------------------------------------------------------
+type BlogPostPublishedArgs = {
+  to: string
+  postTitle: string
+  postSlug: string
+  postUrl: string
+}
+
+/**
+ * Internal notification sent by the daily blog-publishing cron when
+ * a scheduled post crosses its publishedAt date. One email per
+ * newly-live post per day. Founder-only.
+ */
+export async function sendBlogPostPublishedNotification(
+  args: BlogPostPublishedArgs,
+): Promise<boolean> {
+  const resend = getResend()
+  if (!resend) {
+    console.warn(
+      '[email] RESEND_API_KEY not set; skipping blog publish notification',
+    )
+    return false
+  }
+
+  const subject = `[${BRAND.name}] Blog post went live: ${args.postTitle}`
+  const text = [
+    `A scheduled blog post just went live.`,
+    '',
+    `Title: ${args.postTitle}`,
+    `URL:   ${args.postUrl}`,
+    `Slug:  ${args.postSlug}`,
+    '',
+    `Search engines will pick it up on the next sitemap revalidation (within an hour). Time to share it.`,
+  ].join('\n')
+
+  const html = wrapEmailHtml(`
+    <p>A scheduled blog post just went live.</p>
+    <p style="margin:16px 0"><strong>${escapeHtml(args.postTitle)}</strong></p>
+    <p style="margin:16px 0">${ctaButton(args.postUrl, 'Open the post')}</p>
+    <p style="color:#57534e;font-size:13px">Search engines will pick it up on the next sitemap revalidation (within an hour). Time to share it.</p>
+  `)
+
+  return sendOrLog(
+    resend,
+    { to: args.to, subject, text, html },
+    'blog publish',
+  )
+}
+
+type BlogQueueEmptyArgs = {
+  to: string
+  /** ISO date of the most recent published post (so the email can
+   *  state how long the queue has been empty). */
+  latestPublishedAt: string | null
+  /** Suggested next publishedAt — 14 days after the latest, or today
+   *  if there is no published post yet. */
+  nextSuggestedDate: string
+}
+
+/**
+ * Internal notification when the drip-publish queue runs dry —
+ * i.e. no posts in the registry have a future publishedAt. Nudges
+ * the founder to write the next draft before the cadence breaks.
+ */
+export async function sendBlogQueueEmptyNotification(
+  args: BlogQueueEmptyArgs,
+): Promise<boolean> {
+  const resend = getResend()
+  if (!resend) {
+    console.warn(
+      '[email] RESEND_API_KEY not set; skipping blog queue notification',
+    )
+    return false
+  }
+
+  const subject = `[${BRAND.name}] Blog queue is empty`
+  const latestLine = args.latestPublishedAt
+    ? `Most recent post: ${args.latestPublishedAt}.`
+    : `No posts have been published yet.`
+  const text = [
+    `The drip-publish queue has no future-dated posts.`,
+    '',
+    latestLine,
+    `Suggested publishedAt for the next post: ${args.nextSuggestedDate} (14 days after the latest).`,
+    '',
+    `Add a draft under src/content/blog/posts/ with that publishedAt to keep the cadence.`,
+  ].join('\n')
+
+  const html = wrapEmailHtml(`
+    <p>The drip-publish queue has no future-dated posts.</p>
+    <p style="color:#57534e">${escapeHtml(latestLine)}</p>
+    <p>Suggested publishedAt for the next post: <strong>${escapeHtml(args.nextSuggestedDate)}</strong> (14 days after the latest).</p>
+    <p style="color:#57534e;font-size:13px">Add a draft under <code>src/content/blog/posts/</code> with that <code>publishedAt</code> to keep the cadence.</p>
+  `)
+
+  return sendOrLog(
+    resend,
+    { to: args.to, subject, text, html },
+    'blog queue empty',
+  )
+}

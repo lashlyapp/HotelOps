@@ -176,6 +176,16 @@
     "ctaSub": "Sin tarjeta de crédito. 10 GB incluidos.",
     "ctaButton": "Empezar prueba gratuita"
   },
+  "blog": {
+    "navLabel": "Blog",
+    "eyebrow": "Notas desde la trastienda",
+    "headline": "El estado de las operaciones del hotel boutique.",
+    "sub": "Notas sobre el rincón desatendido de la tecnología hotelera — presupuestos operativos realistas, la brecha de modernización, lo que los huéspedes de 2026 esperan y cómo las propiedades independientes pueden ponerse al día sin gastos de empresa.",
+    "relatedHeading": "Sigue leyendo",
+    "ctaHeadline": "Pruébalo en tu propia propiedad.",
+    "ctaSub": "Prueba gratuita de 7 días. Sin tarjeta de crédito. Acceso completo a mantenimiento, eventos, señalización y llegada.",
+    "ctaButton": "Empezar prueba gratuita"
+  },
   "features": {
     "navLabel": "Funciones",
     "eyebrow": "Todo incluido",
@@ -292,12 +302,12 @@
   "destinations": {
     "eyebrow": "Mercados para los que estamos hechos",
     "title": "Para hoteles boutique en todas partes.",
-    "sub": "Lisboa, Barcelona, París, Ciudad de México — los barrios donde los hoteles independientes y de pequeños grupos realmente operan. Regístrate en tu idioma, la misma base operativa en cada destino. Facturado en USD; cualquier tarjeta de crédito funciona."
+    "sub": "Lisboa, Barcelona, París, Ciudad de México — los barrios donde los hoteles independientes y de pequeños grupos realmente operan. Regístrate en tu idioma, la misma base operativa en cada destino."
   },
   "asianDestinations": {
     "eyebrow": "Ahora en APAC",
     "title": "Hecho también para la escena boutique en Asia.",
-    "sub": "Tokio, Seúl, Hanói, Singapur — hoteles de diseño, ryokans, propiedades lifestyle y pequeños grupos de lujo. Regístrate en tu idioma y opera con la misma base que usamos para boutiques en Europa y América. Facturado en USD; cualquier tarjeta de crédito funciona.",
+    "sub": "Tokio, Seúl, Hanói, Singapur — hoteles de diseño, ryokans, propiedades lifestyle y pequeños grupos de lujo. Regístrate en tu idioma y opera con la misma base que usamos para boutiques en Europa y América.",
     "items": [
       {
         "city": "Tokio",
@@ -318,6 +328,25 @@
         "city": "Singapur",
         "country": "Singapur",
         "blurb": "Hoteles shophouse en Chinatown, propiedades lifestyle en Tanjong Pagar, grupos de diseño por toda la isla — registro en inglés, sin sorpresas por pantalla."
+      }
+    ]
+  },
+  "groups": {
+    "eyebrow": "Para grupos",
+    "title": "Una sola plataforma, en cada ciudad donde operas.",
+    "sub": "Gestiona una propiedad en Lisboa, otra en Ciudad de México, una tercera en Tokio — mismo login, mismos flujos, una sola línea mensual. Cada equipo trabaja en su idioma; los propietarios lo ven todo en el suyo.",
+    "items": [
+      {
+        "title": "Idioma local para cada equipo.",
+        "body": "El personal de cada propiedad se registra y trabaja en su idioma. La vista del propietario se consolida en el suyo."
+      },
+      {
+        "title": "Una consola, todas las propiedades.",
+        "body": "Cambia de ciudad con un clic. Los paneles del grupo se agregan automáticamente; las vistas por propiedad permanecen separadas cuando las necesitas."
+      },
+      {
+        "title": "Añade o pausa cuando quieras.",
+        "body": "Abrir una nueva ciudad o cerrar una propiedad lleva unos clics — sin contratos que renegociar, sin cuentas por asiento o por pantalla."
       }
     ]
   },
@@ -475,19 +504,6 @@
       "alaCarte": "à la carte",
       "savings": "Ahorro frente a herramientas independientes",
       "footnote": "Los precios independientes son los niveles de entrada listados públicamente a mayo de 2026; algunos proveedores solo cotizan a petición y pueden ser más altos en la práctica. Los proveedores de bienvenida cobran por habitación ocupada, así que la cifra anterior asume una propiedad de 40 habitaciones con ocupación media-alta típica."
-    },
-    "scale": {
-      "headline": "Lo que pagan realmente los grupos multi-propiedad.",
-      "sub": "Los complementos se activan en toda la organización y se facturan en cada factura de propiedad. Un grupo de cuatro propiedades con ambos complementos paga 4 × $188 = $752/mes — todo incluido.",
-      "headers": {
-        "properties": "Propiedades",
-        "baseOnly": "Solo base",
-        "baseSignage": "Base + Señalización",
-        "everything": "Todo activado"
-      },
-      "propertyOne": "1 propiedad",
-      "propertyMany": "{n} propiedades",
-      "perMonth": "/mes"
     },
     "faq": {
       "heading": "Preguntas frecuentes",

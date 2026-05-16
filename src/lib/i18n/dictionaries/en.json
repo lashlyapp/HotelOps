@@ -176,6 +176,16 @@
     "ctaSub": "No credit card. 10 GB included.",
     "ctaButton": "Start free trial"
   },
+  "blog": {
+    "navLabel": "Blog",
+    "eyebrow": "Notes from the back office",
+    "headline": "The state of boutique hotel operations.",
+    "sub": "Notes on the underserved corner of hospitality tech — realistic operations budgets, the modernization gap, what 2026 guests now expect, and how independent properties can catch up without enterprise spend.",
+    "relatedHeading": "Keep reading",
+    "ctaHeadline": "See it on your own property.",
+    "ctaSub": "7-day free trial. No credit card. Full access to maintenance, events, signage, and arrival.",
+    "ctaButton": "Start free trial"
+  },
   "features": {
     "navLabel": "Features",
     "eyebrow": "Everything included",
@@ -292,12 +302,12 @@
   "destinations": {
     "eyebrow": "Markets we're built for",
     "title": "Made for boutique hotels everywhere.",
-    "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Sign up in your language, the same back-office stack everywhere. Billed in USD; any credit card works."
+    "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Sign up in your language, the same back-office stack everywhere."
   },
   "asianDestinations": {
     "eyebrow": "Now serving APAC",
     "title": "Built for the boutique scene across Asia, too.",
-    "sub": "Tokyo, Seoul, Hanoi, Singapore — design hotels, ryokans, lifestyle properties, and small luxury groups. Sign up in your language and run the same operational stack we run for boutiques in Europe and the Americas. Billed in USD; any credit card works.",
+    "sub": "Tokyo, Seoul, Hanoi, Singapore — design hotels, ryokans, lifestyle properties, and small luxury groups. Sign up in your language and run the same operational stack we run for boutiques in Europe and the Americas.",
     "items": [
       {
         "city": "Tokyo",
@@ -318,6 +328,25 @@
         "city": "Singapore",
         "country": "Singapore",
         "blurb": "Chinatown shophouse hotels, Tanjong Pagar lifestyle properties, design groups across the island — English signup, no per-screen surprises."
+      }
+    ]
+  },
+  "groups": {
+    "eyebrow": "For groups",
+    "title": "One stack, every city you operate in.",
+    "sub": "Run a property in Lisbon, another in Mexico City, a third in Tokyo — same login, same workflows, same monthly line. Each team works in their language; owners see everything in theirs.",
+    "items": [
+      {
+        "title": "Local language for every team.",
+        "body": "Staff at each property sign up and work in their language. The owner's view rolls up in theirs."
+      },
+      {
+        "title": "One console, every property.",
+        "body": "Switch between cities in a click. Group dashboards aggregate automatically; per-property views stay separate when you need them."
+      },
+      {
+        "title": "Add or pause anytime.",
+        "body": "Opening a new city or sunsetting a property is a few clicks — no contracts to renegotiate, no per-seat or per-screen math."
       }
     ]
   },
@@ -475,19 +504,6 @@
       "alaCarte": "à la carte",
       "savings": "Savings vs. standalone à la carte",
       "footnote": "Standalone prices are publicly listed entry tiers as of May 2026; some vendors only quote on request and may be higher in practice. Guest-arrival vendors charge per occupied room, so the figure above assumes a 40-room property at typical mid-tier occupancy."
-    },
-    "scale": {
-      "headline": "What multi-property groups actually pay.",
-      "sub": "Add-ons activate org-wide and bill on every property’s invoice. A four-property group with both add-ons on pays 4 × $188 = $752/month — all in.",
-      "headers": {
-        "properties": "Properties",
-        "baseOnly": "Base only",
-        "baseSignage": "Base + Signage",
-        "everything": "Everything on"
-      },
-      "propertyOne": "1 property",
-      "propertyMany": "{n} properties",
-      "perMonth": "/mo"
     },
     "faq": {
       "heading": "Common questions",

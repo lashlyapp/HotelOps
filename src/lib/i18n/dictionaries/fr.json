@@ -176,6 +176,16 @@
     "ctaSub": "Sans carte bancaire. 10 Go inclus.",
     "ctaButton": "Démarrer l'essai gratuit"
   },
+  "blog": {
+    "navLabel": "Blog",
+    "eyebrow": "Notes du back-office",
+    "headline": "L'état des opérations dans l'hôtellerie boutique.",
+    "sub": "Notes sur le segment mal servi de la tech hôtelière — budgets d'exploitation réalistes, le retard de modernisation, ce que les clients de 2026 attendent et comment les établissements indépendants peuvent rattraper sans budgets d'entreprise.",
+    "relatedHeading": "À lire ensuite",
+    "ctaHeadline": "Voyez-le sur votre propre établissement.",
+    "ctaSub": "Essai gratuit de 7 jours. Sans carte de crédit. Accès complet à la maintenance, aux événements, à l'affichage et à l'arrivée.",
+    "ctaButton": "Démarrer l'essai gratuit"
+  },
   "features": {
     "navLabel": "Fonctionnalités",
     "eyebrow": "Tout est inclus",
@@ -292,12 +302,12 @@
   "destinations": {
     "eyebrow": "Les marchés pour lesquels nous sommes faits",
     "title": "Pour les hôtels boutique, partout.",
-    "sub": "Lisbonne, Barcelone, Paris, Mexico — les quartiers où les hôtels indépendants et des petits groupes opèrent réellement. Inscription dans votre langue, la même base opérationnelle partout. Facturé en USD ; toute carte de crédit fonctionne."
+    "sub": "Lisbonne, Barcelone, Paris, Mexico — les quartiers où les hôtels indépendants et des petits groupes opèrent réellement. Inscription dans votre langue, la même base opérationnelle partout."
   },
   "asianDestinations": {
     "eyebrow": "Maintenant en APAC",
     "title": "Conçu aussi pour la scène boutique en Asie.",
-    "sub": "Tokyo, Séoul, Hanoï, Singapour — hôtels de design, ryokans, propriétés lifestyle et petits groupes de luxe. Inscrivez-vous dans votre langue et exploitez la même base que nos boutiques en Europe et aux Amériques. Facturé en USD ; toute carte de crédit fonctionne.",
+    "sub": "Tokyo, Séoul, Hanoï, Singapour — hôtels de design, ryokans, propriétés lifestyle et petits groupes de luxe. Inscrivez-vous dans votre langue et exploitez la même base que nos boutiques en Europe et aux Amériques.",
     "items": [
       {
         "city": "Tokyo",
@@ -318,6 +328,25 @@
         "city": "Singapour",
         "country": "Singapour",
         "blurb": "Hôtels shophouse à Chinatown, propriétés lifestyle à Tanjong Pagar, groupes de design sur toute l'île — inscription en anglais, sans surprise par écran."
+      }
+    ]
+  },
+  "groups": {
+    "eyebrow": "Pour les groupes",
+    "title": "Une seule base, dans chaque ville où vous opérez.",
+    "sub": "Gérez un établissement à Lisbonne, un autre à Mexico, un troisième à Tokyo — même connexion, mêmes flux, une seule ligne mensuelle. Chaque équipe travaille dans sa langue ; les propriétaires voient l'ensemble dans la leur.",
+    "items": [
+      {
+        "title": "Langue locale pour chaque équipe.",
+        "body": "Le personnel de chaque établissement s'inscrit et travaille dans sa langue. La vue du propriétaire se consolide dans la sienne."
+      },
+      {
+        "title": "Une console, tous les établissements.",
+        "body": "Passez d'une ville à l'autre en un clic. Les tableaux de bord du groupe s'agrègent automatiquement ; les vues par établissement restent séparées au besoin."
+      },
+      {
+        "title": "Ajoutez ou suspendez à tout moment.",
+        "body": "Ouvrir une nouvelle ville ou clôturer un établissement se fait en quelques clics — pas de contrats à renégocier, pas de calcul par siège ou par écran."
       }
     ]
   },
@@ -475,19 +504,6 @@
       "alaCarte": "à la carte",
       "savings": "Économies vs. outils indépendants",
       "footnote": "Les prix indépendants sont les paliers d'entrée publiquement listés en mai 2026 ; certains fournisseurs ne donnent un devis que sur demande et peuvent être plus élevés en pratique. Les fournisseurs d'accueil facturent par chambre occupée, donc le chiffre ci-dessus suppose une propriété de 40 chambres avec un taux d'occupation moyen typique."
-    },
-    "scale": {
-      "headline": "Ce que paient réellement les groupes multi-propriétés.",
-      "sub": "Les options s'activent pour toute l'organisation et sont facturées sur chaque facture de propriété. Un groupe de quatre propriétés avec les deux options actives paie 4 × $188 = $752/mois — tout compris.",
-      "headers": {
-        "properties": "Propriétés",
-        "baseOnly": "Base uniquement",
-        "baseSignage": "Base + Affichage",
-        "everything": "Tout activé"
-      },
-      "propertyOne": "1 propriété",
-      "propertyMany": "{n} propriétés",
-      "perMonth": "/mois"
     },
     "faq": {
       "heading": "Questions fréquentes",

@@ -176,6 +176,16 @@
     "ctaSub": "Không cần thẻ tín dụng. Bao gồm 10 GB.",
     "ctaButton": "Bắt đầu dùng thử miễn phí"
   },
+  "blog": {
+    "navLabel": "Blog",
+    "eyebrow": "Ghi chú từ hậu trường",
+    "headline": "Tình hình vận hành khách sạn boutique.",
+    "sub": "Ghi chú về phân khúc bị bỏ qua trong công nghệ khách sạn — ngân sách vận hành thực tế, khoảng cách hiện đại hóa, kỳ vọng của khách năm 2026, và cách các cơ sở độc lập có thể bắt kịp mà không cần ngân sách doanh nghiệp.",
+    "relatedHeading": "Đọc tiếp",
+    "ctaHeadline": "Trải nghiệm trên chính cơ sở của bạn.",
+    "ctaSub": "Dùng thử miễn phí 7 ngày. Không cần thẻ tín dụng. Truy cập đầy đủ vào bảo trì, sự kiện, biển hiển thị và phần đón khách.",
+    "ctaButton": "Bắt đầu dùng thử miễn phí"
+  },
   "features": {
     "navLabel": "Tính năng",
     "eyebrow": "Tất cả bao gồm",
@@ -292,12 +302,12 @@
   "destinations": {
     "eyebrow": "Thị trường chúng tôi được xây dựng cho",
     "title": "Được làm cho khách sạn boutique ở mọi nơi.",
-    "sub": "Lisbon, Barcelona, Paris, Mexico City — các khu vực nơi khách sạn độc lập và nhóm nhỏ thực sự vận hành. Đăng ký bằng ngôn ngữ của bạn, cùng một ngăn xếp back-office ở mọi nơi. Thanh toán bằng USD; bất kỳ thẻ tín dụng nào cũng dùng được."
+    "sub": "Lisbon, Barcelona, Paris, Mexico City — các khu vực nơi khách sạn độc lập và nhóm nhỏ thực sự vận hành. Đăng ký bằng ngôn ngữ của bạn, cùng một ngăn xếp back-office ở mọi nơi."
   },
   "asianDestinations": {
     "eyebrow": "Nay phục vụ APAC",
     "title": "Cũng được xây dựng cho cảnh boutique khắp Châu Á.",
-    "sub": "Tokyo, Seoul, Hà Nội, Singapore — khách sạn thiết kế, ryokan, tài sản lifestyle và nhóm sang trọng nhỏ. Đăng ký bằng ngôn ngữ của bạn và vận hành cùng ngăn xếp mà chúng tôi vận hành cho các boutique ở Châu Âu và Châu Mỹ. Thanh toán bằng USD; bất kỳ thẻ tín dụng nào cũng dùng được.",
+    "sub": "Tokyo, Seoul, Hà Nội, Singapore — khách sạn thiết kế, ryokan, tài sản lifestyle và nhóm sang trọng nhỏ. Đăng ký bằng ngôn ngữ của bạn và vận hành cùng ngăn xếp mà chúng tôi vận hành cho các boutique ở Châu Âu và Châu Mỹ.",
     "items": [
       {
         "city": "Tokyo",
@@ -318,6 +328,25 @@
         "city": "Singapore",
         "country": "Singapore",
         "blurb": "Khách sạn shophouse Chinatown, tài sản lifestyle Tanjong Pagar, các nhóm thiết kế khắp đảo — đăng ký tiếng Anh, không có bất ngờ theo màn hình."
+      }
+    ]
+  },
+  "groups": {
+    "eyebrow": "Dành cho nhóm",
+    "title": "Một nền tảng, trong mọi thành phố bạn vận hành.",
+    "sub": "Vận hành một cơ sở ở Lisbon, một ở Mexico City, một ở Tokyo — cùng đăng nhập, cùng quy trình, cùng một dòng hóa đơn hàng tháng. Mỗi đội làm việc bằng ngôn ngữ của mình; chủ sở hữu thấy mọi thứ bằng ngôn ngữ của họ.",
+    "items": [
+      {
+        "title": "Ngôn ngữ bản địa cho mỗi đội.",
+        "body": "Nhân viên ở mỗi cơ sở đăng ký và làm việc bằng ngôn ngữ của họ. Góc nhìn của chủ sở hữu được tổng hợp bằng ngôn ngữ của họ."
+      },
+      {
+        "title": "Một bảng điều khiển, mọi cơ sở.",
+        "body": "Chuyển đổi giữa các thành phố trong một cú nhấp. Bảng điều khiển nhóm tự động tổng hợp; góc nhìn theo từng cơ sở vẫn tách biệt khi cần."
+      },
+      {
+        "title": "Thêm hoặc tạm dừng bất cứ lúc nào.",
+        "body": "Mở một thành phố mới hay đóng một cơ sở chỉ mất vài cú nhấp — không có hợp đồng để đàm phán lại, không có phép tính theo ghế hay theo màn hình."
       }
     ]
   },
@@ -475,19 +504,6 @@
       "alaCarte": "mua riêng",
       "savings": "Tiết kiệm so với mua riêng độc lập",
       "footnote": "Giá độc lập là các bậc nhập cảnh được niêm yết công khai tính đến tháng 5 năm 2026; một số nhà cung cấp chỉ báo giá khi yêu cầu và có thể cao hơn trong thực tế. Các nhà cung cấp đón khách tính phí theo phòng được sử dụng, vì vậy con số trên giả định một tài sản 40 phòng ở mức công suất trung bình điển hình."
-    },
-    "scale": {
-      "headline": "Các nhóm đa tài sản thực sự trả gì.",
-      "sub": "Các bổ sung kích hoạt toàn tổ chức và thanh toán trên hóa đơn của mọi tài sản. Một nhóm bốn tài sản với cả hai bổ sung trả 4 × $188 = $752/tháng — tất cả bao gồm.",
-      "headers": {
-        "properties": "Tài sản",
-        "baseOnly": "Chỉ nền tảng",
-        "baseSignage": "Nền tảng + Biển hiển thị",
-        "everything": "Bật mọi thứ"
-      },
-      "propertyOne": "1 tài sản",
-      "propertyMany": "{n} tài sản",
-      "perMonth": "/tháng"
     },
     "faq": {
       "heading": "Câu hỏi thường gặp",

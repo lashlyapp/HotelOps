@@ -93,6 +93,14 @@ const SECURITY_HEADERS = [
 ]
 
 const nextConfig: NextConfig = {
+  // Bundle gated download assets with serverless function output so
+  // the /api/blog/guide-download route handler can read them at
+  // runtime. /public/* would be statically served by Next, which
+  // defeats the gating; keeping the files in /assets/* and tracking
+  // them here is the standard pattern.
+  outputFileTracingIncludes: {
+    '/api/blog/guide-download': ['./assets/downloads/**'],
+  },
   images: {
     remotePatterns: [
       ...(cdn
