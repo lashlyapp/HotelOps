@@ -4,27 +4,29 @@ import { useFormStatus } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import type { Dictionary } from '@/lib/i18n/dictionaries'
 import { verifyLoginMfa } from '../actions'
-
-const ERRORS: Record<string, string> = {
-  wrong_code: 'That code didn’t match. Try the next one your app shows.',
-  invalid: 'Enter the 6-digit code from your authenticator app.',
-  unknown: 'Something went wrong. Try again or sign in fresh.',
-}
 
 export function MfaChallengeForm({
   factorId,
   initialError,
+  t,
 }: {
   factorId: string
   initialError?: string
+  t: Dictionary['loginMfa']
 }) {
+  const errorMessage =
+    initialError && initialError in t.errors
+      ? t.errors[initialError as keyof typeof t.errors]
+      : null
+
   return (
     <form action={verifyLoginMfa} className="space-y-4" noValidate>
       <input type="hidden" name="factor_id" value={factorId} />
 
       <div className="space-y-1.5">
-        <Label htmlFor="code">Code</Label>
+        <Label htmlFor="code">{t.codeLabel}</Label>
         <Input
           id="code"
           name="code"
@@ -40,22 +42,20 @@ export function MfaChallengeForm({
         />
       </div>
 
-      {initialError ? (
-        <p className="text-sm text-danger-fg">
-          {ERRORS[initialError] ?? ERRORS.unknown}
-        </p>
+      {errorMessage ? (
+        <p className="text-sm text-danger-fg">{errorMessage}</p>
       ) : null}
 
-      <SubmitButton />
+      <SubmitButton t={t} />
     </form>
   )
 }
 
-function SubmitButton() {
+function SubmitButton({ t }: { t: Dictionary['loginMfa'] }) {
   const { pending } = useFormStatus()
   return (
     <Button type="submit" className="w-full" size="lg" disabled={pending}>
-      {pending ? 'Verifying…' : 'Verify and continue'}
+      {pending ? t.ctaVerifying : t.ctaVerify}
     </Button>
   )
 }

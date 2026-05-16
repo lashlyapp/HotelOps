@@ -9,6 +9,70 @@
     "logIn": "Connexion",
     "language": "Langue"
   },
+  "login": {
+    "title": "Connectez-vous à votre compte",
+    "email": "Email",
+    "password": "Mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "cta": "Se connecter",
+    "noAccount": "Vous n'avez pas encore de compte ?",
+    "signUpLink": "S'inscrire",
+    "errors": {
+      "missing": "Email et mot de passe sont obligatoires.",
+      "invalid": "Email ou mot de passe incorrect.",
+      "no_org": "Votre compte n'est pas lié à une organisation. Contactez votre administrateur.",
+      "unauthorized": "Votre compte n'est pas autorisé pour le portail d'administration.",
+      "session_expired": "Vous avez été déconnecté pour cause d'inactivité. Reconnectez-vous.",
+      "rate_limited": "Trop de tentatives échouées. Patientez quelques minutes et réessayez."
+    }
+  },
+  "forgotPassword": {
+    "title": "Réinitialisez votre mot de passe",
+    "backToLogin": "Retour à la connexion",
+    "email": "Email",
+    "hint": "Nous vous enverrons un lien à usage unique pour définir un nouveau mot de passe. Le lien expire dans environ une heure.",
+    "cta": "Envoyer le lien",
+    "remembered": "Vous vous en souvenez ?",
+    "loginLink": "Se connecter",
+    "errors": {
+      "invalid": "Veuillez entrer une adresse email valide."
+    },
+    "sent": {
+      "headline": "Vérifiez votre boîte de réception.",
+      "body": "Si un compte existe pour l'adresse saisie, nous avons envoyé un lien à usage unique pour réinitialiser votre mot de passe. Le lien expire dans environ une heure.",
+      "tryAgain": "Vous n'avez rien vu ?",
+      "tryAgainLink": "Réessayez",
+      "orEmail": "ou écrivez à"
+    }
+  },
+  "setPassword": {
+    "title": "Définissez un mot de passe pour finir l'inscription",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "cta": "Enregistrer le mot de passe",
+    "errors": {
+      "too_short": "Le mot de passe est trop court.",
+      "weak": "Le mot de passe ne remplit pas les critères.",
+      "mismatch": "Les mots de passe ne correspondent pas.",
+      "failed": "Impossible d'enregistrer ce mot de passe. Vérifiez qu'il remplit les critères ci-dessous et réessayez."
+    }
+  },
+  "loginMfa": {
+    "eyebrow": "Authentification à deux facteurs",
+    "headline": "Entrez votre code à 6 chiffres",
+    "sub": "Ouvrez votre application d'authentification et entrez le code actuel pour votre compte {email}.",
+    "lostAccess": "Accès perdu ?",
+    "signInAgain": "Reconnectez-vous",
+    "lostAccessSuffix": "ou contactez votre administrateur pour désactiver la 2FA sur votre compte.",
+    "codeLabel": "Code",
+    "ctaVerifying": "Vérification…",
+    "ctaVerify": "Vérifier et continuer",
+    "errors": {
+      "wrong_code": "Ce code ne correspond pas. Essayez le suivant que votre app affiche.",
+      "invalid": "Entrez le code à 6 chiffres de votre application d'authentification.",
+      "unknown": "Quelque chose s'est mal passé. Réessayez ou reconnectez-vous depuis le début."
+    }
+  },
   "nav": {
     "workOrders": "Bons de travail",
     "events": "Événements & banquets",

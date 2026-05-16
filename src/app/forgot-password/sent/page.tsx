@@ -3,8 +3,13 @@ import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
 import { Card, CardBody } from '@/components/ui/card'
 import { BRAND } from '@/lib/brand'
+import { getDictionary } from '@/lib/i18n/dictionaries'
+import { getLocale } from '@/lib/i18n/get-locale'
 
-export default function ForgotPasswordSentPage() {
+export default async function ForgotPasswordSentPage() {
+  const locale = await getLocale()
+  const t = getDictionary(locale).forgotPassword
+
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-border-subtle">
@@ -14,7 +19,7 @@ export default function ForgotPasswordSentPage() {
             href="/login"
             className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
           >
-            ← Back to log in
+            ← {t.backToLogin}
           </Link>
         </div>
       </header>
@@ -42,22 +47,18 @@ export default function ForgotPasswordSentPage() {
             </div>
 
             <h1 className="text-2xl font-semibold tracking-tight text-fg">
-              Check your inbox.
+              {t.sent.headline}
             </h1>
-            <p className="text-sm text-muted leading-relaxed">
-              If an account exists for the address you entered, we’ve sent a
-              one-time link to reset your password. The link expires in
-              about an hour.
-            </p>
+            <p className="text-sm text-muted leading-relaxed">{t.sent.body}</p>
             <p className="pt-2 text-xs text-subtle">
-              Didn’t see anything?{' '}
+              {t.sent.tryAgain}{' '}
               <Link
                 href="/forgot-password"
                 className="font-medium text-fg hover:underline"
               >
-                Try again
+                {t.sent.tryAgainLink}
               </Link>
-              {' '}or email{' '}
+              {' '}{t.sent.orEmail}{' '}
               <a
                 href={`mailto:${BRAND.supportEmail}`}
                 className="font-medium text-fg hover:underline"

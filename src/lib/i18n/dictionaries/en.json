@@ -9,6 +9,70 @@
     "logIn": "Log in",
     "language": "Language"
   },
+  "login": {
+    "title": "Log in to your account",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "cta": "Log in",
+    "noAccount": "Don’t have an account yet?",
+    "signUpLink": "Sign up",
+    "errors": {
+      "missing": "Email and password are required.",
+      "invalid": "Invalid email or password.",
+      "no_org": "Your account isn’t linked to an organization. Contact your admin.",
+      "unauthorized": "Your account is not authorized for the admin portal.",
+      "session_expired": "You were signed out after a period of inactivity. Please log in again.",
+      "rate_limited": "Too many failed sign-in attempts. Wait a few minutes and try again."
+    }
+  },
+  "forgotPassword": {
+    "title": "Reset your password",
+    "backToLogin": "Back to log in",
+    "email": "Email",
+    "hint": "We’ll send a one-time link to set a new password. The link expires in about an hour.",
+    "cta": "Send reset link",
+    "remembered": "Remembered it?",
+    "loginLink": "Log in",
+    "errors": {
+      "invalid": "Please enter a valid email address."
+    },
+    "sent": {
+      "headline": "Check your inbox.",
+      "body": "If an account exists for the address you entered, we’ve sent a one-time link to reset your password. The link expires in about an hour.",
+      "tryAgain": "Didn’t see anything?",
+      "tryAgainLink": "Try again",
+      "orEmail": "or email"
+    }
+  },
+  "setPassword": {
+    "title": "Set a password to finish signing up",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "cta": "Save password",
+    "errors": {
+      "too_short": "Password is too short.",
+      "weak": "Password doesn’t meet the requirements.",
+      "mismatch": "Passwords don’t match.",
+      "failed": "Couldn’t save that password. Make sure it meets the requirements below and try again."
+    }
+  },
+  "loginMfa": {
+    "eyebrow": "Two-factor authentication",
+    "headline": "Enter your 6-digit code",
+    "sub": "Open your authenticator app and enter the current code for your {email} account.",
+    "lostAccess": "Lost access?",
+    "signInAgain": "Sign in again",
+    "lostAccessSuffix": "or contact your admin to disable 2FA on your account.",
+    "codeLabel": "Code",
+    "ctaVerifying": "Verifying…",
+    "ctaVerify": "Verify and continue",
+    "errors": {
+      "wrong_code": "That code didn’t match. Try the next one your app shows.",
+      "invalid": "Enter the 6-digit code from your authenticator app.",
+      "unknown": "Something went wrong. Try again or sign in fresh."
+    }
+  },
   "nav": {
     "workOrders": "Work Orders",
     "events": "Events & Catering",

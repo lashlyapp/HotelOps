@@ -9,6 +9,70 @@
     "logIn": "Acceder",
     "language": "Idioma"
   },
+  "login": {
+    "title": "Inicia sesión en tu cuenta",
+    "email": "Email",
+    "password": "Contraseña",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "cta": "Iniciar sesión",
+    "noAccount": "¿Aún no tienes cuenta?",
+    "signUpLink": "Regístrate",
+    "errors": {
+      "missing": "Email y contraseña son obligatorios.",
+      "invalid": "Email o contraseña incorrectos.",
+      "no_org": "Tu cuenta no está vinculada a una organización. Contacta con tu administrador.",
+      "unauthorized": "Tu cuenta no está autorizada para el portal de administración.",
+      "session_expired": "Se cerró tu sesión por inactividad. Inicia sesión de nuevo.",
+      "rate_limited": "Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo."
+    }
+  },
+  "forgotPassword": {
+    "title": "Restablece tu contraseña",
+    "backToLogin": "Volver al inicio de sesión",
+    "email": "Email",
+    "hint": "Te enviaremos un enlace de un solo uso para crear una nueva contraseña. El enlace caduca en aproximadamente una hora.",
+    "cta": "Enviar enlace",
+    "remembered": "¿La recordaste?",
+    "loginLink": "Iniciar sesión",
+    "errors": {
+      "invalid": "Por favor, introduce una dirección de email válida."
+    },
+    "sent": {
+      "headline": "Revisa tu bandeja de entrada.",
+      "body": "Si existe una cuenta con la dirección introducida, te hemos enviado un enlace de un solo uso para restablecer tu contraseña. El enlace caduca en aproximadamente una hora.",
+      "tryAgain": "¿No has visto nada?",
+      "tryAgainLink": "Inténtalo de nuevo",
+      "orEmail": "o escribe a"
+    }
+  },
+  "setPassword": {
+    "title": "Crea una contraseña para terminar de registrarte",
+    "newPassword": "Nueva contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "cta": "Guardar contraseña",
+    "errors": {
+      "too_short": "La contraseña es demasiado corta.",
+      "weak": "La contraseña no cumple los requisitos.",
+      "mismatch": "Las contraseñas no coinciden.",
+      "failed": "No se pudo guardar esa contraseña. Asegúrate de que cumple los requisitos y vuelve a intentarlo."
+    }
+  },
+  "loginMfa": {
+    "eyebrow": "Autenticación en dos pasos",
+    "headline": "Introduce tu código de 6 dígitos",
+    "sub": "Abre tu aplicación de autenticación e introduce el código actual para tu cuenta {email}.",
+    "lostAccess": "¿Has perdido el acceso?",
+    "signInAgain": "Inicia sesión de nuevo",
+    "lostAccessSuffix": "o contacta con tu administrador para desactivar la 2FA en tu cuenta.",
+    "codeLabel": "Código",
+    "ctaVerifying": "Verificando…",
+    "ctaVerify": "Verificar y continuar",
+    "errors": {
+      "wrong_code": "Ese código no coincide. Prueba con el siguiente que muestre tu app.",
+      "invalid": "Introduce el código de 6 dígitos de tu aplicación de autenticación.",
+      "unknown": "Algo salió mal. Inténtalo de nuevo o inicia sesión desde cero."
+    }
+  },
   "nav": {
     "workOrders": "Órdenes de trabajo",
     "events": "Eventos y banquetes",

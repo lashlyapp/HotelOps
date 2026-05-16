@@ -5,12 +5,10 @@ import { Footer } from '@/components/layout/footer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getDictionary } from '@/lib/i18n/dictionaries'
+import { getLocale } from '@/lib/i18n/get-locale'
 import { createClient } from '@/lib/supabase/server'
 import { requestPasswordReset } from './actions'
-
-const ERROR_MESSAGES: Record<string, string> = {
-  invalid: 'Please enter a valid email address.',
-}
 
 type SearchParams = Promise<{ error?: string }>
 
@@ -19,8 +17,6 @@ export default async function ForgotPasswordPage({
 }: {
   searchParams: SearchParams
 }) {
-  // If they're already signed in, send them home rather than asking them
-  // to start a password reset they don't need.
   const supabase = await createClient()
   const {
     data: { user },
@@ -28,7 +24,12 @@ export default async function ForgotPasswordPage({
   if (user) redirect('/dashboard')
 
   const { error } = await searchParams
-  const errorMessage = error ? ERROR_MESSAGES[error] : null
+  const locale = await getLocale()
+  const t = getDictionary(locale).forgotPassword
+  const errorMessage =
+    error && error in t.errors
+      ? t.errors[error as keyof typeof t.errors]
+      : null
 
   return (
     <div className="flex flex-1 flex-col">
@@ -39,7 +40,7 @@ export default async function ForgotPasswordPage({
             href="/login"
             className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
           >
-            ← Back to log in
+            ← {t.backToLogin}
           </Link>
         </div>
       </header>
@@ -48,12 +49,12 @@ export default async function ForgotPasswordPage({
         <div className="w-full max-w-sm space-y-8">
           <div className="space-y-3 text-center">
             <Wordmark size="lg" href="/" />
-            <p className="text-sm text-muted">Reset your password</p>
+            <p className="text-sm text-muted">{t.title}</p>
           </div>
 
           <form action={requestPasswordReset} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t.email}</Label>
               <Input
                 id="email"
                 name="email"
@@ -61,10 +62,7 @@ export default async function ForgotPasswordPage({
                 autoComplete="email"
                 required
               />
-              <p className="text-xs text-subtle">
-                We’ll send a one-time link to set a new password. The link
-                expires in about an hour.
-              </p>
+              <p className="text-xs text-subtle">{t.hint}</p>
             </div>
 
             {errorMessage ? (
@@ -72,17 +70,17 @@ export default async function ForgotPasswordPage({
             ) : null}
 
             <Button type="submit" className="w-full">
-              Send reset link
+              {t.cta}
             </Button>
           </form>
 
           <p className="text-center text-xs text-subtle">
-            Remembered it?{' '}
+            {t.remembered}{' '}
             <Link
               href="/login"
               className="font-medium text-fg hover:underline"
             >
-              Log in
+              {t.loginLink}
             </Link>
             .
           </p>

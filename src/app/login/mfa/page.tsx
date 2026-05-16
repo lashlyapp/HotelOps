@@ -7,6 +7,9 @@ import {
   getPrimaryVerifiedFactorId,
   needsMfaChallenge,
 } from '@/lib/auth/mfa'
+import { getDictionary } from '@/lib/i18n/dictionaries'
+import { getLocale } from '@/lib/i18n/get-locale'
+import { interpolate } from '@/lib/i18n/interpolate'
 import { createClient } from '@/lib/supabase/server'
 import { MfaChallengeForm } from './_components/challenge-form'
 
@@ -30,21 +33,18 @@ export default async function MfaChallengePage({
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  // No session → kick to /login. Already at aal2 → kick to /dashboard.
-  // The "needs challenge" check covers everything in between.
   if (!user) redirect('/login')
   const needs = await needsMfaChallenge()
   if (!needs) redirect('/dashboard')
 
   const factorId = await getPrimaryVerifiedFactorId()
   if (!factorId) {
-    // User had a factor at password-check time but it was unenrolled
-    // between then and now. Bounce to dashboard — session is still
-    // valid, just at aal1.
     redirect('/dashboard')
   }
 
   const { error } = await searchParams
+  const locale = await getLocale()
+  const t = getDictionary(locale).loginMfa
 
   return (
     <div className="flex flex-1 flex-col">
@@ -58,29 +58,32 @@ export default async function MfaChallengePage({
         <section className="mx-auto max-w-md px-6 py-16">
           <div className="text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Two-factor authentication
+              {t.eyebrow}
             </p>
             <h1 className="mt-3 text-2xl sm:text-3xl font-semibold tracking-tight text-fg">
-              Enter your 6-digit code
+              {t.headline}
             </h1>
             <p className="mt-4 text-sm text-muted leading-relaxed">
-              Open your authenticator app and enter the current code for
-              your {user.email} account.
+              {interpolate(t.sub, { email: user.email ?? '' })}
             </p>
           </div>
 
           <Card className="mt-8">
             <CardBody className="p-6 sm:p-8">
-              <MfaChallengeForm factorId={factorId} initialError={error} />
+              <MfaChallengeForm
+                factorId={factorId}
+                initialError={error}
+                t={t}
+              />
             </CardBody>
           </Card>
 
           <p className="mt-6 text-center text-xs text-subtle">
-            Lost access?{' '}
+            {t.lostAccess}{' '}
             <Link href="/login" className="font-medium text-fg hover:underline">
-              Sign in again
+              {t.signInAgain}
             </Link>{' '}
-            or contact your admin to disable 2FA on your account.
+            {t.lostAccessSuffix}
           </p>
         </section>
       </main>
