@@ -93,6 +93,15 @@ export function getPost(slug: string): BlogPostModule | undefined {
   return mod
 }
 
+/** Admin-only lookup that ignores the publish gate so the
+ *  /admin/blog/[slug] preview can render scheduled drafts. Never
+ *  use this in a public route. */
+export function getPostIncludingScheduled(
+  slug: string,
+): BlogPostModule | undefined {
+  return MODULES.find((m) => m.meta.slug === slug)
+}
+
 export function getAllSlugs(): string[] {
   return MODULES.filter((m) => isPublished(m.meta)).map((m) => m.meta.slug)
 }

@@ -27,6 +27,7 @@ export default async function AdminLayout({
           <NavLink href="/admin/tenants/new">Create tenant</NavLink>
           <NavLink href="/admin/appointments">Appointments</NavLink>
           <NavLink href="/admin/leads">Guide leads</NavLink>
+          <NavLink href="/admin/blog">Blog queue</NavLink>
         </nav>
 
         <form
