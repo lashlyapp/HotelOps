@@ -41,7 +41,10 @@ export function GuideDownloadForm({ guideSlug, t }: Props) {
     INITIAL,
   )
 
-  if (state.success) {
+  // Empty downloadUrl is the honeypot-tripped sentinel: pretend the
+  // submission succeeded so a bot does not learn to retry, but render
+  // a plain confirmation without a download CTA.
+  if (state.success && state.success.downloadUrl) {
     return (
       <div className="not-prose mt-10 rounded-2xl border border-border-subtle bg-surface p-6 sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
@@ -68,6 +71,21 @@ export function GuideDownloadForm({ guideSlug, t }: Props) {
       </div>
     )
   }
+  if (state.success) {
+    return (
+      <div className="not-prose mt-10 rounded-2xl border border-border-subtle bg-surface p-6 sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
+          Sent
+        </p>
+        <h3 className="mt-2 text-xl font-semibold tracking-tight text-fg">
+          {t.successHeading}
+        </h3>
+        <p className="mt-3 text-sm text-muted leading-relaxed">
+          {t.successBody}
+        </p>
+      </div>
+    )
+  }
 
   return (
     <form
@@ -75,6 +93,25 @@ export function GuideDownloadForm({ guideSlug, t }: Props) {
       className="not-prose mt-10 rounded-2xl border border-border-subtle bg-surface p-6 sm:p-8"
     >
       <input type="hidden" name="guide_slug" value={guideSlug} />
+      {/* Honeypot: humans don't see this; bots fill every input.
+          aria-hidden + tabIndex=-1 keep assistive tech off it,
+          autoComplete=off discourages browser autofill from
+          tripping it for real users on saved-form devices. */}
+      <div
+        aria-hidden="true"
+        className="absolute left-[-9999px] top-auto h-0 w-0 overflow-hidden"
+      >
+        <label>
+          Company size
+          <input
+            type="text"
+            name="company_size"
+            tabIndex={-1}
+            autoComplete="off"
+            defaultValue=""
+          />
+        </label>
+      </div>
       <h3 className="text-xl font-semibold tracking-tight text-fg">
         {t.heading}
       </h3>

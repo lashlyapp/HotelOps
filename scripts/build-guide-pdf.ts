@@ -165,9 +165,14 @@ const CLOSE: string[] = [
   'A 40-room boutique buying the same surface à la carte from Quore, Yodeck, and Duve pays around $580/month. With us, everything-on costs $188/month per property — and you can drop either add-on with a single click. The first 7 days are free, with no credit card required to start. If you want to see whether the back office of your property looks better on this stack, start the trial at myhotelops.com/signup — it takes under a minute and your data persists if you convert.',
 ]
 
+// Output lives outside /public so the file is not served by Next's
+// static file handler. The /api/blog/guide-download route reads it
+// from here after verifying the lead's token. See
+// next.config.ts → outputFileTracingIncludes for the deploy bundle
+// wiring.
 const OUT_PATH = path.resolve(
   process.cwd(),
-  'public/downloads/10-ways-modernize-boutique-hotel.pdf',
+  'assets/downloads/10-ways-modernize-boutique-hotel.pdf',
 )
 
 function build(): void {

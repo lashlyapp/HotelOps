@@ -42,14 +42,12 @@ export type GuideSlug = '10-ways-modernize-boutique-hotel'
 type GuideDescriptor = {
   slug: GuideSlug
   title: string
-  fileName: string
 }
 
 const GUIDES: Record<GuideSlug, GuideDescriptor> = {
   '10-ways-modernize-boutique-hotel': {
     slug: '10-ways-modernize-boutique-hotel',
     title: '10 ways to modernize your boutique hotel',
-    fileName: '10-ways-modernize-boutique-hotel.pdf',
   },
 }
 
@@ -65,6 +63,16 @@ export async function requestGuideDownload(
   const guide = GUIDES[slug]
   if (!guide) {
     return { error: 'Unknown guide.' }
+  }
+
+  // Honeypot — bots fill every input including hidden ones, humans
+  // can't see this field. Silently succeed-but-do-nothing so the
+  // bot doesn't learn to retry with the field cleared. We do NOT
+  // insert a lead or send emails in this branch.
+  const honeypot = String(formData.get('company_size') ?? '').trim()
+  if (honeypot) {
+    console.warn('[guide] honeypot tripped; dropping submission')
+    return { success: { downloadUrl: '' } }
   }
 
   const visitorName = String(formData.get('name') ?? '').trim()
@@ -136,19 +144,23 @@ export async function requestGuideDownload(
     // ignore malformed cookie
   }
 
-  const { error: insertErr } = await admin.from('guide_leads').insert({
-    email: visitorEmail,
-    visitor_name: visitorName,
-    hotel_name: hotelName,
-    website,
-    guide_slug: guide.slug,
-    visitor_locale: locale,
-    ip_address: ipAddress,
-    user_agent: userAgent,
-    ...utm,
-  })
+  const { data: inserted, error: insertErr } = await admin
+    .from('guide_leads')
+    .insert({
+      email: visitorEmail,
+      visitor_name: visitorName,
+      hotel_name: hotelName,
+      website,
+      guide_slug: guide.slug,
+      visitor_locale: locale,
+      ip_address: ipAddress,
+      user_agent: userAgent,
+      ...utm,
+    })
+    .select('download_token')
+    .single()
 
-  if (insertErr) {
+  if (insertErr || !inserted) {
     console.error('[guide] insert failed', insertErr)
     return {
       error: `Something went wrong saving your request. Please email ${BRAND.supportEmail} and we'll send it manually.`,
@@ -158,7 +170,7 @@ export async function requestGuideDownload(
   const siteUrl = (
     process.env.NEXT_PUBLIC_SITE_URL ?? `https://www.${BRAND.domain}`
   ).replace(/\/+$/, '')
-  const downloadUrl = `${siteUrl}/downloads/${guide.fileName}`
+  const downloadUrl = `${siteUrl}/api/blog/guide-download?t=${inserted.download_token}`
 
   // Fire both emails in parallel; we don't block the success
   // response on either of them. The lead has the download URL
