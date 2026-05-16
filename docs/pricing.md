@@ -196,6 +196,54 @@ HotelOps replaces:
 
 Customer who only wants the base: ~$360 of competing tools for $100.
 
+## Multi-currency
+
+`organizations.currency` is set at signup from the visitor's locale
+(en → USD, es/fr → EUR, with more locales mapping into the table as
+we localize the marketing site). The column is immutable once set —
+switching currency mid-stream on a Stripe Customer is awkward enough
+that we treat it as a manual-ops escape hatch, not a customer-facing
+control.
+
+**Per-currency Stripe Prices.** USD keeps the bare lookup keys
+(`hotelops_per_property_monthly`, etc.) so existing US customers are
+not migrated. Each new currency gets a parallel set of Prices in the
+same Stripe account, with lookup keys suffixed by the lowercase ISO
+code:
+
+| Currency | Base lookup key                                |
+| -------- | ---------------------------------------------- |
+| USD      | `hotelops_per_property_monthly`                |
+| EUR      | `hotelops_per_property_monthly_eur`            |
+| GBP      | `hotelops_per_property_monthly_gbp`            |
+| MXN      | `hotelops_per_property_monthly_mxn`            |
+| AUD      | `hotelops_per_property_monthly_aud`            |
+
+The same `_<code>` suffix applies to every Price in the family:
+`hotelops_setup_fee_eur`, `hotelops_signage_unlimited_monthly_eur`,
+`hotelops_guest_experience_monthly_eur`,
+`hotelops_signage_overage_per_screen_monthly_eur`,
+`hotelops_storage_block_25gb_monthly_eur`. Resolution is handled by
+`currencyAwareLookupKey()` in `src/lib/billing/currency.ts` — the
+codebase reads the org's currency once on the way into Stripe and
+every downstream Price lookup picks the right one automatically.
+
+**Operator workflow to launch a new market** (e.g. add GBP):
+1. In Stripe Dashboard, create one Price per family in the new
+   currency with the suffixed lookup key. Use realistic local
+   pricing (£89 not £100; €99 not €100) — the goal is "reads as
+   cheap" not "fx-converted exactly".
+2. Add the currency code to `SUPPORTED_CURRENCIES` in
+   `src/lib/billing/currency.ts` AND the CHECK constraint in
+   `supabase/migrations/<next>_org_currency_<code>.sql`. Both in
+   the same PR.
+3. Update the `LOCALE_TO_CURRENCY` map if a marketing locale should
+   default to the new currency.
+
+No existing customer is affected. New signups with the
+matching locale land on the new currency; everyone else continues
+on whatever currency they signed up under.
+
 ## Operational
 
 1. Create the Stripe Prices once per environment (test, live):

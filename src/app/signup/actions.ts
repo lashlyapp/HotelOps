@@ -13,7 +13,9 @@ import {
   hashOtp,
 } from '@/lib/auth/otp'
 import { validatePassword } from '@/lib/auth/password'
+import { currencyForLocale } from '@/lib/billing/currency'
 import { TRIAL_DAYS, TRIAL_STORAGE_BYTES } from '@/lib/billing/trial'
+import { getLocale } from '@/lib/i18n/get-locale'
 import { BRAND } from '@/lib/brand'
 import { decryptString, encryptString } from '@/lib/crypto/aes'
 import {
@@ -279,6 +281,14 @@ export async function verifySignupOtp(
     trialStart.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000,
   )
 
+  // Currency is set once at signup from the visitor's locale and
+  // never changes for this org. Mid-stream currency switches on a
+  // Stripe Customer are messy, and locale-at-signup is a good enough
+  // proxy for the customer's billing currency preference. Operator
+  // can override via direct SQL in the rare case a customer asks.
+  const locale = await getLocale()
+  const currency = currencyForLocale(locale)
+
   const { data: org, error: orgErr } = await admin
     .from('organizations')
     .insert({
@@ -286,6 +296,7 @@ export async function verifySignupOtp(
       name: pending.hotel_name,
       trial_started_at: trialStart.toISOString(),
       trial_ends_at: trialEnd.toISOString(),
+      currency,
     })
     .select('id')
     .single()

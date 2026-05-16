@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requireOrgOwner } from '@/lib/auth/session'
+import type { Currency } from '@/lib/billing/currency'
 import { listMediaForPropertyCached } from '@/lib/r2/list'
 import { computeLibraryStats, formatBytes } from '@/lib/r2/stats'
 import { r2PublicUrl } from '@/lib/r2/client'
@@ -32,12 +33,14 @@ export default async function PropertiesPage() {
       ? resolvePriceSnapshotByLookupKey(
           stripeClient,
           HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
+          session.organization.currency as Currency,
         )
       : Promise.resolve(null),
     subscriptionRequired
       ? resolvePriceSnapshotByLookupKey(
           stripeClient,
           HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
+          session.organization.currency as Currency,
         )
       : Promise.resolve(null),
   ])

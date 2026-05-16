@@ -2,6 +2,7 @@ import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requireSession } from '@/lib/auth/session'
 import { BRAND } from '@/lib/brand'
+import type { Currency } from '@/lib/billing/currency'
 import {
   STORAGE_BLOCK_BYTES,
   computeStorageBlocks,
@@ -54,10 +55,12 @@ export default async function BillingPage() {
     resolvePriceSnapshotByLookupKey(
       stripeClient,
       HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
+      session.organization.currency as Currency,
     ),
     resolvePriceSnapshotByLookupKey(
       stripeClient,
       HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
+      session.organization.currency as Currency,
     ),
   ])
   const [stripeInvoices, billingDetails] = await Promise.all([

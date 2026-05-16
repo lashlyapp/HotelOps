@@ -24,6 +24,10 @@ export type Organization = {
   trial_reminder_t3_sent_at: string | null
   trial_expired_email_sent_at: string | null
   trial_converted_at: string | null
+  // ISO 4217 lowercase code. Set at signup based on the visitor's
+  // locale; immutable thereafter. See 20260515020000_org_currency.sql
+  // and src/lib/billing/currency.ts.
+  currency: string
 }
 
 export type Profile = {

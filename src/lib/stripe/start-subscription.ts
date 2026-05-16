@@ -1,5 +1,6 @@
 import 'server-only'
 import type Stripe from 'stripe'
+import { DEFAULT_CURRENCY, type Currency } from '@/lib/billing/currency'
 import { TRIAL_STORAGE_BYTES } from '@/lib/billing/trial'
 import { STORAGE_BLOCK_BYTES } from '@/lib/storage/usage'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -30,15 +31,19 @@ export async function resolveActiveOrgAddonPriceIds(
   const admin = createAdminClient()
   const { data: org } = await admin
     .from('organizations')
-    .select('signage_unlimited_addon_active, guest_experience_addon_active')
+    .select(
+      'signage_unlimited_addon_active, guest_experience_addon_active, currency',
+    )
     .eq('id', orgId)
     .maybeSingle()
   if (!org) return []
+  const currency: Currency = (org.currency as Currency | null) ?? DEFAULT_CURRENCY
   const out: Array<{ key: AddonKey; priceId: string }> = []
   if (org.signage_unlimited_addon_active) {
     const priceId = await resolvePriceIdByLookupKey(
       s,
       ADDONS.signage_unlimited.lookupKey,
+      currency,
     )
     if (priceId) out.push({ key: 'signage_unlimited', priceId })
   }
@@ -46,6 +51,7 @@ export async function resolveActiveOrgAddonPriceIds(
     const priceId = await resolvePriceIdByLookupKey(
       s,
       ADDONS.guest_experience.lookupKey,
+      currency,
     )
     if (priceId) out.push({ key: 'guest_experience', priceId })
   }
@@ -134,11 +140,12 @@ export async function startSubscriptionForProperty(
 
   const { data: org, error: orgErr } = await admin
     .from('organizations')
-    .select('id, name, slug')
+    .select('id, name, slug, currency')
     .eq('id', property.org_id)
     .maybeSingle()
   if (orgErr) throw orgErr
   if (!org) throw new Error(`No organization with id "${property.org_id}".`)
+  const currency: Currency = (org.currency as Currency | null) ?? DEFAULT_CURRENCY
 
   const existing = await existingSubscription(admin, propertyId)
   if (existing.subscriptionId && existing.customerId) {
@@ -156,6 +163,7 @@ export async function startSubscriptionForProperty(
     (await requirePriceIdByLookupKey(
       s,
       HOTELOPS_PRICE_LOOKUP_KEYS.perPropertyMonthly,
+      currency,
     ))
 
   // Charge the one-time setup fee on the property's FIRST subscription
@@ -163,7 +171,8 @@ export async function startSubscriptionForProperty(
   // billing_subscriptions history doesn't re-charge. To waive setup
   // fees entirely (e.g. as a promotion), deactivate the
   // hotelops_setup_fee Price in Stripe — resolvePriceIdByLookupKey
-  // returns null and the fee is silently omitted.
+  // returns null and the fee is silently omitted. Resolved per-currency
+  // for the org so EUR / GBP / MXN customers pay in their currency.
   let setupFeePriceId: string | null = null
   if (!opts.skipSetupFee) {
     const alreadySubscribed = await propertyHasBeenSubscribed(property.id)
@@ -173,6 +182,7 @@ export async function startSubscriptionForProperty(
         (await resolvePriceIdByLookupKey(
           s,
           HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
+          currency,
         ))
     }
   }
@@ -184,6 +194,7 @@ export async function startSubscriptionForProperty(
     org.id,
     org.name,
     ownerEmail,
+    currency,
   )
 
   // Stripe caps Subscription.description at 500 chars; property.name is a
@@ -319,6 +330,7 @@ async function ensureCustomer(
   orgId: string,
   orgName: string,
   ownerEmail: string | null,
+  currency: Currency,
 ): Promise<string> {
   // Source of truth lives on organizations.stripe_customer_id (unique).
   // This avoids the "abandoned checkout creates a second Customer on
@@ -330,11 +342,18 @@ async function ensureCustomer(
     .maybeSingle()
   if (org?.stripe_customer_id) return org.stripe_customer_id
 
+  // preferred_locales: an ISO-like hint Stripe uses for invoice
+  // formatting (currency placement, date format, decimal separator).
+  // We don't have a per-customer locale stored separately so we map
+  // off the currency: EUR → fr-FR (representative European format),
+  // GBP → en-GB, MXN → es-MX, AUD → en-AU. Imperfect but it's the
+  // difference between "$99.00" and "€99,00" on the customer's PDF.
   const customer = await s.customers.create(
     {
       name: orgName,
       email: ownerEmail ?? undefined,
       metadata: { org_id: orgId, app: 'hotelops' },
+      preferred_locales: [stripeLocaleForCurrency(currency)],
     },
     { idempotencyKey: `customer:${orgId}` },
   )
@@ -427,4 +446,29 @@ async function findOwnerEmail(
   if (!ownerId) return null
   const { data } = await admin.auth.admin.getUserById(ownerId)
   return data.user?.email ?? null
+}
+
+/**
+ * Map an org currency to a Stripe `preferred_locales` value. Stripe
+ * uses this purely for invoice / receipt formatting (currency
+ * placement, decimal separator); it does not affect what the
+ * Customer is billed. We pick representative locales rather than
+ * exposing per-customer locale storage because the visible
+ * difference is small and the operational cost of tracking
+ * per-customer language alongside currency isn't worth it yet.
+ */
+function stripeLocaleForCurrency(currency: Currency): string {
+  switch (currency) {
+    case 'eur':
+      return 'fr-FR'
+    case 'gbp':
+      return 'en-GB'
+    case 'mxn':
+      return 'es-MX'
+    case 'aud':
+      return 'en-AU'
+    case 'usd':
+    default:
+      return 'en-US'
+  }
 }
