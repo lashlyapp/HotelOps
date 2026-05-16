@@ -62,8 +62,8 @@ const DESTINATIONS: AsianDestination[] = [
   },
   {
     slug: 'hanoi',
-    imageSrc: UNSPLASH('1509923973826-2da6e36c1be4'),
-    imageAlt: 'Hanoi — Old Quarter street with hanging lanterns',
+    imageSrc: UNSPLASH('1599708153386-62bf3f035c78'),
+    imageAlt: 'Hanoi — Old Quarter rooftops at golden hour',
     lang: 'vi',
     city: 'Hà Nội',
     neighborhoods: 'Phố Cổ · Tây Hồ · Ba Đình',
