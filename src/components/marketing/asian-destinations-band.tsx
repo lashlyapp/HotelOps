@@ -62,8 +62,8 @@ const DESTINATIONS: AsianDestination[] = [
   },
   {
     slug: 'hanoi',
-    imageSrc: UNSPLASH('1509030450996-dd1a26dda07a'),
-    imageAlt: 'Hanoi — high-rise skyline at golden hour',
+    imageSrc: UNSPLASH('1643029891412-92f9a81a8c16'),
+    imageAlt: 'Ha Long Bay near Hanoi — boats among limestone karst islands',
     lang: 'vi',
     city: 'Hà Nội',
     neighborhoods: 'Phố Cổ · Tây Hồ · Ba Đình',
