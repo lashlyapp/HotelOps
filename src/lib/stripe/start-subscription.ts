@@ -140,12 +140,27 @@ export async function startSubscriptionForProperty(
 
   const { data: org, error: orgErr } = await admin
     .from('organizations')
-    .select('id, name, slug, currency')
+    .select('id, name, slug, currency, trial_ends_at')
     .eq('id', property.org_id)
     .maybeSingle()
   if (orgErr) throw orgErr
   if (!org) throw new Error(`No organization with id "${property.org_id}".`)
   const currency: Currency = (org.currency as Currency | null) ?? DEFAULT_CURRENCY
+
+  // Honor remaining trial days when subscribing during trial. Stripe
+  // accepts `trial_end` as a unix timestamp; the subscription enters
+  // status='trialing' until that date and the first invoice (including
+  // the setup fee added below via add_invoice_items) is generated then.
+  // If the trial already ended or never existed, bill immediately.
+  // Same logic for every property in a multi-property org: their org's
+  // trial window is the source of truth, not per-property.
+  const trialEndUnix = (() => {
+    if (!org.trial_ends_at) return null
+    const ts = new Date(org.trial_ends_at).getTime()
+    if (!Number.isFinite(ts)) return null
+    const seconds = Math.floor(ts / 1000)
+    return seconds > Math.floor(Date.now() / 1000) ? seconds : null
+  })()
 
   const existing = await existingSubscription(admin, propertyId)
   if (existing.subscriptionId && existing.customerId) {
@@ -239,6 +254,12 @@ export async function startSubscriptionForProperty(
     // customers (VAT / GST) but harmless for US customers in states
     // where we have no nexus.
     automatic_tax: { enabled: true },
+    // When the org is still inside its 7-day signup trial, defer the
+    // first invoice to trial_end. The customer's card (or grace
+    // invoice) is on file from this call onward, but no money moves
+    // until the trial window closes. Honors the marketing promise:
+    // "7 days free, then $100/property/month."
+    ...(trialEndUnix ? { trial_end: trialEndUnix } : {}),
   }
   if (setupFeePriceId) {
     params.add_invoice_items = [{ price: setupFeePriceId, quantity: 1 }]
@@ -255,11 +276,17 @@ export async function startSubscriptionForProperty(
   })
 
   // When charging automatically with a card on file the grace deadline
-  // is meaningless — Stripe attempts payment immediately and the gate
-  // is driven by subscription.status (active vs. past_due) from then on.
+  // is meaningless — Stripe attempts payment immediately (or at
+  // trial_end when set) and the gate is driven by subscription.status
+  // (active vs. past_due) from then on. For the send_invoice path,
+  // anchor the deadline on the invoice generation time: trial_end if
+  // we're deferring into a trial window, otherwise now.
   const dueAt = useChargeAutomatically
     ? null
-    : new Date(Date.now() + graceDays * 24 * 60 * 60 * 1000)
+    : new Date(
+        (trialEndUnix ? trialEndUnix * 1000 : Date.now()) +
+          graceDays * 24 * 60 * 60 * 1000,
+      )
   await syncToDb(admin, property.id, org.id, customerId, subscription, dueAt)
 
   // Trial → paid conversion: the signup flow created this property with
