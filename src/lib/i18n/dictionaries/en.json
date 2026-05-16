@@ -274,8 +274,8 @@
             "description": "No per-seat, no per-screen, no per-room math. One flat number per property, predictable forever."
           },
           {
-            "name": "Local-currency Billing",
-            "description": "Sign up in your language; get invoiced in USD, EUR, GBP, MXN, AUD, JPY, KRW, VND, or SGD. No FX conversion surprises."
+            "name": "USD Billing, Worldwide Cards",
+            "description": "One simple billing currency: US Dollars. Any major credit card works from anywhere — your bank handles the FX conversion. Stripe Tax adds the correct local VAT / GST per your country."
           },
           {
             "name": "No Contracts",
@@ -292,32 +292,32 @@
   "destinations": {
     "eyebrow": "Markets we're built for",
     "title": "Made for boutique hotels everywhere.",
-    "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Local-currency billing, signup in your language, the same back-office stack everywhere."
+    "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Sign up in your language, the same back-office stack everywhere. Billed in USD; any credit card works."
   },
   "asianDestinations": {
     "eyebrow": "Now serving APAC",
     "title": "Built for the boutique scene across Asia, too.",
-    "sub": "Tokyo, Seoul, Hanoi, Singapore — design hotels, ryokans, lifestyle properties, and small luxury groups. Sign up in your language, get billed in your currency, run the same operational stack we run for boutiques in Europe and the Americas.",
+    "sub": "Tokyo, Seoul, Hanoi, Singapore — design hotels, ryokans, lifestyle properties, and small luxury groups. Sign up in your language and run the same operational stack we run for boutiques in Europe and the Americas. Billed in USD; any credit card works.",
     "items": [
       {
         "city": "Tokyo",
         "country": "Japan",
-        "blurb": "Shibuya design hotels, Asakusa ryokans, Ginza lifestyle properties — JPY billing, 日本語 signup, the same maintenance + events + signage stack."
+        "blurb": "Shibuya design hotels, Asakusa ryokans, Ginza lifestyle properties — 日本語 signup, the same maintenance + events + signage stack."
       },
       {
         "city": "Seoul",
         "country": "South Korea",
-        "blurb": "Gangnam boutiques, Itaewon hostels, Jeju resort branches — KRW billing, 한국어 signup, one subscription per property."
+        "blurb": "Gangnam boutiques, Itaewon hostels, Jeju resort branches — 한국어 signup, one subscription per property."
       },
       {
         "city": "Hanoi",
         "country": "Vietnam",
-        "blurb": "Old Quarter boutiques, Hội An heritage hotels, Da Nang beach properties — VND billing, Tiếng Việt signup, flat per-property pricing that scales."
+        "blurb": "Old Quarter boutiques, Hội An heritage hotels, Da Nang beach properties — Tiếng Việt signup, flat per-property pricing that scales."
       },
       {
         "city": "Singapore",
         "country": "Singapore",
-        "blurb": "Chinatown shophouse hotels, Tanjong Pagar lifestyle properties, design groups across the island — SGD billing, English signup, no per-screen surprises."
+        "blurb": "Chinatown shophouse hotels, Tanjong Pagar lifestyle properties, design groups across the island — English signup, no per-screen surprises."
       }
     ]
   },

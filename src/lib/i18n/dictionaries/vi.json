@@ -274,8 +274,8 @@
             "description": "Không tính toán theo chỗ ngồi, theo màn hình, theo phòng. Một con số đồng nhất cho mỗi tài sản, có thể dự đoán mãi mãi."
           },
           {
-            "name": "Thanh Toán Tiền Tệ Địa Phương",
-            "description": "Đăng ký bằng ngôn ngữ của bạn; được lập hóa đơn bằng USD, EUR, GBP, MXN, AUD, JPY, KRW, VND, hoặc SGD. Không có bất ngờ chuyển đổi ngoại tệ."
+            "name": "Thanh Toán USD, Thẻ Toàn Cầu",
+            "description": "Một loại tiền tệ thanh toán duy nhất: đô la Mỹ. Bất kỳ thẻ tín dụng nào cũng dùng được từ bất cứ đâu — ngân hàng của bạn xử lý quy đổi tiền tệ. Stripe Tax tự động cộng thuế VAT / GST đúng theo quốc gia của bạn."
           },
           {
             "name": "Không Hợp Đồng",
@@ -292,32 +292,32 @@
   "destinations": {
     "eyebrow": "Thị trường chúng tôi được xây dựng cho",
     "title": "Được làm cho khách sạn boutique ở mọi nơi.",
-    "sub": "Lisbon, Barcelona, Paris, Mexico City — các khu vực nơi khách sạn độc lập và nhóm nhỏ thực sự vận hành. Thanh toán bằng tiền tệ địa phương, đăng ký bằng ngôn ngữ của bạn, cùng một ngăn xếp back-office ở mọi nơi."
+    "sub": "Lisbon, Barcelona, Paris, Mexico City — các khu vực nơi khách sạn độc lập và nhóm nhỏ thực sự vận hành. Đăng ký bằng ngôn ngữ của bạn, cùng một ngăn xếp back-office ở mọi nơi. Thanh toán bằng USD; bất kỳ thẻ tín dụng nào cũng dùng được."
   },
   "asianDestinations": {
     "eyebrow": "Nay phục vụ APAC",
     "title": "Cũng được xây dựng cho cảnh boutique khắp Châu Á.",
-    "sub": "Tokyo, Seoul, Hà Nội, Singapore — khách sạn thiết kế, ryokan, tài sản lifestyle và nhóm sang trọng nhỏ. Đăng ký bằng ngôn ngữ của bạn, được thanh toán bằng tiền tệ của bạn, vận hành cùng ngăn xếp mà chúng tôi vận hành cho các boutique ở Châu Âu và Châu Mỹ.",
+    "sub": "Tokyo, Seoul, Hà Nội, Singapore — khách sạn thiết kế, ryokan, tài sản lifestyle và nhóm sang trọng nhỏ. Đăng ký bằng ngôn ngữ của bạn và vận hành cùng ngăn xếp mà chúng tôi vận hành cho các boutique ở Châu Âu và Châu Mỹ. Thanh toán bằng USD; bất kỳ thẻ tín dụng nào cũng dùng được.",
     "items": [
       {
         "city": "Tokyo",
         "country": "Nhật Bản",
-        "blurb": "Khách sạn thiết kế Shibuya, ryokan Asakusa, tài sản lifestyle Ginza — thanh toán JPY, đăng ký 日本語, cùng ngăn xếp bảo trì + sự kiện + biển hiển thị."
+        "blurb": "Khách sạn thiết kế Shibuya, ryokan Asakusa, tài sản lifestyle Ginza — đăng ký 日本語, cùng ngăn xếp bảo trì + sự kiện + biển hiển thị."
       },
       {
         "city": "Seoul",
         "country": "Hàn Quốc",
-        "blurb": "Boutique Gangnam, hostel Itaewon, chi nhánh resort Jeju — thanh toán KRW, đăng ký 한국어, một gói thuê bao cho mỗi tài sản."
+        "blurb": "Boutique Gangnam, hostel Itaewon, chi nhánh resort Jeju — đăng ký 한국어, một gói thuê bao cho mỗi tài sản."
       },
       {
         "city": "Hà Nội",
         "country": "Việt Nam",
-        "blurb": "Boutique Phố Cổ, khách sạn di sản Hội An, tài sản bãi biển Đà Nẵng — thanh toán VND, đăng ký Tiếng Việt, giá đồng nhất cho mỗi tài sản có thể mở rộng."
+        "blurb": "Boutique Phố Cổ, khách sạn di sản Hội An, tài sản bãi biển Đà Nẵng — đăng ký Tiếng Việt, giá đồng nhất cho mỗi tài sản có thể mở rộng."
       },
       {
         "city": "Singapore",
         "country": "Singapore",
-        "blurb": "Khách sạn shophouse Chinatown, tài sản lifestyle Tanjong Pagar, các nhóm thiết kế khắp đảo — thanh toán SGD, đăng ký tiếng Anh, không có bất ngờ theo màn hình."
+        "blurb": "Khách sạn shophouse Chinatown, tài sản lifestyle Tanjong Pagar, các nhóm thiết kế khắp đảo — đăng ký tiếng Anh, không có bất ngờ theo màn hình."
       }
     ]
   },

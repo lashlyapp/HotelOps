@@ -9,10 +9,17 @@ import {
 } from './currency'
 
 describe('currencyForLocale', () => {
-  it('maps known locales to their default currency', () => {
-    assert.equal(currencyForLocale('en'), 'usd')
-    assert.equal(currencyForLocale('es'), 'eur')
-    assert.equal(currencyForLocale('fr'), 'eur')
+  // v1 strategy is USD-only: every supported locale maps to USD.
+  // See the comment block at the top of currency.ts for the rationale
+  // and the procedure for activating non-USD currencies later.
+  it('maps every supported locale to USD', () => {
+    for (const locale of ['en', 'es', 'fr', 'ja', 'ko', 'vi']) {
+      assert.equal(
+        currencyForLocale(locale),
+        'usd',
+        `expected ${locale} → usd (USD-only v1)`,
+      )
+    }
   })
 
   it('falls back to USD for unknown / missing locales', () => {
