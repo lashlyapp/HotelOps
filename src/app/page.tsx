@@ -224,6 +224,12 @@ export default async function HomePage() {
               {t.nav.pricing}
             </Link>
             <Link
+              href="/blog"
+              className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
+            >
+              {t.blog.navLabel}
+            </Link>
+            <Link
               href="/about"
               className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
             >

@@ -176,6 +176,16 @@
     "ctaSub": "Không cần thẻ tín dụng. Bao gồm 10 GB.",
     "ctaButton": "Bắt đầu dùng thử miễn phí"
   },
+  "blog": {
+    "navLabel": "Blog",
+    "eyebrow": "Ghi chú từ hậu trường",
+    "headline": "Tình hình vận hành khách sạn boutique.",
+    "sub": "Ghi chú về phân khúc bị bỏ qua trong công nghệ khách sạn — ngân sách vận hành thực tế, khoảng cách hiện đại hóa, kỳ vọng của khách năm 2026, và cách các cơ sở độc lập có thể bắt kịp mà không cần ngân sách doanh nghiệp.",
+    "relatedHeading": "Đọc tiếp",
+    "ctaHeadline": "Trải nghiệm trên chính cơ sở của bạn.",
+    "ctaSub": "Dùng thử miễn phí 7 ngày. Không cần thẻ tín dụng. Truy cập đầy đủ vào bảo trì, sự kiện, biển hiển thị và phần đón khách.",
+    "ctaButton": "Bắt đầu dùng thử miễn phí"
+  },
   "features": {
     "navLabel": "Tính năng",
     "eyebrow": "Tất cả bao gồm",

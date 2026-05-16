@@ -1,12 +1,14 @@
 import type { MetadataRoute } from 'next'
+import { posts } from '@/content/blog'
 import { BRAND } from '@/lib/brand'
 
 /**
  * Public sitemap. We only list the marketing surface — `/`, `/pricing`,
- * and the legal pages. App routes (/dashboard, /billing, etc.) are
- * authed-only and shouldn't be in search results; the public arrival
- * pages at /a/<slug> have `noindex,nofollow` set per-page and aren't
- * meant to be discovered via search either.
+ * `/blog` (plus each blog post), and the legal pages. App routes
+ * (/dashboard, /billing, etc.) are authed-only and shouldn't be in
+ * search results; the public arrival pages at /a/<slug> have
+ * `noindex,nofollow` set per-page and aren't meant to be discovered
+ * via search either.
  *
  * Next 16 picks this file up automatically at /sitemap.xml.
  */
@@ -26,6 +28,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.9,
     },
+    {
+      url: `${base}/blog`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    ...posts.map((p) => ({
+      url: `${base}/blog/${p.slug}`,
+      lastModified: new Date(p.publishedAt),
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    })),
     {
       url: `${base}/privacy`,
       lastModified: now,

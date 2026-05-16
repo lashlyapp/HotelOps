@@ -83,6 +83,14 @@ export async function Footer({ variant = 'public' }: { variant?: Variant }) {
             </li>
             <li>
               <Link
+                href="/blog"
+                className="text-muted hover:text-fg focus-ring rounded-sm"
+              >
+                {dict.blog.navLabel}
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/demo"
                 className="text-muted hover:text-fg focus-ring rounded-sm"
               >

@@ -66,6 +66,12 @@ export default async function DemoPage() {
               {dict.nav.pricing}
             </Link>
             <Link
+              href="/blog"
+              className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
+            >
+              {dict.blog.navLabel}
+            </Link>
+            <Link
               href="/about"
               className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
             >

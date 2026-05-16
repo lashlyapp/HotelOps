@@ -176,6 +176,16 @@
     "ctaSub": "Sans carte bancaire. 10 Go inclus.",
     "ctaButton": "Démarrer l'essai gratuit"
   },
+  "blog": {
+    "navLabel": "Blog",
+    "eyebrow": "Notes du back-office",
+    "headline": "L'état des opérations dans l'hôtellerie boutique.",
+    "sub": "Notes sur le segment mal servi de la tech hôtelière — budgets d'exploitation réalistes, le retard de modernisation, ce que les clients de 2026 attendent et comment les établissements indépendants peuvent rattraper sans budgets d'entreprise.",
+    "relatedHeading": "À lire ensuite",
+    "ctaHeadline": "Voyez-le sur votre propre établissement.",
+    "ctaSub": "Essai gratuit de 7 jours. Sans carte de crédit. Accès complet à la maintenance, aux événements, à l'affichage et à l'arrivée.",
+    "ctaButton": "Démarrer l'essai gratuit"
+  },
   "features": {
     "navLabel": "Fonctionnalités",
     "eyebrow": "Tout est inclus",
