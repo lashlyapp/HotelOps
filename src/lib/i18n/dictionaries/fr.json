@@ -177,6 +177,7 @@
     "ctaButton": "Démarrer l'essai gratuit"
   },
   "features": {
+    "navLabel": "Fonctionnalités",
     "eyebrow": "Tout est inclus",
     "title": "Conçu comme un back-office boutique fonctionne réellement.",
     "sub": "Toute la surface, en un seul endroit. Pas de tarification par module — chaque fonctionnalité ci-dessous est dans la base à 100$/propriété ou dans l'une des deux options à tarif forfaitaire. Rien ici ne coûte plus par siège, par écran ou par chambre.",

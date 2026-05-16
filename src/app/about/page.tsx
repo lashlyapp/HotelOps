@@ -43,6 +43,12 @@ export default async function AboutPage() {
             className="hidden items-center gap-1 text-sm sm:flex"
           >
             <Link
+              href="/features"
+              className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
+            >
+              {dict.features.navLabel}
+            </Link>
+            <Link
               href="/pricing"
               className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
             >
