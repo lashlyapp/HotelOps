@@ -490,6 +490,30 @@ function fallbackCaptions(p: {
         return ['#hotelrestaurant', '#chefspecial', '#foodie']
       case 'nearby_landmarks':
         return ['#travel', '#explorelocal', '#destination']
+      case 'room_reveal':
+        return ['#hotelroom', '#suitelife', '#interiordesign']
+      case 'amenity_spotlight':
+        return ['#hotelpool', '#spaday', '#luxuryhotel']
+      case 'bar_cocktail':
+        return ['#cocktailhour', '#hotelbar', '#mixology']
+      case 'morning_routine':
+        return ['#goodmorning', '#hotelbreakfast', '#slowmornings']
+      case 'evening_ritual':
+        return ['#goldenhour', '#hotelnightlife', '#sunsetviews']
+      case 'wellness':
+        return ['#wellnesstravel', '#hotelspa', '#selfcare']
+      case 'seasonal_decor':
+        return ['#seasonal', '#hotelvibes', '#travelinspiration']
+      case 'local_cuisine':
+        return ['#localfood', '#foodie', '#eatlocal']
+      case 'transit_arrival':
+        return ['#travelday', '#wanderlust', '#welcometravelers']
+      case 'nature_nearby':
+        return ['#naturelovers', '#outdoors', '#traveldeeper']
+      case 'culture_arts':
+        return ['#cultureandtravel', '#museumvisit', '#arttravel']
+      case 'local_attractions':
+        return ['#thingstodo', '#familytravel', '#weekendgetaway']
     }
   })()
 
@@ -564,6 +588,86 @@ function fallbackCaptions(p: {
             ? `Steps from ${name}: [add a landmark guests can walk to]. The kind of detail that makes a trip.`
             : `Step outside and you're already there. [Add a landmark or two within walking distance].`,
           `Stay at ${name} and see [add a landmark] without ever booking a cab. The neighborhood is the amenity.`,
+        ]
+      case 'room_reveal':
+        return [
+          `Room with a view (and a story).`,
+          `One of our favorite rooms at ${name} — [add what makes it special: the bathtub, the balcony, the corner light].`,
+          `Slow mornings start here. [Add one detail — the linens, the soaking tub, the view at sunrise]. Book the room that already feels like yours.`,
+        ]
+      case 'amenity_spotlight':
+        return [
+          `The space guests come back for.`,
+          `[Add the amenity — the pool, the rooftop, the library, the fireplace] is open early today.`,
+          `Some hotels have rooms with a pool. We have a pool with rooms around it. [Replace with your hero amenity — and add the hours].`,
+        ]
+      case 'bar_cocktail':
+        return [
+          `Cocktail hour, anytime.`,
+          `On the bar tonight: [add the drink name]. [Add one tasting note or a story behind it].`,
+          `Our bartender, [name], makes a [add cocktail name] that we'd come back for even if we didn't work here. Stop by after 5.`,
+        ]
+      case 'morning_routine':
+        return [
+          `Slow morning, strong coffee.`,
+          `What's on the breakfast spread at ${name} this morning: [add 2-3 items]. Quiet enough to read, generous enough to linger.`,
+          `Mornings here look like this. [Add a detail — fresh bread from a named local bakery, single-origin coffee, the light through the dining-room window]. Pull up a chair.`,
+        ]
+      case 'evening_ritual':
+        return [
+          `Golden hour, every day.`,
+          `By 7pm tonight at ${name}: [add the moment — candles lit, the bar open, the terrace cooling down]. Built for the slow second half of the day.`,
+          `Sunset from [add the rooftop / terrace / suite balcony]. Drinks at the bar after. The last good hour of the day, made for staying in.`,
+        ]
+      case 'wellness':
+        return [
+          `Permission to slow down.`,
+          `At the spa today: [add the treatment name]. [Add one line about what makes it ours].`,
+          `Some travel is sightseeing. Some is sleeping in, eating well, and walking out lighter than you arrived. We're built for the second kind.`,
+        ]
+      case 'seasonal_decor':
+        return [
+          `Looks like [add the season] at ${name}.`,
+          `[Add what's changed: the lobby tree, the porch pumpkins, the spring florals, the summer pool floats]. The kind of seasonal you'd photograph.`,
+          `Every few months we redress the lobby for the season. [Add what's in it now and why it matters this year]. Drop by for the look.`,
+        ]
+      case 'local_cuisine':
+        return [
+          city ? `Eat your way through ${city}.` : `Eat your way through the neighborhood.`,
+          city
+            ? `Our top 3 dishes within walking distance of ${name} in ${city}: [add 3 dishes from 3 different places]. We'll point.`
+            : `Three dishes within walking distance of ${name}: [add three]. Ask the front desk; we'll point.`,
+          `The hotel restaurant gets the headlines. The neighborhood food is the reason to wander. Ask us for our list. [Add a couple of favorites].`,
+        ]
+      case 'transit_arrival':
+        return [
+          `We'll be here when you land.`,
+          `[Add the airport / station name] to ${name}: [add minutes by car, or a transit tip]. The trip starts the moment you check in.`,
+          `Long flight? Short trip? Either way the room is ready, the bar opens at 4, and we'll hold your bags if you arrive early. See you soon.`,
+        ]
+      case 'nature_nearby':
+        return [
+          city ? `${city}, the outdoor edit.` : `Nature, within reach.`,
+          city
+            ? `Within 30 minutes of ${name}: [add a trail / beach / vineyard / park]. Built into the stay if you want it.`
+            : `[Add a beach / mountain / forest within 30 minutes]. We'll lend you maps. Or just point.`,
+          `Sometimes the best part of a hotel is what's beyond it. [Add a specific outdoors spot and why you love it]. Stay with us, then go outside.`,
+        ]
+      case 'culture_arts':
+        return [
+          city ? `${city}'s culture, this week.` : `Art near the front door.`,
+          city
+            ? `Open this week near ${name}: [add an exhibition / show / mural / festival]. Worth the walk.`
+            : `[Add one cultural thing happening this week — exhibition, show, festival]. Pair it with dinner here.`,
+          `Hotels make the best base camps. [Add what's on at a nearby museum / gallery / theater this week]. Concierge has the tickets.`,
+        ]
+      case 'local_attractions':
+        return [
+          city ? `Stay at ${name}, see ${city}.` : `Stay here, see everything.`,
+          city
+            ? `Three things to do within an easy outing from ${name}: [add three — one for families, one for couples, one for the curious traveler].`
+            : `Three things to do within easy reach of ${name}: [add three different kinds].`,
+          `Hotels are base camps. ${city ? `${city}` : 'This town'} is full of [add an attraction — the aquarium, the conservatory, the riverwalk]. We'll point you toward what fits your day.`,
         ]
     }
   })()

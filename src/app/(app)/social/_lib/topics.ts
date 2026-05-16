@@ -15,15 +15,29 @@ import type { Event } from '@/lib/supabase/types'
 // 'local_moment', which works off the calendar alone.
 
 export type TopicKey =
+  // Property-anchored — real hotel content, lean on the catalog.
   | 'event_today'
   | 'staff_spotlight'
   | 'behind_the_scenes'
-  | 'weather_mood'
-  | 'local_moment'
+  | 'catering_feature'
+  | 'room_reveal'
+  | 'amenity_spotlight'
+  | 'bar_cocktail'
+  | 'morning_routine'
+  | 'evening_ritual'
+  | 'wellness'
   | 'sustainability'
   | 'guest_moment'
-  | 'catering_feature'
+  | 'seasonal_decor'
+  // Destination-anchored — travel-vibe angles, lean on Unsplash.
+  | 'weather_mood'
+  | 'local_moment'
   | 'nearby_landmarks'
+  | 'local_attractions'
+  | 'local_cuisine'
+  | 'transit_arrival'
+  | 'nature_nearby'
+  | 'culture_arts'
 
 // How aggressively the topic leans on outside imagery (Unsplash).
 //
@@ -131,6 +145,55 @@ export const TOPICS: Record<TopicKey, Topic> = {
     preferredTags: ['food', 'plate', 'dining', 'menu', 'chef'],
     mediaPolicy: 'catalog_first',
   },
+  room_reveal: {
+    key: 'room_reveal',
+    label: 'Room reveal',
+    hint: 'Hero a beautifully made room. The single most-saved post category for hotels — guests imagine themselves in the frame.',
+    preferredTags: ['room', 'suite', 'bedroom', 'interior'],
+    mediaPolicy: 'catalog_first',
+  },
+  amenity_spotlight: {
+    key: 'amenity_spotlight',
+    label: 'Amenity spotlight',
+    hint: 'Pool, spa, terrace, library, fireplace — the spaces guests come back for. Pair with a photo that shows it empty and beautiful.',
+    preferredTags: ['pool', 'spa', 'terrace', 'lounge', 'fireplace', 'amenity', 'library', 'gym'],
+    mediaPolicy: 'catalog_first',
+  },
+  bar_cocktail: {
+    key: 'bar_cocktail',
+    label: 'Bar & cocktails',
+    hint: 'Lead with a signature drink. Strong saturation and shallow depth-of-field bar shots over-index on Instagram.',
+    preferredTags: ['bar', 'cocktail', 'drink', 'wine', 'lounge'],
+    mediaPolicy: 'catalog_first',
+  },
+  morning_routine: {
+    key: 'morning_routine',
+    label: 'Morning routine',
+    hint: 'Coffee, breakfast spread, sunrise on the terrace. The "good morning" post — easy save, easy share.',
+    preferredTags: ['coffee', 'breakfast', 'morning', 'sunrise', 'pastry'],
+    mediaPolicy: 'catalog_first',
+  },
+  evening_ritual: {
+    key: 'evening_ritual',
+    label: 'Evening ritual',
+    hint: 'Sunset, turn-down, candlelight, that-second-glass moments. Posts well around 5–7pm local.',
+    preferredTags: ['sunset', 'evening', 'candle', 'turndown', 'night'],
+    mediaPolicy: 'catalog_first',
+  },
+  wellness: {
+    key: 'wellness',
+    label: 'Wellness',
+    hint: 'Spa, yoga, gym, sauna, cold plunge — anything restorative. Strong fit for January and post-holiday seasons.',
+    preferredTags: ['spa', 'wellness', 'yoga', 'gym', 'sauna', 'massage'],
+    mediaPolicy: 'catalog_first',
+  },
+  seasonal_decor: {
+    key: 'seasonal_decor',
+    label: 'Seasonal moment',
+    hint: 'Holiday lights, fall foliage on the porch, summer pool floats, spring blossoms. Tie the property to the calendar.',
+    preferredTags: ['seasonal', 'holiday', 'autumn', 'spring', 'summer', 'winter', 'decor'],
+    mediaPolicy: 'catalog_first',
+  },
   nearby_landmarks: {
     key: 'nearby_landmarks',
     label: 'Nearby landmarks',
@@ -139,19 +202,76 @@ export const TOPICS: Record<TopicKey, Topic> = {
     preferredTags: [],
     mediaPolicy: 'external_only',
   },
+  local_attractions: {
+    key: 'local_attractions',
+    label: 'Local attractions',
+    hint: 'Things to do near the property — aquarium, zoo, theme park, kid-friendly outings, day trips. One of the biggest reasons people book in the first place, so position the hotel as a base camp.',
+    preferredTags: ['attraction', 'family', 'kids', 'tour'],
+    // Catalog rarely covers attractions; Unsplash does it well across
+    // every category. Falls back to catalog if the GM happens to have
+    // a partner-attraction photo on file.
+    mediaPolicy: 'external_first',
+  },
+  local_cuisine: {
+    key: 'local_cuisine',
+    label: 'Local cuisine',
+    hint: 'A "what to eat nearby" angle — the regional dish, the bakery on the corner, the market. Strong destination signal for in-feed travelers.',
+    preferredTags: ['food', 'local', 'market'],
+    // City-specific food photography rarely lives in a hotel's own
+    // catalog; Unsplash has thousands of beautiful local-cuisine shots.
+    mediaPolicy: 'external_first',
+  },
+  transit_arrival: {
+    key: 'transit_arrival',
+    label: 'Welcome travelers',
+    hint: 'Airport, train station, road-trip-arriving vibes. The "we\'ll be here when you land" angle — performs well as a Sunday-evening post.',
+    preferredTags: ['arrival', 'welcome'],
+    mediaPolicy: 'external_first',
+  },
+  nature_nearby: {
+    key: 'nature_nearby',
+    label: 'Nature nearby',
+    hint: 'Beach, mountains, forest, vineyards, parks — the outdoors within reach of the property. Catalogs rarely cover this; Unsplash does it well.',
+    preferredTags: ['nature', 'outdoor', 'view', 'mountain', 'beach', 'forest'],
+    mediaPolicy: 'external_first',
+  },
+  culture_arts: {
+    key: 'culture_arts',
+    label: 'Culture & arts',
+    hint: 'Museums, galleries, theaters, street murals — the things travelers came here to see. Positions the hotel as a base for culture, not just a place to sleep.',
+    preferredTags: ['art', 'museum', 'culture'],
+    mediaPolicy: 'external_first',
+  },
 }
 
+// Rotation order. The picker starts at a date-derived offset and walks
+// from there, biased away from anything posted in the last few days,
+// so the literal order matters less than the breadth — what we want is
+// for every property's two-week stretch of posts to feel varied. The
+// list deliberately interleaves property-anchored and destination-
+// anchored topics so the feed alternates "look at us" with "look at
+// where we are."
 const ORDER: TopicKey[] = [
   'event_today', // highest priority IF an event exists today
+  'morning_routine',
   'weather_mood',
+  'room_reveal',
+  'local_cuisine',
   'behind_the_scenes',
+  'amenity_spotlight',
+  'nature_nearby',
   'catering_feature',
+  'evening_ritual',
+  'culture_arts',
+  'bar_cocktail',
   'staff_spotlight',
   'local_moment',
+  'wellness',
+  'transit_arrival',
   'sustainability',
+  'seasonal_decor',
   'guest_moment',
-  // Lands roughly once per rotation — pairs with a destination photo
-  // from Unsplash when the property has a city set. See generator.ts.
+  'local_attractions',
   'nearby_landmarks',
 ]
 
@@ -289,9 +409,54 @@ export function buildUnsplashQuery(
     case 'guest_moment':
       return 'travel airport sunrise'
 
+    case 'room_reveal':
+      return 'boutique hotel room interior'
+
+    case 'amenity_spotlight':
+      return 'hotel pool spa terrace'
+
+    case 'bar_cocktail':
+      return 'hotel bar cocktail moody'
+
+    case 'morning_routine':
+      return 'hotel breakfast coffee morning'
+
+    case 'evening_ritual':
+      return 'hotel sunset terrace candlelight'
+
+    case 'wellness':
+      return 'hotel spa wellness sauna'
+
+    case 'seasonal_decor':
+      return 'hotel seasonal decor'
+
+    case 'local_cuisine':
+      if (city) return `${city} food`
+      return 'local cuisine market'
+
+    case 'transit_arrival':
+      return 'airport arrival travel'
+
+    case 'nature_nearby':
+      if (city) return `${city} nature outdoors`
+      return 'travel nature destination'
+
+    case 'culture_arts':
+      if (city) return `${city} museum art`
+      return 'travel museum gallery'
+
+    case 'local_attractions':
+      // Stay broad — the Unsplash query language for "attractions" is
+      // weak compared to specific terms. Bias toward "things to do"
+      // / day-trip imagery rather than monolithic landmarks.
+      if (city) return `${city} things to do`
+      return 'family travel attractions'
+
     case 'event_today':
-      // Don't substitute for the GM's own event photos — return null
-      // so the cron stays on the catalog for this topic.
+    case 'staff_spotlight':
+      // Don't substitute — these need authentic property content.
+      // (staff_spotlight is catalog_only, so this only matters when
+      // a future caller asks for a query anyway.)
       return null
   }
 }
