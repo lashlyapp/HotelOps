@@ -25,6 +25,34 @@ export type TopicKey =
   | 'catering_feature'
   | 'nearby_landmarks'
 
+// How aggressively the topic leans on outside imagery (Unsplash).
+//
+//   external_only:  always try Unsplash. Catalog is a last resort if
+//                   the upstream call fails. Use for topics where the
+//                   GM is talking about places they don't photograph
+//                   themselves (landmarks).
+//
+//   external_first: try Unsplash first; fall back to catalog when
+//                   Unsplash returns nothing or the key is unset.
+//                   Use for travel-vibe topics where stock photography
+//                   often beats whatever's in the catalog (local
+//                   moments, weather mood).
+//
+//   catalog_first:  try the catalog first; fall back to Unsplash on
+//                   the every-Nth-post cadence so a thin catalog
+//                   doesn't recycle the same images. Default for most
+//                   operational topics.
+//
+//   catalog_only:   never substitute. The post is about a real event
+//                   or specific people; a stock photo would feel
+//                   dishonest. If the catalog has no fitting image,
+//                   the post ships without one.
+export type TopicMediaPolicy =
+  | 'external_only'
+  | 'external_first'
+  | 'catalog_first'
+  | 'catalog_only'
+
 export type Topic = {
   key: TopicKey
   label: string
@@ -34,6 +62,7 @@ export type Topic = {
   // wins; if nothing tagged matches, the generator falls back to any
   // image, then to no image.
   preferredTags: string[]
+  mediaPolicy: TopicMediaPolicy
 }
 
 export const TOPICS: Record<TopicKey, Topic> = {
@@ -42,48 +71,65 @@ export const TOPICS: Record<TopicKey, Topic> = {
     label: "Today's event",
     hint: "Pulled from your Events module — there's a wedding, banquet, or catering happening today.",
     preferredTags: ['event', 'wedding', 'banquet', 'celebration', 'venue'],
+    // Real event photos only — a stock wedding shot here would feel dishonest.
+    mediaPolicy: 'catalog_only',
   },
   staff_spotlight: {
     key: 'staff_spotlight',
     label: 'Staff spotlight',
     hint: 'Shout out the people behind the experience. Swap the placeholder name for a real team member.',
     preferredTags: ['team', 'staff', 'people', 'service'],
+    // Has to be the actual team. Stock photography of "hospitality
+    // workers" would directly contradict the post copy.
+    mediaPolicy: 'catalog_only',
   },
   behind_the_scenes: {
     key: 'behind_the_scenes',
     label: 'Behind the scenes',
     hint: 'A peek at the craft — prep, plating, turn-down, floral. The kind of post followers save.',
     preferredTags: ['kitchen', 'prep', 'behind', 'detail', 'craft'],
+    mediaPolicy: 'catalog_first',
   },
   weather_mood: {
     key: 'weather_mood',
     label: 'Weather + vibe',
-    hint: "Today's weather paired with what the hotel feels like right now.",
+    hint: "Today's weather paired with what the hotel feels like right now. Often pulls a travel-style Unsplash shot since most catalogs don't have a fitting rainy-day photo.",
     preferredTags: ['view', 'lobby', 'pool', 'fireplace', 'outdoor'],
+    // Weather-matched stock often reads better than a sunny lobby
+    // photo on a rainy day. Property catalogs rarely cover every mood.
+    mediaPolicy: 'external_first',
   },
   local_moment: {
     key: 'local_moment',
     label: 'Local moment',
-    hint: 'A nudge tied to the day of the week or the season. Always works, never feels forced.',
+    hint: 'A nudge tied to the day of the week or the season — often paired with a city / neighborhood photo from Unsplash to bring the destination into the post.',
     preferredTags: ['neighborhood', 'local', 'town', 'view'],
+    // Street and town shots from the property's own catalog are rare;
+    // Unsplash usually has stronger destination photography.
+    mediaPolicy: 'external_first',
   },
   sustainability: {
     key: 'sustainability',
     label: 'Sustainability moment',
     hint: 'One small thing you do that guests rarely notice — and why it matters.',
     preferredTags: ['garden', 'farm', 'sustainability', 'local', 'eco'],
+    mediaPolicy: 'catalog_first',
   },
   guest_moment: {
     key: 'guest_moment',
     label: 'Guest moment',
-    hint: 'A generic "thank-you to our guests" angle — easiest to personalize before posting.',
+    hint: 'A generic "thank-you to our guests" angle, sometimes paired with a travel-vibe Unsplash photo (airport, road trip, sunrise) to widen the visual range.',
     preferredTags: ['guest', 'room', 'experience', 'welcome'],
+    // Mostly catalog (real welcome / room moments), occasionally
+    // bumped to a travel-vibe stock image via the cadence rule.
+    mediaPolicy: 'catalog_first',
   },
   catering_feature: {
     key: 'catering_feature',
     label: "Today's plate",
     hint: 'Lead with the food. Works for breakfast, lunch service, a tasting menu, or banquet prep.',
     preferredTags: ['food', 'plate', 'dining', 'menu', 'chef'],
+    mediaPolicy: 'catalog_first',
   },
   nearby_landmarks: {
     key: 'nearby_landmarks',
@@ -91,6 +137,7 @@ export const TOPICS: Record<TopicKey, Topic> = {
     hint: 'A travel-style nod to what guests can walk to. Image is sourced from Unsplash so you can post about places you don\'t have photos of.',
     // Unused — this topic always pulls from Unsplash, not the catalog.
     preferredTags: [],
+    mediaPolicy: 'external_only',
   },
 }
 

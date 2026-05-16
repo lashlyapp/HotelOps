@@ -213,24 +213,26 @@ function padHashtagSets(sets: string[][], length: number): string[][] {
 // ---------------------------------------------------------------------------
 
 /**
- * Pick the photo for today's post. Three paths in priority order:
+ * Pick the photo for today's post. Drives off `topic.mediaPolicy`:
  *
- *   1. nearby_landmarks topic → always try Unsplash with a location
- *      query. The whole point of this topic is to talk about places
- *      the GM doesn't have photos of.
+ *   external_only   — always try Unsplash. Used for topics like
+ *                     "nearby landmarks" where the catalog can't
+ *                     reasonably cover the angle.
  *
- *   2. every Nth post (currently every 5th, counted from the property's
- *      recent log) → try Unsplash with a topic-appropriate travel /
- *      hotel-vibe query. Widens the feed beyond whatever's in the
- *      catalog so a small media library doesn't recycle the same
- *      ten images.
+ *   external_first  — Unsplash first, catalog fallback. Used for
+ *                     travel-style topics (local moments, weather
+ *                     vibes) where stock photography typically beats
+ *                     whatever's in the catalog. The bulk of "more
+ *                     topics use Unsplash" lives here.
  *
- *   3. otherwise → media catalog pick, by tag matching the topic.
+ *   catalog_first   — catalog first, Unsplash fallback only when the
+ *                     5th-post cadence hits or the catalog is empty
+ *                     for this topic.
  *
- * Any failure in 1 or 2 (no Unsplash key, query had no results, network
- * blip) cleanly falls through to 3. If the catalog is also empty, we
- * return null and the GM gets a caption-only suggestion they can pair
- * with their own image manually.
+ *   catalog_only    — never substitute. Real events, real staff.
+ *
+ * Any Unsplash failure (no key, no results, network blip) cleanly
+ * falls through to the catalog, then to no image at all.
  */
 async function pickPhoto(args: {
   topic: Topic
@@ -252,20 +254,29 @@ async function pickPhoto(args: {
     return file ? { source: 'catalog', file } : null
   }
 
-  // 1. Landmarks topic — Unsplash is the whole point.
-  if (args.topic.key === 'nearby_landmarks') {
-    return (await tryUnsplash()) ?? pickCatalog()
-  }
+  switch (args.topic.mediaPolicy) {
+    case 'external_only':
+      return (await tryUnsplash()) ?? pickCatalog()
 
-  // 2. Cadence: every Nth post uses Unsplash regardless of topic. We
-  //    count posts where external_media_url is non-null in the
-  //    property's recent history; if four catalog-sourced posts have
-  //    landed in a row, the fifth goes external.
-  if (shouldUseUnsplashByCadence(args.recent)) {
-    return (await tryUnsplash()) ?? pickCatalog()
-  }
+    case 'external_first':
+      return (await tryUnsplash()) ?? pickCatalog()
 
-  return pickCatalog()
+    case 'catalog_first': {
+      // Cadence: if the last few posts all came from the catalog,
+      // bump this one to Unsplash. Keeps a thin catalog from cycling
+      // the same ten images day after day.
+      if (shouldUseUnsplashByCadence(args.recent)) {
+        return (await tryUnsplash()) ?? pickCatalog()
+      }
+      // Otherwise catalog-first, with Unsplash as a last-resort
+      // fallback when the catalog has nothing fitting (small media
+      // library, brand-new property).
+      return pickCatalog() ?? (await tryUnsplash())
+    }
+
+    case 'catalog_only':
+      return pickCatalog()
+  }
 }
 
 const UNSPLASH_CADENCE = 5
