@@ -1,23 +1,25 @@
--- "Today's post" generator: helps the GM publish to their hotel's
--- social channels without us touching any social platform API. The
--- app suggests a topic + caption + image; the GM copies/downloads
--- and posts manually from their phone.
+-- "Today's post" generator (Social Studio add-on): the system drafts
+-- one post per property per day so the GM never has to think about
+-- what to publish. Generation runs from a Vercel cron — there is no
+-- user-initiated regeneration, which keeps per-property AI cost
+-- bounded ("use it or lose it"). The OpenAI key lives in a single
+-- platform-wide env var; tenants do not provide one.
 --
--- Two tables:
+-- Three tables:
 --
---   property_social_settings — one row per property. Holds the brand
---     voice, an (optionally) AES-encrypted OpenAI API key, signature
---     hashtags, and the public-facing social handles we mention in
---     captions. Encryption reuses SIGNUP_ENCRYPTION_KEY via
---     src/lib/crypto/aes.ts — same envelope format, different
---     payload. If the key is rotated, GMs re-enter their OpenAI key
---     (same blast-radius story as in-flight signups).
+--   property_social_settings — one row per property. Brand voice,
+--     signature hashtags appended to every caption, and the public
+--     social handle the generator references when natural.
 --
---   social_post_log — append-only history of generated posts. Drives
---     the "don't repeat yesterday's topic" rotation in
---     src/app/(app)/social/_lib/topics.ts and gives the GM a "what
---     have I posted recently" timeline. We keep the actual caption
---     text so the GM can re-copy a past post without regenerating.
+--   social_post_log — one row per (property, post_date). The cron
+--     upserts via that uniqueness, so a retry within the same day
+--     never produces a second post. Stores all three caption
+--     variants + parallel AI-suggested hashtag sets + a media key,
+--     so the page is a pure reader.
+--
+--   social_caption_feedback — thumbs-up/down votes folded back into
+--     the next day's prompt as positive / negative few-shot
+--     examples.
 
 -- ---------------------------------------------------------------------------
 -- 1. Per-property settings
@@ -28,10 +30,6 @@ create table public.property_social_settings (
   -- One of: warm, luxury, boutique, family, casual, playful. Kept as
   -- text rather than an enum so we can add voices without a migration.
   brand_voice text not null default 'warm',
-  -- AES-256-GCM(IV || ciphertext || authTag), base64. Null when the GM
-  -- has not configured a key — caption generation falls back to a
-  -- template path in that case.
-  openai_api_key_enc text,
   -- Free-form: "#boutiquehotel #santabarbara". Appended to every
   -- generated caption when set.
   signature_hashtags text,
@@ -63,22 +61,24 @@ create policy property_social_settings_select_org
 -- policies needed for v1.
 
 comment on table public.property_social_settings is
-  'Per-property configuration for the social post generator (brand voice, encrypted OpenAI key, hashtags). One row per property; missing row = defaults.';
-comment on column public.property_social_settings.openai_api_key_enc is
-  'AES-256-GCM ciphertext (IV||ct||tag, base64) of the GM-provided OpenAI key. Encrypted under SIGNUP_ENCRYPTION_KEY via src/lib/crypto/aes.ts. Null means "no key configured — use template fallback".';
+  'Per-property configuration for the social post generator: brand voice, signature hashtags, social handle. One row per property; missing row = defaults.';
 
 -- ---------------------------------------------------------------------------
--- 2. Post history
+-- 2. Generated posts (one per property per day)
 -- ---------------------------------------------------------------------------
 create table public.social_post_log (
   id uuid primary key default gen_random_uuid(),
   property_id uuid not null references public.properties(id) on delete cascade,
   org_id uuid not null references public.organizations(id) on delete cascade,
+  -- The day this post was generated for. The cron upserts on
+  -- (property_id, post_date) so a retry within the same UTC day
+  -- never produces a second post, and the page query is a single
+  -- index lookup.
+  post_date date not null,
   -- The topic key the rotation picked (e.g. 'staff_spotlight', 'weather_mood').
   -- Used to bias future picks away from recent topics.
   topic text not null,
-  -- The caption the GM saw. We log all variants the generator returned
-  -- as a JSON array so a re-copy works without regeneration.
+  -- The three caption variants the generator produced.
   captions jsonb not null,
   -- Parallel array (same length as `captions`) of AI-suggested
   -- hashtag sets per variant. The GM-configured "signature hashtags"
@@ -88,14 +88,16 @@ create table public.social_post_log (
   hashtag_sets jsonb not null default '[]'::jsonb,
   -- R2 key of the suggested image, if any.
   media_key text,
-  -- Stamped when the GM hits "copy" or "email me" — purely
-  -- informational; the row exists from generation time.
+  -- Stamped when the GM hits "Mark as posted". Purely informational;
+  -- the row exists from generation time. Drives the "you've already
+  -- posted today" indicator and a campaign-style adoption metric.
   marked_used_at timestamptz,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  unique (property_id, post_date)
 );
 
 create index social_post_log_property_idx
-  on public.social_post_log(property_id, created_at desc);
+  on public.social_post_log(property_id, post_date desc);
 
 alter table public.social_post_log enable row level security;
 
@@ -112,7 +114,7 @@ create policy social_post_log_select_org
   );
 
 comment on table public.social_post_log is
-  'Append-only history of generated social posts. Drives topic rotation (avoid recent topics) and a "recent posts" timeline for the GM.';
+  'One row per property per day, written by the /api/cron/social-daily-posts job. Drives topic rotation (avoid the last few days) and the "recent posts" timeline.';
 
 -- ---------------------------------------------------------------------------
 -- 3. Caption feedback (RLHF-lite for the brand voice)

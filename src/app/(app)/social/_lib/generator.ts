@@ -1,5 +1,4 @@
 import 'server-only'
-import { decryptString } from '@/lib/crypto/aes'
 import type { MediaFile } from '@/lib/r2/list'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type {
@@ -42,21 +41,18 @@ export type GeneratedPost = {
 export type GenerateInput = {
   property: Property
   orgName: string
-  // Date string YYYY-MM-DD in the property-ish day. We don't bother
-  // computing a TZ-correct boundary for v1 — the caller passes
-  // new Date().toISOString().slice(0, 10).
+  // Date string YYYY-MM-DD. The cron passes today's UTC date; topic
+  // rotation is keyed on this so a same-day retry produces an
+  // identical pick (idempotent under the unique constraint on
+  // (property_id, post_date)).
   today: string
-  // Attempt counter so "Regenerate" actually returns something
-  // different. The seed feeds both topic rotation (when no events
-  // override it) and media picking.
-  attempt: number
 }
 
 /**
  * Build today's post: pick a topic, find a photo, call OpenAI (or fall
- * back to a template), and return the bundle the UI renders. Caller is
- * responsible for persisting to social_post_log if it wants the choice
- * remembered for future rotation decisions.
+ * back to a template), and return the bundle the cron persists to
+ * `social_post_log`. The `/social` page reads that row, it does NOT
+ * call this function — generation is system-driven, once per day.
  */
 export async function generatePost(input: GenerateInput): Promise<GeneratedPost> {
   const admin = createAdminClient()
@@ -106,7 +102,7 @@ export async function generatePost(input: GenerateInput): Promise<GeneratedPost>
     .filter((t): t is TopicKey => t in TOPICS)
 
   const topic = pickTopic({
-    today: `${input.today}#${input.attempt}`,
+    today: input.today,
     propertyId: input.property.id,
     todaysEvents: (events as Event[]) ?? [],
     recentMedia: media,
@@ -116,7 +112,7 @@ export async function generatePost(input: GenerateInput): Promise<GeneratedPost>
   const photo = pickMediaForTopic(
     topic,
     media,
-    `${input.today}#${input.attempt}#${input.property.id}`,
+    `${input.today}#${input.property.id}`,
   )
 
   const voice = (typedSettings?.brand_voice ?? 'warm') as BrandVoice
@@ -132,7 +128,7 @@ export async function generatePost(input: GenerateInput): Promise<GeneratedPost>
   let captions: string[] = []
   let hashtagSets: string[][] = []
   let usedAi = false
-  const apiKey = decryptApiKey(typedSettings?.openai_api_key_enc ?? null)
+  const apiKey = process.env.OPENAI_API_KEY?.trim() || null
   if (apiKey) {
     try {
       const messages = buildPrompt({
@@ -476,17 +472,3 @@ function moodForWeather(c: WeatherSummary['condition']): string {
   }
 }
 
-// ---------------------------------------------------------------------------
-// API key decryption — wraps decryptString so a corrupted blob doesn't
-// take down the whole render. We treat decryption failures as "no key
-// configured" and fall back to templates.
-// ---------------------------------------------------------------------------
-export function decryptApiKey(enc: string | null): string | null {
-  if (!enc) return null
-  try {
-    return decryptString(enc)
-  } catch (err) {
-    console.warn('[social] OpenAI key decrypt failed; falling back to templates', err)
-    return null
-  }
-}

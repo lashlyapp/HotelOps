@@ -20,6 +20,12 @@ export const ADDONS = {
     itemIdColumn: 'guest_experience_item_id' as const,
     label: 'Guest Experience',
   },
+  social_studio: {
+    lookupKey: HOTELOPS_PRICE_LOOKUP_KEYS.socialStudioMonthly,
+    activeColumn: 'social_studio_active' as const,
+    itemIdColumn: 'social_studio_item_id' as const,
+    label: 'Social Studio',
+  },
 } as const
 
 export type AddonKey = keyof typeof ADDONS
@@ -35,6 +41,7 @@ export function extractAddonState(
   const result: Record<AddonKey, { active: boolean; itemId: string | null }> = {
     signage_unlimited: { active: false, itemId: null },
     guest_experience: { active: false, itemId: null },
+    social_studio: { active: false, itemId: null },
   }
   for (const item of subscription.items.data) {
     const lookupKey = item.price?.lookup_key

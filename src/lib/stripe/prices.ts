@@ -35,6 +35,9 @@ export const HOTELOPS_PRICE_LOOKUP_KEYS = {
   // Add-on: arrival pages + printable QR + guest issue intake.
   // $39 / property / month. See docs/pricing.md.
   guestExperienceMonthly: 'hotelops_guest_experience_monthly',
+  // Add-on: Social Studio — one AI-drafted daily post per property.
+  // $19 / property / month. See docs/pricing.md.
+  socialStudioMonthly: 'hotelops_social_studio_monthly',
   // Per-property storage overage. Quantity = number of 25 GB blocks
   // beyond the base 25 GB quota. $5 / block / property / month.
   storageBlock25GbMonthly: 'hotelops_storage_block_25gb_monthly',

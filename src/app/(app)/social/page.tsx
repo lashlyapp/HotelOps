@@ -2,14 +2,22 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Card, CardBody } from '@/components/ui/card'
 import { requireSession } from '@/lib/auth/session'
+import { hasAddon } from '@/lib/billing/has-addon'
+import { r2PublicUrl } from '@/lib/r2/client'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { cn } from '@/lib/utils/cn'
-import { generatePost } from './_lib/generator'
+import { PaywallPreview } from './_components/paywall-preview'
 import { PostCard } from './_components/post-card'
 import { RecentTimeline } from './_components/recent-timeline'
-import type { SocialCaptionFeedback, SocialPostLog } from '@/lib/supabase/types'
+import { SAMPLE_POST } from './_lib/sample-post'
+import { TOPICS, type TopicKey } from './_lib/topics'
+import type {
+  PropertySocialSettings,
+  SocialCaptionFeedback,
+  SocialPostLog,
+} from '@/lib/supabase/types'
 
-type SearchParams = Promise<{ property?: string; attempt?: string }>
+type SearchParams = Promise<{ property?: string }>
 
 export default async function SocialPage({
   searchParams,
@@ -17,7 +25,7 @@ export default async function SocialPage({
   searchParams: SearchParams
 }) {
   const session = await requireSession()
-  const { property: propertySlug, attempt: attemptRaw } = await searchParams
+  const { property: propertySlug } = await searchParams
 
   if (session.properties.length === 0) {
     return (
@@ -38,31 +46,68 @@ export default async function SocialPage({
     redirect(`/social?property=${activeProperty.slug}`)
   }
 
-  const attempt = Math.max(0, Math.min(99, Number.parseInt(attemptRaw ?? '0', 10) || 0))
+  // Paywall path: org doesn't have the add-on. Show the static sample
+  // post so the operator sees exactly what they're buying, plus a
+  // direct CTA to Billing where they can enable it.
+  if (!hasAddon(session.organization, 'social_studio')) {
+    return (
+      <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
+        <PageHeader
+          title="Social Studio"
+          subtitle="One AI-drafted post per property, every morning — captions, hashtags, and a photo pick from your media library. Built for GMs without a marketing team."
+        />
+        <PropertyTabsBar
+          properties={session.properties.map((p) => ({
+            slug: p.slug,
+            name: p.name,
+            active: p.slug === activeProperty.slug,
+          }))}
+        />
+        <PaywallPreview
+          sample={SAMPLE_POST}
+          propertyName={activeProperty.name}
+          propertyCount={session.properties.length}
+        />
+      </div>
+    )
+  }
 
-  // Use UTC date — we don't store property timezones yet, and the
-  // rotation only needs to advance once a day. Good enough for v1.
+  // Add-on active — read today's generated post and recent history.
   const today = new Date().toISOString().slice(0, 10)
+  const admin = createAdminClient()
 
-  const [post, history, feedbackByCaption] = await Promise.all([
-    generatePost({
-      property: activeProperty,
-      orgName: session.organization.name,
-      today,
-      attempt,
-    }),
+  const [
+    { data: todayRow },
+    { data: settings },
+    historyRows,
+    feedbackByCaption,
+  ] = await Promise.all([
+    admin
+      .from('social_post_log')
+      .select('*')
+      .eq('property_id', activeProperty.id)
+      .eq('post_date', today)
+      .maybeSingle(),
+    admin
+      .from('property_social_settings')
+      .select('*')
+      .eq('property_id', activeProperty.id)
+      .maybeSingle(),
     loadRecentPosts(activeProperty.id),
     loadFeedbackForCaptions(activeProperty.id),
   ])
+
+  const typedSettings = (settings as PropertySocialSettings | null) ?? null
+  const todayPost = (todayRow as SocialPostLog | null) ?? null
 
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <PageHeader
         title="Social posts"
-        subtitle="A post a day, ready to publish. Pick a caption, grab the image, paste it into your hotel's social — we don't touch the platforms ourselves."
+        subtitle="A post a day, ready to publish. Pick a caption, grab the image, paste it into your hotel's social — we never touch the platforms ourselves."
       />
 
-      <PropertyTabs
+      <PropertyTabsBar
         properties={session.properties.map((p) => ({
           slug: p.slug,
           name: p.name,
@@ -70,55 +115,54 @@ export default async function SocialPage({
         }))}
       />
 
-      {!post.settings || !post.settings.openai_api_key_enc ? (
+      {todayPost ? (
+        <PostCard
+          propertyId={activeProperty.id}
+          propertyName={activeProperty.name}
+          postDate={todayPost.post_date}
+          topicKey={todayPost.topic}
+          topicLabel={TOPICS[todayPost.topic as TopicKey]?.label ?? todayPost.topic}
+          topicHint={TOPICS[todayPost.topic as TopicKey]?.hint ?? ''}
+          captions={todayPost.captions}
+          hashtagSets={todayPost.hashtag_sets ?? []}
+          media={
+            todayPost.media_key
+              ? {
+                  key: todayPost.media_key,
+                  url: r2PublicUrl(todayPost.media_key),
+                  displayName: deriveDisplayName(todayPost.media_key),
+                }
+              : null
+          }
+          markedUsed={Boolean(todayPost.marked_used_at)}
+          signatureHashtags={typedSettings?.signature_hashtags ?? null}
+          socialHandle={typedSettings?.social_handles ?? null}
+          feedbackByCaption={feedbackByCaption}
+        />
+      ) : (
         <Card>
-          <CardBody className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-fg">
-                {post.usedAi ? 'AI is on for this property' : 'Add your OpenAI key for richer captions'}
-              </h3>
-              <p className="mt-1 text-sm text-muted">
-                Without a key, the app uses templated captions with placeholders. With a key, captions adapt to your brand voice and learn from your thumbs-up/down feedback.
-              </p>
-            </div>
-            <Link
-              href={`/social/settings?property=${activeProperty.slug}`}
-              className="focus-ring inline-flex h-9 shrink-0 items-center justify-center rounded-md border border-border-default bg-surface px-4 text-sm font-medium text-fg hover:bg-surface-muted"
-            >
-              Open settings
-            </Link>
+          <CardBody className="space-y-2">
+            <h3 className="text-sm font-semibold text-fg">
+              Today&apos;s post is on the way
+            </h3>
+            <p className="text-sm text-muted">
+              Social Studio drafts one post per property every morning. Check back shortly — or come back tomorrow at 6am local for fresh material.
+            </p>
+            <p className="text-xs text-subtle">
+              Tip: while you wait, set your{' '}
+              <Link
+                href={`/social/settings?property=${activeProperty.slug}`}
+                className="focus-ring text-fg underline-offset-2 hover:underline"
+              >
+                brand voice and signature hashtags
+              </Link>{' '}
+              so tomorrow&apos;s draft already sounds like you.
+            </p>
           </CardBody>
         </Card>
-      ) : null}
+      )}
 
-      <PostCard
-        propertyId={activeProperty.id}
-        propertyName={activeProperty.name}
-        propertySlug={activeProperty.slug}
-        today={today}
-        attempt={attempt}
-        topicKey={post.topic.key}
-        topicLabel={post.topic.label}
-        topicHint={post.topic.hint}
-        captions={post.captions}
-        hashtagSets={post.hashtagSets}
-        media={
-          post.media
-            ? {
-                key: post.media.key,
-                url: post.media.url,
-                displayName: post.media.displayName,
-              }
-            : null
-        }
-        weatherPhrase={post.weather.phrase}
-        usedAi={post.usedAi}
-        signatureHashtags={post.settings?.signature_hashtags ?? null}
-        socialHandle={post.settings?.social_handles ?? null}
-        feedbackByCaption={feedbackByCaption}
-      />
-
-      <RecentTimeline rows={history} />
+      <RecentTimeline rows={historyRows} />
     </div>
   )
 }
@@ -129,11 +173,12 @@ async function loadRecentPosts(propertyId: string): Promise<SocialPostLog[]> {
     .from('social_post_log')
     .select('*')
     .eq('property_id', propertyId)
-    .order('created_at', { ascending: false })
+    .order('post_date', { ascending: false })
     .limit(7)
   return ((data as SocialPostLog[] | null) ?? []).map((row) => ({
     ...row,
     captions: Array.isArray(row.captions) ? row.captions : [],
+    hashtag_sets: Array.isArray(row.hashtag_sets) ? row.hashtag_sets : [],
   }))
 }
 
@@ -155,7 +200,15 @@ async function loadFeedbackForCaptions(
   return map
 }
 
-function PropertyTabs({
+function deriveDisplayName(key: string): string {
+  const last = key.split('/').pop() ?? key
+  return last
+    .replace(/\.[^.]+$/, '')
+    .replace(/[-_]+/g, ' ')
+    .trim()
+}
+
+function PropertyTabsBar({
   properties,
 }: {
   properties: { slug: string; name: string; active: boolean }[]

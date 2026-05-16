@@ -93,7 +93,6 @@ export default async function SocialSettingsPage({
               brand_voice: typed?.brand_voice ?? 'warm',
               signature_hashtags: typed?.signature_hashtags ?? '',
               social_handles: typed?.social_handles ?? '',
-              hasOpenAiKey: Boolean(typed?.openai_api_key_enc),
             }}
           />
         </CardBody>

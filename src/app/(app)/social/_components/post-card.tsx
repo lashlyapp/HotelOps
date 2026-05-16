@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useActionState, useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody } from '@/components/ui/card'
@@ -24,9 +23,7 @@ type Media = {
 export type PostCardProps = {
   propertyId: string
   propertyName: string
-  propertySlug: string
-  today: string
-  attempt: number
+  postDate: string
   topicKey: string
   topicLabel: string
   topicHint: string
@@ -34,8 +31,7 @@ export type PostCardProps = {
   // Parallel to captions: AI-suggested hashtags per variant.
   hashtagSets: string[][]
   media: Media | null
-  weatherPhrase: string
-  usedAi: boolean
+  markedUsed: boolean
   signatureHashtags: string | null
   socialHandle: string | null
   // caption text → 'like' | 'dislike'. Server-rendered so the buttons
@@ -57,14 +53,14 @@ export function PostCard(props: PostCardProps) {
             </h2>
             <p className="mt-1 text-sm text-muted max-w-xl">{props.topicHint}</p>
             <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-subtle">
-              <span>{props.today}</span>
-              {props.weatherPhrase ? <span>· {props.weatherPhrase}</span> : null}
-              <span>
-                · {props.usedAi ? 'Drafted by AI' : 'Template draft (add your OpenAI key for AI)'}
-              </span>
+              <span>{props.postDate}</span>
+              {props.markedUsed ? (
+                <span className="inline-flex items-center rounded-sm bg-success-bg px-1.5 py-0.5 text-[10px] font-medium text-success-fg">
+                  Posted
+                </span>
+              ) : null}
             </p>
           </div>
-          <RegenerateLink slug={props.propertySlug} attempt={props.attempt} />
         </div>
 
         <PlatformPreview
@@ -96,28 +92,15 @@ export function PostCard(props: PostCardProps) {
         <PostActions
           propertyId={props.propertyId}
           propertyName={props.propertyName}
+          postDate={props.postDate}
           captions={props.captions}
           hashtagSets={props.hashtagSets}
-          topicKey={props.topicKey}
-          mediaKey={props.media?.key ?? null}
           mediaUrl={props.media?.url ?? null}
           signatureHashtags={props.signatureHashtags}
+          alreadyMarked={props.markedUsed}
         />
       </CardBody>
     </Card>
-  )
-}
-
-function RegenerateLink({ slug, attempt }: { slug: string; attempt: number }) {
-  const next = attempt + 1
-  return (
-    <Link
-      href={`/social?property=${slug}&attempt=${next}`}
-      className="focus-ring inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border-default bg-surface px-3 text-sm font-medium text-fg hover:bg-surface-muted"
-    >
-      <ArrowPath />
-      Regenerate
-    </Link>
   )
 }
 
@@ -305,28 +288,28 @@ function VoteButtons({
 function PostActions({
   propertyId,
   propertyName,
+  postDate,
   captions,
   hashtagSets,
-  topicKey,
-  mediaKey,
   mediaUrl,
   signatureHashtags,
+  alreadyMarked,
 }: {
   propertyId: string
   propertyName: string
+  postDate: string
   captions: string[]
   hashtagSets: string[][]
-  topicKey: string
-  mediaKey: string | null
   mediaUrl: string | null
   signatureHashtags: string | null
+  alreadyMarked: boolean
 }) {
   const [emailState, emailAction, emailPending] = useActionState(
     emailPostAction,
     initialResult,
   )
   const [markedPending, startMark] = useTransition()
-  const [marked, setMarked] = useState(false)
+  const [marked, setMarked] = useState(alreadyMarked)
 
   // We email the longest caption — it's the one most likely to be
   // posted, and the GM can trim from there. Pair it with that
@@ -343,10 +326,7 @@ function PostActions({
     startMark(async () => {
       const fd = new FormData()
       fd.set('property_id', propertyId)
-      fd.set('topic', topicKey)
-      fd.set('captions', JSON.stringify(captions))
-      fd.set('hashtag_sets', JSON.stringify(hashtagSets))
-      if (mediaKey) fd.set('media_key', mediaKey)
+      fd.set('post_date', postDate)
       await markPostUsedAction(fd)
     })
   }
@@ -447,16 +427,3 @@ function Check() {
   )
 }
 
-function ArrowPath() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M3 10a7 7 0 0 1 12.4-4.4M17 4v3h-3M17 10a7 7 0 0 1-12.4 4.4M3 16v-3h3"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,13 +24,11 @@ export type SettingsFormProps = {
     brand_voice: BrandVoice
     signature_hashtags: string
     social_handles: string
-    hasOpenAiKey: boolean
   }
 }
 
 export function SettingsForm({ propertyId, initial: init }: SettingsFormProps) {
   const [state, action, pending] = useActionState(saveSocialSettingsAction, initial)
-  const [showKeyInput, setShowKeyInput] = useState(!init.hasOpenAiKey)
 
   return (
     <form action={action} className="space-y-5">
@@ -87,52 +85,6 @@ export function SettingsForm({ propertyId, initial: init }: SettingsFormProps) {
         />
         <p className="text-xs text-subtle">
           Mentioned in captions when natural — handy for cross-posting from a regional account.
-        </p>
-      </div>
-
-      <div className="space-y-1.5 border-t border-border-subtle pt-5">
-        <Label htmlFor="openai_api_key">OpenAI API key</Label>
-        {init.hasOpenAiKey && !showKeyInput ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-md border border-border-subtle bg-surface-muted px-3 py-2 text-sm">
-            <span className="text-muted">A key is on file (hidden).</span>
-            <button
-              type="button"
-              className="focus-ring rounded-sm text-fg underline-offset-2 hover:underline"
-              onClick={() => setShowKeyInput(true)}
-            >
-              Replace
-            </button>
-            <span className="text-subtle">·</span>
-            <label className="flex items-center gap-1.5 text-muted">
-              <input
-                type="checkbox"
-                name="clear_openai_api_key"
-                className="accent-fg"
-              />
-              Clear key
-            </label>
-          </div>
-        ) : (
-          <Input
-            id="openai_api_key"
-            name="openai_api_key"
-            type="password"
-            autoComplete="off"
-            placeholder="sk-..."
-            maxLength={200}
-          />
-        )}
-        <p className="text-xs text-subtle">
-          Encrypted at rest. Used only to generate captions for this property. Without a key, the app uses templated drafts with placeholders. Get one at{' '}
-          <a
-            href="https://platform.openai.com/api-keys"
-            target="_blank"
-            rel="noreferrer noopener"
-            className="text-fg underline-offset-2 hover:underline"
-          >
-            platform.openai.com/api-keys
-          </a>
-          .
         </p>
       </div>
 

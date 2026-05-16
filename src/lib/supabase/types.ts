@@ -11,6 +11,7 @@ export type Organization = {
   // 20260514070000_org_addon_flags.sql for the data model.
   signage_unlimited_addon_active: boolean
   guest_experience_addon_active: boolean
+  social_studio_addon_active: boolean
   // Self-serve trial window — see 20260515000000_self_service_trial.sql
   // and src/lib/billing/trial.ts. Null on tenants created via the
   // admin path (no trial).
@@ -266,6 +267,8 @@ export type BillingSubscription = {
   signage_unlimited_item_id: string | null
   guest_experience_active: boolean
   guest_experience_item_id: string | null
+  social_studio_active: boolean
+  social_studio_item_id: string | null
   // Storage overage. quantity = number of 25 GB blocks active beyond
   // the property's storage_quota_bytes. item_id is the Stripe
   // SubscriptionItem id for the overage Price; null when quantity = 0.
@@ -738,7 +741,6 @@ export type PropertySocialSettings = {
   property_id: string
   org_id: string
   brand_voice: BrandVoice
-  openai_api_key_enc: string | null
   signature_hashtags: string | null
   social_handles: string | null
   created_at: string
@@ -749,6 +751,9 @@ export type SocialPostLog = {
   id: string
   property_id: string
   org_id: string
+  // YYYY-MM-DD — the day this post was generated for. Unique with
+  // property_id so the cron upserts cleanly within a single UTC day.
+  post_date: string
   topic: string
   captions: string[]
   // Parallel array to `captions`: AI-suggested hashtags per variant.

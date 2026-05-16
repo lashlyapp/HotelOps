@@ -26,6 +26,8 @@ function sub(partial: Partial<BillingSubscription>): BillingSubscription {
     signage_unlimited_item_id: null,
     guest_experience_active: false,
     guest_experience_item_id: null,
+    social_studio_active: false,
+    social_studio_item_id: null,
     storage_blocks_quantity: 0,
     storage_blocks_item_id: null,
     created_at: new Date().toISOString(),

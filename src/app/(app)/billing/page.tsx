@@ -623,6 +623,16 @@ function AddonsCard({
             description="Arrival pages, printable QR cards, and guest room-issue intake."
           />
         </div>
+        <div className="p-5">
+          <AddonToggle
+            addonKey="social_studio"
+            label="Social Studio"
+            priceCents={1900}
+            propertyCount={propertyCount}
+            active={organization.social_studio_addon_active}
+            description="One AI-drafted social post per property per day — captions, hashtags, and a photo pick from your media library. Generated automatically every morning."
+          />
+        </div>
       </div>
     </Card>
   )

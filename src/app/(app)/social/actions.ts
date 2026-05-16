@@ -1,7 +1,6 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { encryptString } from '@/lib/crypto/aes'
 import { getEmailFrom, getResend } from '@/lib/email/client'
 import { requireOrgUser, denyIfRestricted } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -62,51 +61,16 @@ export async function saveSocialSettingsAction(
   const hashtags = trimOrNull(formData.get('signature_hashtags'))
   const handles = trimOrNull(formData.get('social_handles'))
 
-  // The OpenAI key field. Three states:
-  //   - left blank, no existing key  → null
-  //   - left blank, existing key     → keep existing (don't overwrite)
-  //   - submitted plaintext          → re-encrypt and replace
-  // A "clear" checkbox lets the GM remove a previously-set key.
-  const rawKey = trim(formData.get('openai_api_key'))
-  const clearKey = formData.get('clear_openai_api_key') === 'on'
-
-  const admin = createAdminClient()
-  const { data: existing } = await admin
-    .from('property_social_settings')
-    .select('openai_api_key_enc')
-    .eq('property_id', propertyId)
-    .maybeSingle()
-
-  let openai_api_key_enc: string | null
-  if (clearKey) {
-    openai_api_key_enc = null
-  } else if (rawKey !== '') {
-    if (!rawKey.startsWith('sk-')) {
-      return { error: 'OpenAI keys start with "sk-". Double-check what you pasted.' }
-    }
-    try {
-      openai_api_key_enc = encryptString(rawKey)
-    } catch (err) {
-      console.error('[social] failed to encrypt API key', err)
-      return {
-        error:
-          'Could not securely store the key — server encryption is misconfigured. Contact support.',
-      }
-    }
-  } else {
-    openai_api_key_enc = existing?.openai_api_key_enc ?? null
-  }
-
   const row = {
     property_id: propertyId,
     org_id: session.organization.id,
     brand_voice: brandVoice,
-    openai_api_key_enc,
     signature_hashtags: hashtags,
     social_handles: handles,
     updated_at: new Date().toISOString(),
   }
 
+  const admin = createAdminClient()
   const { error } = await admin
     .from('property_social_settings')
     .upsert(row, { onConflict: 'property_id' })
@@ -225,56 +189,25 @@ export async function emailPostAction(
 }
 
 // ---------------------------------------------------------------------------
-// Mark today's post as "used" so a) the topic feeds rotation history
-// and b) the UI can show a subtle "you've posted today" indicator.
+// Mark today's post as "used" — stamps marked_used_at on the row the
+// cron already wrote. Purely informational; drives the "Posted" pill
+// on the recent timeline and a campaign-style adoption metric.
 // ---------------------------------------------------------------------------
 export async function markPostUsedAction(formData: FormData): Promise<void> {
   const session = await requireOrgUser({ write: true })
   if (denyIfRestricted(session)) return
 
   const propertyId = trim(formData.get('property_id'))
-  const topic = trim(formData.get('topic'))
-  const captionsRaw = trim(formData.get('captions'))
-  const hashtagSetsRaw = trim(formData.get('hashtag_sets'))
-  const mediaKey = trimOrNull(formData.get('media_key'))
-  if (!propertyId || !topic || !captionsRaw) return
+  const postDate = trim(formData.get('post_date'))
+  if (!propertyId || !postDate) return
   if (!(await loadPropertyInOrg(session.organization.id, propertyId))) return
 
-  let captions: string[]
-  try {
-    const parsed = JSON.parse(captionsRaw) as unknown
-    if (!Array.isArray(parsed)) return
-    captions = parsed.filter((c): c is string => typeof c === 'string')
-  } catch {
-    return
-  }
-
-  let hashtagSets: string[][] = captions.map(() => [])
-  if (hashtagSetsRaw) {
-    try {
-      const parsed = JSON.parse(hashtagSetsRaw) as unknown
-      if (Array.isArray(parsed)) {
-        hashtagSets = parsed.map((set) =>
-          Array.isArray(set)
-            ? set.filter((t): t is string => typeof t === 'string')
-            : [],
-        )
-      }
-    } catch {
-      // Keep the empty default — bad shape just means no hashtags in history.
-    }
-  }
-
   const admin = createAdminClient()
-  await admin.from('social_post_log').insert({
-    property_id: propertyId,
-    org_id: session.organization.id,
-    topic,
-    captions,
-    hashtag_sets: hashtagSets,
-    media_key: mediaKey,
-    marked_used_at: new Date().toISOString(),
-  })
+  await admin
+    .from('social_post_log')
+    .update({ marked_used_at: new Date().toISOString() })
+    .eq('property_id', propertyId)
+    .eq('post_date', postDate)
   revalidatePath('/social')
 }
 
