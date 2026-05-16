@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { BRAND, BRAND_ADDRESS_LINES } from '@/lib/brand'
+import { BRAND } from '@/lib/brand'
 import { Wordmark } from '@/components/brand/wordmark'
 import { LocaleSwitcher } from '@/components/i18n/locale-switcher'
+import { getDictionary } from '@/lib/i18n/dictionaries'
 import { getLocale } from '@/lib/i18n/get-locale'
 
 type Variant = 'public' | 'app'
@@ -39,24 +40,48 @@ export async function Footer({ variant = 'public' }: { variant?: Variant }) {
   // Public footer only — locale is irrelevant inside the (app) shell
   // (authenticated UI isn't localized yet) so we resolve it just here.
   const locale = await getLocale()
+  const dict = getDictionary(locale)
 
   return (
     <footer className="mt-auto border-t border-border-subtle bg-surface-muted">
       <div className="mx-auto max-w-6xl px-6 py-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-3">
           <Wordmark size="md" />
-          <p className="text-sm text-muted max-w-xs">{BRAND.productTagline}.</p>
+          <p className="text-sm text-muted max-w-xs">{BRAND.productTagline}</p>
         </div>
 
+        {/* Company column — About replaces the previous Mailing
+            address column. Full address now lives on /about. */}
         <div className="space-y-2 text-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
-            Mailing address
+            Company
           </p>
-          <address className="not-italic text-muted leading-6">
-            {BRAND_ADDRESS_LINES.map((line) => (
-              <div key={line}>{line}</div>
-            ))}
-          </address>
+          <ul className="space-y-1">
+            <li>
+              <Link
+                href="/about"
+                className="text-muted hover:text-fg focus-ring rounded-sm"
+              >
+                {dict.about.navLabel}
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/pricing"
+                className="text-muted hover:text-fg focus-ring rounded-sm"
+              >
+                {dict.nav.pricing}
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/demo"
+                className="text-muted hover:text-fg focus-ring rounded-sm"
+              >
+                {dict.demo.navLabel}
+              </Link>
+            </li>
+          </ul>
         </div>
 
         <div className="space-y-2 text-sm">

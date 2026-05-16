@@ -160,6 +160,22 @@
       "resendNeedsEmail": "Nous avons besoin d'un email valide pour renvoyer le code."
     }
   },
+  "about": {
+    "navLabel": "À propos",
+    "eyebrow": "Pourquoi nous l'avons construit",
+    "headline": "Les hôtels boutique méritent un logiciel fait pour eux.",
+    "missionHeading": "Notre mission",
+    "missionBody": "Les grandes suites PMS et les outils des grandes chaînes n'ont jamais été conçus pour le boutique de 20, 40 ou 60 chambres. Ils empaquettent des modules dont personne n'a besoin à des prix qui ne collent pas, et laissent l'opération quotidienne aux tableurs, aux groupes WhatsApp et au papier. Nous pensons que c'est à l'envers. Le marché boutique est mal servi par le logiciel, et les gens qui gèrent ces propriétés — les directeurs, les propriétaires, les managers qui vivent le chaos chaque jour — méritent des outils à la hauteur de leur réalité.",
+    "sectionTwoHeading": "Ce que nous faisons",
+    "sectionTwoBody": "MyHotelOps est la couche d'exploitation qui fonctionne aux côtés du PMS que vous utilisez déjà. Nous gérons ce que votre système de réservation ne fait pas — bons de travail de maintenance, propositions d'événements, accès fournisseurs, affichage sur chaque téléviseur, la carte d'accueil imprimable dans chaque chambre. Un abonnement par propriété, sans jeu par siège, sans taxe par écran. Le type de prix sur lequel une petite entreprise peut planifier.",
+    "sectionThreeHeading": "Pour qui nous travaillons",
+    "sectionThreeBody": "Hôtels boutique indépendants et petits groupes, là où ils se concentrent — États-Unis, Mexique, Europe. Des gens qui considèrent l'hospitalité comme un métier et veulent que leur logiciel en fasse autant. Si c'est vous, nous l'avons construit pour vous.",
+    "addressHeading": "Adresse postale",
+    "supportHeading": "Contactez-nous",
+    "ctaHeading": "Essayez-le gratuitement pendant 7 jours.",
+    "ctaSub": "Sans carte bancaire. 10 Go inclus.",
+    "ctaButton": "Démarrer l'essai gratuit"
+  },
   "destinations": {
     "eyebrow": "Les marchés pour lesquels nous sommes faits",
     "title": "Pour les hôtels boutique, partout.",

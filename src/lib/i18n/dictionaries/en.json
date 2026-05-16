@@ -160,6 +160,22 @@
       "resendNeedsEmail": "We need a valid email to resend the code."
     }
   },
+  "about": {
+    "navLabel": "About",
+    "eyebrow": "Why we built this",
+    "headline": "Boutique hotels deserve software built for them.",
+    "missionHeading": "Our mission",
+    "missionBody": "Big PMS suites and big-chain tooling were never built for the 20-, 40-, 60-room boutique. They bundle modules nobody asked for at prices that don't fit, then leave the actual day-to-day operations to spreadsheets, group chats, and paper. We think that's backwards. The boutique market is underserved by software, and the people running these properties — the GMs, the owners, the managers who actually live the chaos — deserve tools that fit their reality.",
+    "sectionTwoHeading": "What we do",
+    "sectionTwoBody": "MyHotelOps is the operations layer that runs alongside whatever PMS you already use. We handle the things your reservation system doesn't — maintenance work orders, event proposals, vendor logins, signage on every TV, the printable arrival card in every room. One subscription per property, no per-seat games, no per-screen tax. The kind of pricing a small business can plan around.",
+    "sectionThreeHeading": "Who we serve",
+    "sectionThreeBody": "Independent boutique hotels and small groups, anywhere they cluster — the US, Mexico, Europe. People who care about hospitality as a craft and want their software to do the same. If that's you, we built this for you.",
+    "addressHeading": "Mailing address",
+    "supportHeading": "Get in touch",
+    "ctaHeading": "Try it free for 7 days.",
+    "ctaSub": "No credit card. 10 GB included.",
+    "ctaButton": "Start free trial"
+  },
   "destinations": {
     "eyebrow": "Markets we're built for",
     "title": "Made for boutique hotels everywhere.",

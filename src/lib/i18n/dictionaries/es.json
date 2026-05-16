@@ -160,6 +160,22 @@
       "resendNeedsEmail": "Necesitamos un email válido para reenviar el código."
     }
   },
+  "about": {
+    "navLabel": "Sobre nosotros",
+    "eyebrow": "Por qué lo construimos",
+    "headline": "Los hoteles boutique merecen software hecho para ellos.",
+    "missionHeading": "Nuestra misión",
+    "missionBody": "Los grandes PMS y las herramientas de las grandes cadenas nunca se diseñaron para el boutique de 20, 40 o 60 habitaciones. Empaquetan módulos que nadie pidió a precios que no encajan, y dejan la operación diaria real a hojas de cálculo, chats de grupo y papel. Creemos que está al revés. El mercado boutique está desatendido por el software, y la gente que gestiona estas propiedades — los Directores, los propietarios, los gerentes que viven el caos a diario — merecen herramientas a la altura de su realidad.",
+    "sectionTwoHeading": "Lo que hacemos",
+    "sectionTwoBody": "MyHotelOps es la capa de operaciones que funciona junto al PMS que ya usas. Gestionamos lo que tu sistema de reservas no hace — órdenes de trabajo de mantenimiento, propuestas de eventos, accesos de proveedores, señalización en cada televisor, la tarjeta de bienvenida imprimible en cada habitación. Una suscripción por propiedad, sin juegos por usuario ni impuestos por pantalla. El tipo de precio con el que un pequeño negocio puede planificar.",
+    "sectionThreeHeading": "A quién servimos",
+    "sectionThreeBody": "Hoteles boutique independientes y pequeños grupos, allá donde se concentran — Estados Unidos, México, Europa. Gente que ve la hospitalidad como un oficio y quiere que su software haga lo mismo. Si eres tú, lo hicimos para ti.",
+    "addressHeading": "Dirección postal",
+    "supportHeading": "Contacta con nosotros",
+    "ctaHeading": "Pruébalo gratis durante 7 días.",
+    "ctaSub": "Sin tarjeta de crédito. 10 GB incluidos.",
+    "ctaButton": "Empezar prueba gratuita"
+  },
   "destinations": {
     "eyebrow": "Mercados para los que estamos hechos",
     "title": "Para hoteles boutique en todas partes.",
