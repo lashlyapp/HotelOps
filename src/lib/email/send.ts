@@ -708,3 +708,107 @@ export async function sendGuideLeadNotification(
     return false
   }
 }
+
+// ---------------------------------------------------------------------------
+// Blog publishing cron — drip-publish notifications
+// ---------------------------------------------------------------------------
+type BlogPostPublishedArgs = {
+  to: string
+  postTitle: string
+  postSlug: string
+  postUrl: string
+}
+
+/**
+ * Internal notification sent by the daily blog-publishing cron when
+ * a scheduled post crosses its publishedAt date. One email per
+ * newly-live post per day. Founder-only.
+ */
+export async function sendBlogPostPublishedNotification(
+  args: BlogPostPublishedArgs,
+): Promise<boolean> {
+  const resend = getResend()
+  if (!resend) {
+    console.warn(
+      '[email] RESEND_API_KEY not set; skipping blog publish notification',
+    )
+    return false
+  }
+
+  const subject = `[${BRAND.name}] Blog post went live: ${args.postTitle}`
+  const text = [
+    `A scheduled blog post just went live.`,
+    '',
+    `Title: ${args.postTitle}`,
+    `URL:   ${args.postUrl}`,
+    `Slug:  ${args.postSlug}`,
+    '',
+    `Search engines will pick it up on the next sitemap revalidation (within an hour). Time to share it.`,
+  ].join('\n')
+
+  const html = wrapEmailHtml(`
+    <p>A scheduled blog post just went live.</p>
+    <p style="margin:16px 0"><strong>${escapeHtml(args.postTitle)}</strong></p>
+    <p style="margin:16px 0">${ctaButton(args.postUrl, 'Open the post')}</p>
+    <p style="color:#57534e;font-size:13px">Search engines will pick it up on the next sitemap revalidation (within an hour). Time to share it.</p>
+  `)
+
+  return sendOrLog(
+    resend,
+    { to: args.to, subject, text, html },
+    'blog publish',
+  )
+}
+
+type BlogQueueEmptyArgs = {
+  to: string
+  /** ISO date of the most recent published post (so the email can
+   *  state how long the queue has been empty). */
+  latestPublishedAt: string | null
+  /** Suggested next publishedAt — 14 days after the latest, or today
+   *  if there is no published post yet. */
+  nextSuggestedDate: string
+}
+
+/**
+ * Internal notification when the drip-publish queue runs dry —
+ * i.e. no posts in the registry have a future publishedAt. Nudges
+ * the founder to write the next draft before the cadence breaks.
+ */
+export async function sendBlogQueueEmptyNotification(
+  args: BlogQueueEmptyArgs,
+): Promise<boolean> {
+  const resend = getResend()
+  if (!resend) {
+    console.warn(
+      '[email] RESEND_API_KEY not set; skipping blog queue notification',
+    )
+    return false
+  }
+
+  const subject = `[${BRAND.name}] Blog queue is empty`
+  const latestLine = args.latestPublishedAt
+    ? `Most recent post: ${args.latestPublishedAt}.`
+    : `No posts have been published yet.`
+  const text = [
+    `The drip-publish queue has no future-dated posts.`,
+    '',
+    latestLine,
+    `Suggested publishedAt for the next post: ${args.nextSuggestedDate} (14 days after the latest).`,
+    '',
+    `Add a draft under src/content/blog/posts/ with that publishedAt to keep the cadence.`,
+  ].join('\n')
+
+  const html = wrapEmailHtml(`
+    <p>The drip-publish queue has no future-dated posts.</p>
+    <p style="color:#57534e">${escapeHtml(latestLine)}</p>
+    <p>Suggested publishedAt for the next post: <strong>${escapeHtml(args.nextSuggestedDate)}</strong> (14 days after the latest).</p>
+    <p style="color:#57534e;font-size:13px">Add a draft under <code>src/content/blog/posts/</code> with that <code>publishedAt</code> to keep the cadence.</p>
+  `)
+
+  return sendOrLog(
+    resend,
+    { to: args.to, subject, text, html },
+    'blog queue empty',
+  )
+}

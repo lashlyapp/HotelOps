@@ -4,14 +4,18 @@ import { BRAND } from '@/lib/brand'
 
 /**
  * Public sitemap. We only list the marketing surface — `/`, `/pricing`,
- * `/blog` (plus each blog post), and the legal pages. App routes
- * (/dashboard, /billing, etc.) are authed-only and shouldn't be in
- * search results; the public arrival pages at /a/<slug> have
+ * `/blog` (plus each published blog post), and the legal pages. App
+ * routes (/dashboard, /billing, etc.) are authed-only and shouldn't be
+ * in search results; the public arrival pages at /a/<slug> have
  * `noindex,nofollow` set per-page and aren't meant to be discovered
  * via search either.
  *
- * Next 16 picks this file up automatically at /sitemap.xml.
+ * Revalidated hourly so scheduled blog posts (date-gated in
+ * src/content/blog/index.ts) appear in search engines within
+ * ~60 minutes of their publishedAt cutover. Next 16 picks this file
+ * up automatically at /sitemap.xml.
  */
+export const revalidate = 3600
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = `https://www.${BRAND.domain}`
   const now = new Date()
