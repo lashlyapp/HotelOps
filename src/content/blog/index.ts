@@ -1,12 +1,18 @@
 import * as guestExpectations from './posts/guest-expectations'
+import * as hotelSignageCost from './posts/hotel-digital-signage-cost-2026'
+import * as modernizeChecklist from './posts/modernize-your-boutique-hotel'
 import * as operationsBudget from './posts/operations-budget'
+import * as pmsVsOperations from './posts/pms-vs-operations-system'
 import * as techModernization from './posts/tech-modernization'
 import * as underservedIndustry from './posts/underserved-industry'
 import type { BlogPostMeta, BlogPostModule } from './types'
 
 const MODULES: BlogPostModule[] = [
+  modernizeChecklist,
   underservedIndustry,
+  pmsVsOperations,
   operationsBudget,
+  hotelSignageCost,
   techModernization,
   guestExpectations,
 ]
