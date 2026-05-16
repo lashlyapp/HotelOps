@@ -3,17 +3,20 @@ import { redirect } from 'next/navigation'
 import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
 import { Card, CardBody } from '@/components/ui/card'
-import { BRAND } from '@/lib/brand'
+import { getDictionary } from '@/lib/i18n/dictionaries'
+import { getLocale } from '@/lib/i18n/get-locale'
 import { createClient } from '@/lib/supabase/server'
 import { SignupForm } from './_components/signup-form'
 
 export default async function SignupPage() {
-  // Already-authenticated users have an account; bounce them home.
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (user) redirect('/dashboard')
+
+  const locale = await getLocale()
+  const t = getDictionary(locale)
 
   return (
     <div className="flex flex-1 flex-col">
@@ -25,13 +28,13 @@ export default async function SignupPage() {
               href="/"
               className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
             >
-              ← Back to home
+              ← {t.common.backToHome}
             </Link>
             <Link
               href="/login"
               className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-fg hover:bg-surface-muted"
             >
-              Log in
+              {t.common.logIn}
             </Link>
           </div>
         </div>
@@ -41,31 +44,21 @@ export default async function SignupPage() {
         <section className="mx-auto max-w-2xl px-6 py-16">
           <div className="text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Start free
+              {t.signup.eyebrow}
             </p>
             <h1 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-              Try {BRAND.name} free for 7 days
+              {t.signup.headline}
             </h1>
             <p className="mt-4 text-base text-muted leading-relaxed">
-              Full access. No credit card. 10 GB of media included. We’ll email
-              you a verification code to confirm your address — takes under a
-              minute end to end.
+              {t.signup.sub}
             </p>
           </div>
 
           <Card className="mt-10">
             <CardBody className="p-6 sm:p-8">
-              <SignupForm />
+              <SignupForm t={t.signup} />
             </CardBody>
           </Card>
-
-          <p className="mt-6 text-center text-xs text-subtle">
-            Already have an account?{' '}
-            <Link href="/login" className="font-medium text-fg hover:underline">
-              Log in
-            </Link>
-            .
-          </p>
         </section>
       </main>
 

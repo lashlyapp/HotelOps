@@ -3,6 +3,7 @@ import {
   sendTrialExpiredEmail,
   sendTrialReminderEmail,
 } from '@/lib/email/send'
+import { asLocale } from '@/lib/i18n/locales'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
@@ -36,6 +37,7 @@ type OrgRow = {
   trial_reminder_t3_sent_at: string | null
   trial_expired_email_sent_at: string | null
   trial_converted_at: string | null
+  locale: string | null
 }
 
 export async function GET(request: NextRequest) {
@@ -63,7 +65,7 @@ export async function GET(request: NextRequest) {
   const { data: t3Orgs, error: t3Err } = await admin
     .from('organizations')
     .select(
-      'id, name, trial_ends_at, trial_reminder_t3_sent_at, trial_expired_email_sent_at, trial_converted_at',
+      'id, name, trial_ends_at, trial_reminder_t3_sent_at, trial_expired_email_sent_at, trial_converted_at, locale',
     )
     .is('trial_reminder_t3_sent_at', null)
     .is('trial_converted_at', null)
@@ -80,7 +82,7 @@ export async function GET(request: NextRequest) {
   const { data: expiredOrgs, error: expErr } = await admin
     .from('organizations')
     .select(
-      'id, name, trial_ends_at, trial_reminder_t3_sent_at, trial_expired_email_sent_at, trial_converted_at',
+      'id, name, trial_ends_at, trial_reminder_t3_sent_at, trial_expired_email_sent_at, trial_converted_at, locale',
     )
     .is('trial_expired_email_sent_at', null)
     .is('trial_converted_at', null)
@@ -114,6 +116,7 @@ export async function GET(request: NextRequest) {
       recipientName: recipient.fullName ?? 'there',
       hotelName: org.name,
       daysLeft,
+      locale: asLocale(org.locale),
     }).catch((err) => {
       console.warn('[cron] trial-expiry T-3 email failed', org.id, err)
     })
@@ -132,6 +135,7 @@ export async function GET(request: NextRequest) {
       to: recipient.email,
       recipientName: recipient.fullName ?? 'there',
       hotelName: org.name,
+      locale: asLocale(org.locale),
     }).catch((err) => {
       console.warn('[cron] trial-expiry T+0 email failed', org.id, err)
     })

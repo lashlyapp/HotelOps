@@ -38,11 +38,104 @@
   "signup": {
     "eyebrow": "Empezar gratis",
     "headline": "Prueba MyHotelOps gratis durante 7 días",
-    "sub": "Acceso completo. Sin tarjeta de crédito. 10 GB de contenido multimedia incluidos. Te enviaremos un código de verificación por correo — toma menos de un minuto de principio a fin."
+    "sub": "Acceso completo. Sin tarjeta de crédito. 10 GB de contenido multimedia incluidos. Te enviaremos un código de verificación por correo — toma menos de un minuto de principio a fin.",
+    "form": {
+      "yourName": "Tu nombre",
+      "hotelName": "Nombre del hotel",
+      "hotelNamePlaceholder": "p. ej. Hotel Boutique Madrid",
+      "workEmail": "Email profesional",
+      "password": "Contraseña",
+      "passwordHint": "Al menos 8 caracteres, con al menos una letra minúscula, una letra mayúscula, un número y un símbolo.",
+      "consentPrefix": "Acepto los ",
+      "consentTerms": "Términos del Servicio",
+      "consentAnd": " y la ",
+      "consentPrivacy": "Política de Privacidad",
+      "consentSuffix": ".",
+      "ctaSending": "Enviando código de verificación…",
+      "ctaSend": "Enviar código de verificación",
+      "noCardLine": "Sin tarjeta de crédito. 10 GB de contenido multimedia incluidos."
+    },
+    "verify": {
+      "eyebrow": "Verifica tu correo",
+      "headline": "Introduce tu código de {n} dígitos",
+      "sub": "Enviamos un código a {email}. Caduca en {minutes} minutos.",
+      "startOver": "Empezar de nuevo",
+      "wrongEmail": "¿Email incorrecto?",
+      "needHelp": "¿Necesitas ayuda?",
+      "codeLabel": "Código de verificación",
+      "codeHint": "{n} dígitos, del correo que acabamos de enviar.",
+      "ctaVerifying": "Verificando…",
+      "ctaVerify": "Verificar y empezar prueba",
+      "noEmail": "¿No recibiste el correo?",
+      "resending": "Enviando…",
+      "resend": "Reenviar código",
+      "resentRecently": "Un nuevo código está en camino."
+    },
+    "errors": {
+      "missingFields": "Email, contraseña, tu nombre y el nombre del hotel son obligatorios.",
+      "invalidEmail": "Por favor, introduce una dirección de email válida.",
+      "tooLong": "Eso es demasiado largo — mantén los nombres bajo 200 caracteres.",
+      "consentRequired": "Acepta los Términos del Servicio y la Política de Privacidad para continuar.",
+      "rateLimitIp": "Demasiados intentos de registro desde esta red. Inténtalo de nuevo en unos minutos o escribe a {email}.",
+      "rateLimitEmail": "Ya enviamos un código a {email} hace poco. Revisa tu bandeja de entrada o espera unos minutos antes de volver a intentarlo.",
+      "emailExists": "{email} ya tiene una cuenta de MyHotelOps. Inicia sesión o restablece tu contraseña.",
+      "internalError": "Algo salió mal. Por favor, inténtalo de nuevo.",
+      "tempUnavailable": "El registro no está disponible temporalmente. Inténtalo más tarde.",
+      "createAccountFailed": "Algo salió mal al crear tu cuenta. Por favor, inténtalo de nuevo.",
+      "profileFailed": "Algo salió mal configurando tu perfil. Por favor, inténtalo de nuevo.",
+      "codeRequired": "Introduce el código de tu correo.",
+      "codeLength": "El código tiene {n} dígitos.",
+      "codeExpired": "Ese código ha caducado. Empieza de nuevo desde /signup.",
+      "codeTooManyAttempts": "Demasiados códigos incorrectos. Empieza de nuevo desde /signup.",
+      "codeMismatchOne": "Ese código no coincide. Queda 1 intento.",
+      "codeMismatchMany": "Ese código no coincide. Quedan {n} intentos.",
+      "codeMismatchFinal": "Ese código no coincide. Empieza de nuevo desde /signup.",
+      "noPendingSignup": "No tenemos un registro pendiente para ese email. Empieza de nuevo desde /signup.",
+      "tooManyResends": "Demasiados reenvíos. Empieza de nuevo desde /signup.",
+      "resendCooldown": "Espera un momento antes de pedir otro código.",
+      "resendNeedsEmail": "Necesitamos un email válido para reenviar el código."
+    }
   },
   "destinations": {
     "eyebrow": "Mercados para los que estamos hechos",
     "title": "Para hoteles boutique donde realmente se agrupan.",
     "sub": "Lisboa, Barcelona, París, Ciudad de México — los barrios donde los hoteles independientes y de pequeños grupos realmente operan. Facturación en moneda local, registro en tu idioma, la misma base operativa en cada destino."
+  },
+  "email": {
+    "signoff": "— MyHotelOps",
+    "otp": {
+      "subject": "Tu código de verificación de MyHotelOps: {code}",
+      "greeting": "Hola {name},",
+      "intro": "Tu código de verificación para MyHotelOps es:",
+      "instructions": "Introdúcelo en la página de registro para terminar de crear {hotel}.",
+      "ttl": "El código caduca en {minutes} minutos. Si no solicitaste esto, puedes ignorar este correo sin problema."
+    },
+    "welcome": {
+      "subject": "Bienvenido a MyHotelOps — tu prueba de {days} días está activa",
+      "greeting": "Hola {name},",
+      "intro": "{hotel} ya está configurado en MyHotelOps. Tu prueba gratuita te da acceso completo durante {days} días — sin tarjeta de crédito, con {gb} GB de contenido multimedia incluidos.",
+      "ctaOpen": "Abrir tu panel",
+      "tryFirstHeading": "Qué probar primero",
+      "tryFirstTeam": "Añade tu equipo desde la página Equipo",
+      "tryFirstMedia": "Sube tus primeros planos / fotos a Multimedia",
+      "tryFirstWO": "Crea una orden de trabajo para ver el tablero Kanban en acción",
+      "convertPrefix": "¿Listo para convertir? ",
+      "convertLink": "Añade un método de pago",
+      "convertSuffix": " cuando quieras."
+    },
+    "reminder": {
+      "subjectOne": "Tu prueba de MyHotelOps termina en 1 día",
+      "subjectMany": "Tu prueba de MyHotelOps termina en {days} días",
+      "greeting": "Hola {name},",
+      "bodyOne": "Tu prueba de MyHotelOps para {hotel} termina en 1 día. Añade un método de pago para seguir editando — tus datos se conservan en cualquier caso.",
+      "bodyMany": "Tu prueba de MyHotelOps para {hotel} termina en {days} días. Añade un método de pago para seguir editando — tus datos se conservan en cualquier caso.",
+      "cta": "Abrir facturación"
+    },
+    "expired": {
+      "subject": "Tu prueba de MyHotelOps ha terminado — tus datos están a salvo",
+      "greeting": "Hola {name},",
+      "body": "Tu prueba de MyHotelOps para {hotel} terminó hoy. Hemos pasado tu cuenta a solo lectura y conservamos todos tus datos — añade un método de pago cuando quieras para seguir editando.",
+      "cta": "Abrir facturación"
+    }
   }
 }

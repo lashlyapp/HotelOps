@@ -5,6 +5,9 @@ import { Footer } from '@/components/layout/footer'
 import { Card, CardBody } from '@/components/ui/card'
 import { OTP_LENGTH, OTP_TTL_MINUTES } from '@/lib/auth/otp-constants'
 import { BRAND } from '@/lib/brand'
+import { getDictionary } from '@/lib/i18n/dictionaries'
+import { getLocale } from '@/lib/i18n/get-locale'
+import { interpolate } from '@/lib/i18n/interpolate'
 import { createClient } from '@/lib/supabase/server'
 import { VerifyForm } from './_components/verify-form'
 
@@ -25,6 +28,10 @@ export default async function SignupVerifyPage({
   const email = (emailParam ?? '').trim().toLowerCase()
   if (!email) redirect('/signup')
 
+  const locale = await getLocale()
+  const t = getDictionary(locale).signup.verify
+  const common = getDictionary(locale).common
+
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-border-subtle">
@@ -35,7 +42,7 @@ export default async function SignupVerifyPage({
               href="/signup"
               className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
             >
-              ← Start over
+              ← {t.startOver}
             </Link>
           </div>
         </div>
@@ -45,30 +52,50 @@ export default async function SignupVerifyPage({
         <section className="mx-auto max-w-md px-6 py-16">
           <div className="text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Verify your email
+              {t.eyebrow}
             </p>
             <h1 className="mt-3 text-2xl sm:text-3xl font-semibold tracking-tight text-fg">
-              Enter your {OTP_LENGTH}-digit code
+              {interpolate(t.headline, { n: OTP_LENGTH })}
             </h1>
             <p className="mt-4 text-sm text-muted leading-relaxed">
-              We sent a code to <strong className="text-fg">{email}</strong>.
-              It expires in {OTP_TTL_MINUTES} minutes.
+              {interpolate(t.sub, { email, minutes: OTP_TTL_MINUTES })
+                .split(email)
+                .map((part, i, all) => (
+                  <span key={i}>
+                    {part}
+                    {i < all.length - 1 ? (
+                      <strong className="text-fg">{email}</strong>
+                    ) : null}
+                  </span>
+                ))}
             </p>
           </div>
 
           <Card className="mt-8">
             <CardBody className="p-6 sm:p-8">
-              <VerifyForm email={email} />
+              <VerifyForm email={email} t={t} />
             </CardBody>
           </Card>
 
           <p className="mt-6 text-center text-xs text-subtle">
-            Wrong email?{' '}
+            {t.wrongEmail}{' '}
             <Link href="/signup" className="font-medium text-fg hover:underline">
-              Start over
+              {t.startOver}
             </Link>
-            . Need help? <a href={`mailto:${BRAND.supportEmail}`} className="font-medium text-fg hover:underline">{BRAND.supportEmail}</a>
+            . {t.needHelp}{' '}
+            <a
+              href={`mailto:${BRAND.supportEmail}`}
+              className="font-medium text-fg hover:underline"
+            >
+              {BRAND.supportEmail}
+            </a>
           </p>
+
+          {/* Locale-switcher hint at the bottom: if a French user
+              landed here via /signup but the UI is in English, they
+              can switch — that switch propagates to the OTP email
+              language via the locale stored on signup_pending. */}
+          <p className="sr-only">{common.language}</p>
         </section>
       </main>
 

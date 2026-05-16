@@ -4,12 +4,18 @@ import { useActionState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { PASSWORD_REQUIREMENTS_HINT } from '@/lib/auth/password'
+import type { Dictionary } from '@/lib/i18n/dictionaries'
 import { submitSignupRequest, type SignupActionResult } from '../actions'
 
 const initial: SignupActionResult = {}
 
-export function SignupForm() {
+/**
+ * Localized signup form. Parent passes the visitor-locale dictionary
+ * so every label / placeholder / hint / CTA renders in the right
+ * language; server action also resolves the locale and returns
+ * localized error strings.
+ */
+export function SignupForm({ t }: { t: Dictionary['signup'] }) {
   const [state, action, pending] = useActionState(
     submitSignupRequest,
     initial,
@@ -25,7 +31,7 @@ export function SignupForm() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="full_name">Your name</Label>
+          <Label htmlFor="full_name">{t.form.yourName}</Label>
           <Input
             id="full_name"
             name="full_name"
@@ -37,7 +43,7 @@ export function SignupForm() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="hotel_name">Hotel name</Label>
+          <Label htmlFor="hotel_name">{t.form.hotelName}</Label>
           <Input
             id="hotel_name"
             name="hotel_name"
@@ -45,13 +51,13 @@ export function SignupForm() {
             autoComplete="organization"
             required
             maxLength={200}
-            placeholder="e.g. The Coastal Inn"
+            placeholder={t.form.hotelNamePlaceholder}
           />
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="email">Work email</Label>
+        <Label htmlFor="email">{t.form.workEmail}</Label>
         <Input
           id="email"
           name="email"
@@ -62,7 +68,7 @@ export function SignupForm() {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">{t.form.password}</Label>
         <Input
           id="password"
           name="password"
@@ -73,7 +79,7 @@ export function SignupForm() {
           aria-describedby="password-hint"
         />
         <p id="password-hint" className="text-xs text-subtle">
-          {PASSWORD_REQUIREMENTS_HINT}
+          {t.form.passwordHint}
         </p>
       </div>
 
@@ -85,26 +91,30 @@ export function SignupForm() {
           required
           className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-border-default text-fg focus-ring"
         />
+        {/* Segmented copy — same grammatical order in en/es/fr so the
+            link slots can stay positional. If we ever add a locale
+            with a different word order we'd switch to a richer
+            interpolation pattern. */}
         <span>
-          I agree to the{' '}
+          {t.form.consentPrefix}
           <a
             href="/terms"
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-fg hover:underline"
           >
-            Terms of Service
+            {t.form.consentTerms}
           </a>
-          {' '}and{' '}
+          {t.form.consentAnd}
           <a
             href="/privacy"
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-fg hover:underline"
           >
-            Privacy Policy
+            {t.form.consentPrivacy}
           </a>
-          .
+          {t.form.consentSuffix}
         </span>
       </label>
 
@@ -113,11 +123,11 @@ export function SignupForm() {
       ) : null}
 
       <Button type="submit" className="w-full" size="lg" disabled={pending}>
-        {pending ? 'Sending verification code…' : 'Send verification code'}
+        {pending ? t.form.ctaSending : t.form.ctaSend}
       </Button>
 
       <p className="text-center text-xs text-subtle">
-        No credit card required. 10 GB of media included.
+        {t.form.noCardLine}
       </p>
     </form>
   )

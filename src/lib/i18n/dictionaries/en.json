@@ -38,11 +38,104 @@
   "signup": {
     "eyebrow": "Start free",
     "headline": "Try MyHotelOps free for 7 days",
-    "sub": "Full access. No credit card. 10 GB of media included. We'll email you a verification code to confirm your address — takes under a minute end to end."
+    "sub": "Full access. No credit card. 10 GB of media included. We'll email you a verification code to confirm your address — takes under a minute end to end.",
+    "form": {
+      "yourName": "Your name",
+      "hotelName": "Hotel name",
+      "hotelNamePlaceholder": "e.g. The Coastal Inn",
+      "workEmail": "Work email",
+      "password": "Password",
+      "passwordHint": "At least 8 characters, with at least one lowercase letter, one uppercase letter, one number, and one symbol.",
+      "consentPrefix": "I agree to the ",
+      "consentTerms": "Terms of Service",
+      "consentAnd": " and ",
+      "consentPrivacy": "Privacy Policy",
+      "consentSuffix": ".",
+      "ctaSending": "Sending verification code…",
+      "ctaSend": "Send verification code",
+      "noCardLine": "No credit card required. 10 GB of media included."
+    },
+    "verify": {
+      "eyebrow": "Verify your email",
+      "headline": "Enter your {n}-digit code",
+      "sub": "We sent a code to {email}. It expires in {minutes} minutes.",
+      "startOver": "Start over",
+      "wrongEmail": "Wrong email?",
+      "needHelp": "Need help?",
+      "codeLabel": "Verification code",
+      "codeHint": "{n} digits, from the email we just sent.",
+      "ctaVerifying": "Verifying…",
+      "ctaVerify": "Verify and start trial",
+      "noEmail": "Didn’t get the email?",
+      "resending": "Sending…",
+      "resend": "Resend code",
+      "resentRecently": "A new code is on its way."
+    },
+    "errors": {
+      "missingFields": "Email, password, your name, and hotel name are required.",
+      "invalidEmail": "Please enter a valid email address.",
+      "tooLong": "That looks too long — keep names under 200 characters.",
+      "consentRequired": "Please agree to the Terms of Service and Privacy Policy to continue.",
+      "rateLimitIp": "Too many signup attempts from this network. Try again in a few minutes, or email {email}.",
+      "rateLimitEmail": "We’ve sent a code to {email} recently. Check your inbox or wait a few minutes before trying again.",
+      "emailExists": "{email} already has a MyHotelOps account. Log in or reset your password instead.",
+      "internalError": "Something went wrong. Please try again.",
+      "tempUnavailable": "Signup is temporarily unavailable. Please try again later.",
+      "createAccountFailed": "Something went wrong creating your account. Please try again.",
+      "profileFailed": "Something went wrong setting up your profile. Please try again.",
+      "codeRequired": "Enter the code from your email.",
+      "codeLength": "The code is {n} digits.",
+      "codeExpired": "That code has expired. Start over from /signup.",
+      "codeTooManyAttempts": "Too many wrong codes. Start over from /signup.",
+      "codeMismatchOne": "That code doesn’t match. 1 attempt left.",
+      "codeMismatchMany": "That code doesn’t match. {n} attempts left.",
+      "codeMismatchFinal": "That code doesn’t match. Start over from /signup.",
+      "noPendingSignup": "We don’t have a pending signup for that email. Start over from /signup.",
+      "tooManyResends": "Too many resends. Start over from /signup.",
+      "resendCooldown": "Hang on a moment before requesting another code.",
+      "resendNeedsEmail": "We need a valid email to resend the code."
+    }
   },
   "destinations": {
     "eyebrow": "Markets we're built for",
     "title": "Made for boutique hotels everywhere they cluster.",
     "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Local-currency billing, signup in your language, the same back-office stack everywhere."
+  },
+  "email": {
+    "signoff": "— MyHotelOps",
+    "otp": {
+      "subject": "Your MyHotelOps verification code: {code}",
+      "greeting": "Hi {name},",
+      "intro": "Your verification code for MyHotelOps is:",
+      "instructions": "Enter it on the signup page to finish creating {hotel}.",
+      "ttl": "The code expires in {minutes} minutes. If you didn’t request this, you can safely ignore this email."
+    },
+    "welcome": {
+      "subject": "Welcome to MyHotelOps — your {days}-day trial is live",
+      "greeting": "Hi {name},",
+      "intro": "{hotel} is set up on MyHotelOps. Your free trial gives you full access for {days} days — no credit card needed, {gb} GB of media included.",
+      "ctaOpen": "Open your dashboard",
+      "tryFirstHeading": "What to try first",
+      "tryFirstTeam": "Add your team from the Team page",
+      "tryFirstMedia": "Upload your first floor plans / photos to Media",
+      "tryFirstWO": "Create a work order to see the Kanban board in action",
+      "convertPrefix": "Ready to convert? ",
+      "convertLink": "Add a payment method",
+      "convertSuffix": " any time."
+    },
+    "reminder": {
+      "subjectOne": "Your MyHotelOps trial ends in 1 day",
+      "subjectMany": "Your MyHotelOps trial ends in {days} days",
+      "greeting": "Hi {name},",
+      "bodyOne": "Your MyHotelOps trial for {hotel} ends in 1 day. Add a payment method to keep editing — your data stays where it is regardless.",
+      "bodyMany": "Your MyHotelOps trial for {hotel} ends in {days} days. Add a payment method to keep editing — your data stays where it is regardless.",
+      "cta": "Open Billing"
+    },
+    "expired": {
+      "subject": "Your MyHotelOps trial has ended — your data is safe",
+      "greeting": "Hi {name},",
+      "body": "Your MyHotelOps trial for {hotel} ended today. We’ve moved your account to read-only and we’re holding all of your data — add a payment method any time to keep editing.",
+      "cta": "Open Billing"
+    }
   }
 }

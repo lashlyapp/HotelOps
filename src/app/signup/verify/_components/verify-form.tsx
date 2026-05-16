@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { OTP_LENGTH } from '@/lib/auth/otp-constants'
+import type { Dictionary } from '@/lib/i18n/dictionaries'
+import { interpolate } from '@/lib/i18n/interpolate'
 import {
   resendSignupOtp,
   verifySignupOtp,
@@ -13,7 +15,13 @@ import {
 
 const initial: SignupActionResult = {}
 
-export function VerifyForm({ email }: { email: string }) {
+export function VerifyForm({
+  email,
+  t,
+}: {
+  email: string
+  t: Dictionary['signup']['verify']
+}) {
   const [verifyState, verifyAction, verifyPending] = useActionState(
     verifySignupOtp,
     initial,
@@ -22,8 +30,6 @@ export function VerifyForm({ email }: { email: string }) {
     resendSignupOtp,
     initial,
   )
-  // Boolean "we just resent" pill that auto-clears after a few seconds.
-  // Effect-driven so render stays pure.
   const [resentRecently, setResentRecently] = useState(false)
   useEffect(() => {
     if (!resentRecently) return
@@ -37,7 +43,7 @@ export function VerifyForm({ email }: { email: string }) {
         <input type="hidden" name="email" value={email} />
 
         <div className="space-y-1.5">
-          <Label htmlFor="code">Verification code</Label>
+          <Label htmlFor="code">{t.codeLabel}</Label>
           <Input
             id="code"
             name="code"
@@ -53,7 +59,7 @@ export function VerifyForm({ email }: { email: string }) {
             aria-describedby="code-hint"
           />
           <p id="code-hint" className="text-xs text-subtle">
-            {OTP_LENGTH} digits, from the email we just sent.
+            {interpolate(t.codeHint, { n: OTP_LENGTH })}
           </p>
         </div>
 
@@ -67,12 +73,12 @@ export function VerifyForm({ email }: { email: string }) {
           size="lg"
           disabled={verifyPending}
         >
-          {verifyPending ? 'Verifying…' : 'Verify and start trial'}
+          {verifyPending ? t.ctaVerifying : t.ctaVerify}
         </Button>
       </form>
 
       <div className="flex items-center justify-between gap-2 border-t border-border-subtle pt-4 text-xs text-muted">
-        <span>Didn’t get the email?</span>
+        <span>{t.noEmail}</span>
         <form action={resendAction}>
           <input type="hidden" name="email" value={email} />
           <button
@@ -81,7 +87,7 @@ export function VerifyForm({ email }: { email: string }) {
             onClick={() => setResentRecently(true)}
             className="focus-ring rounded-sm font-medium text-fg hover:underline disabled:opacity-50"
           >
-            {resendPending ? 'Sending…' : 'Resend code'}
+            {resendPending ? t.resending : t.resend}
           </button>
         </form>
       </div>
@@ -89,9 +95,7 @@ export function VerifyForm({ email }: { email: string }) {
       {resendState.error ? (
         <p className="text-xs text-danger-fg">{resendState.error}</p>
       ) : resentRecently && !resendState.error ? (
-        <p className="text-xs text-success-fg">
-          A new code is on its way.
-        </p>
+        <p className="text-xs text-success-fg">{t.resentRecently}</p>
       ) : null}
     </div>
   )

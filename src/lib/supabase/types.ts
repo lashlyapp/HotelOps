@@ -28,6 +28,11 @@ export type Organization = {
   // locale; immutable thereafter. See 20260515020000_org_currency.sql
   // and src/lib/billing/currency.ts.
   currency: string
+  // BCP-47 short code (en / es / fr). Captured at signup and used by
+  // cron-driven transactional emails (trial reminders) that have no
+  // live request context to read getLocale() from. See
+  // 20260515030000_org_locale.sql.
+  locale: string
 }
 
 export type Profile = {
@@ -413,6 +418,10 @@ export type SignupPending = {
   ip_address: string | null
   resends: number
   resent_at: string | null
+  // Visitor locale captured at OTP-request time so the OTP email +
+  // any resend speak the same language even if the user starts /signup
+  // in one tab and finishes /signup/verify in another.
+  locale: string
   created_at: string
 }
 
