@@ -54,6 +54,6 @@ alter table public.demo_bookings_pending enable row level security;
 -- No policies → service-role only.
 
 comment on table public.demo_bookings_pending is
-  'Short-lived hold for /demo bookings between OTP-request and OTP-verify. Row is deleted on successful verification; expired rows are swept by the same cron that cleans signup_pending.';
+  'Short-lived hold for /demo bookings between OTP-request and OTP-verify. Row is deleted on successful verification. Expired rows accumulate until a cleanup cron is set up (also pending for signup_pending) — at /demo''s expected volume, this stays small for months without one.';
 comment on column public.demo_bookings_pending.preferred_language is
   'Language the visitor wants the demo call conducted in. Limited to ''en'' / ''es'' / ''ko'' / ''vi'' — the four the founder speaks. Not the same as visitor_locale (what they read on the site).';
