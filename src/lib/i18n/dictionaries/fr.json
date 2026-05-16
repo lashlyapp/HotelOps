@@ -292,12 +292,12 @@
   "destinations": {
     "eyebrow": "Les marchés pour lesquels nous sommes faits",
     "title": "Pour les hôtels boutique, partout.",
-    "sub": "Lisbonne, Barcelone, Paris, Mexico — les quartiers où les hôtels indépendants et des petits groupes opèrent réellement. Inscription dans votre langue, la même base opérationnelle partout. Facturé en USD ; toute carte de crédit fonctionne."
+    "sub": "Lisbonne, Barcelone, Paris, Mexico — les quartiers où les hôtels indépendants et des petits groupes opèrent réellement. Inscription dans votre langue, la même base opérationnelle partout."
   },
   "asianDestinations": {
     "eyebrow": "Maintenant en APAC",
     "title": "Conçu aussi pour la scène boutique en Asie.",
-    "sub": "Tokyo, Séoul, Hanoï, Singapour — hôtels de design, ryokans, propriétés lifestyle et petits groupes de luxe. Inscrivez-vous dans votre langue et exploitez la même base que nos boutiques en Europe et aux Amériques. Facturé en USD ; toute carte de crédit fonctionne.",
+    "sub": "Tokyo, Séoul, Hanoï, Singapour — hôtels de design, ryokans, propriétés lifestyle et petits groupes de luxe. Inscrivez-vous dans votre langue et exploitez la même base que nos boutiques en Europe et aux Amériques.",
     "items": [
       {
         "city": "Tokyo",

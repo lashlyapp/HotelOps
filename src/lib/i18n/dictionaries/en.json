@@ -292,12 +292,12 @@
   "destinations": {
     "eyebrow": "Markets we're built for",
     "title": "Made for boutique hotels everywhere.",
-    "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Sign up in your language, the same back-office stack everywhere. Billed in USD; any credit card works."
+    "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Sign up in your language, the same back-office stack everywhere."
   },
   "asianDestinations": {
     "eyebrow": "Now serving APAC",
     "title": "Built for the boutique scene across Asia, too.",
-    "sub": "Tokyo, Seoul, Hanoi, Singapore — design hotels, ryokans, lifestyle properties, and small luxury groups. Sign up in your language and run the same operational stack we run for boutiques in Europe and the Americas. Billed in USD; any credit card works.",
+    "sub": "Tokyo, Seoul, Hanoi, Singapore — design hotels, ryokans, lifestyle properties, and small luxury groups. Sign up in your language and run the same operational stack we run for boutiques in Europe and the Americas.",
     "items": [
       {
         "city": "Tokyo",
