@@ -1,15 +1,23 @@
+import * as thirtyDayAudit from './posts/30-day-operational-audit'
+import * as arrivalPageDosDonts from './posts/arrival-page-dos-and-donts'
+import * as housekeepingHandoff from './posts/boutique-housekeeping-handoff'
 import * as eventPipeline from './posts/boutique-hotel-event-pipeline'
+import * as emergencyComms from './posts/emergency-communications-plan'
 import * as guestConciergeCost from './posts/guest-concierge-app-cost'
 import * as guestExpectations from './posts/guest-expectations'
 import * as hotelSignageCost from './posts/hotel-digital-signage-cost-2026'
 import * as wifiSetup from './posts/hotel-guest-wifi-setup'
+import * as signageContent from './posts/hotel-signage-content-that-works'
 import * as maintenanceTicket from './posts/maintenance-ticket-that-closes'
 import * as modernizeChecklist from './posts/modernize-your-boutique-hotel'
 import * as multiPropertyGroup from './posts/multi-property-boutique-group'
+import * as gmOnboarding from './posts/onboarding-new-gm-week-one'
 import * as operationsBudget from './posts/operations-budget'
+import * as ownerMonthlyReport from './posts/owner-monthly-report'
 import * as pmsVsOperations from './posts/pms-vs-operations-system'
 import * as techModernization from './posts/tech-modernization'
 import * as underservedIndustry from './posts/underserved-industry'
+import * as whatGuestsNotice from './posts/what-guests-notice-day-one'
 import type { BlogPostMeta, BlogPostModule } from './types'
 
 /**
@@ -31,12 +39,20 @@ const MODULES: BlogPostModule[] = [
   // Drip-publish queue — newest scheduled date first. Posts whose
   // publishedAt is in the future are gated by filter() below; the
   // daily cron emails when each one crosses its date.
-  eventPipeline,
-  multiPropertyGroup,
-  guestConciergeCost,
-  wifiSetup,
-  maintenanceTicket,
-  modernizeChecklist,
+  thirtyDayAudit, // 2026-11-13
+  housekeepingHandoff, // 2026-10-30
+  signageContent, // 2026-10-16
+  arrivalPageDosDonts, // 2026-10-02
+  emergencyComms, // 2026-09-18
+  whatGuestsNotice, // 2026-09-04
+  ownerMonthlyReport, // 2026-08-21
+  gmOnboarding, // 2026-08-07
+  eventPipeline, // 2026-07-24
+  multiPropertyGroup, // 2026-07-10
+  guestConciergeCost, // 2026-06-26
+  wifiSetup, // 2026-06-12
+  maintenanceTicket, // 2026-05-29
+  modernizeChecklist, // 2026-05-15 (live)
   underservedIndustry,
   pmsVsOperations,
   operationsBudget,
