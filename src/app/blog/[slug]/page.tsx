@@ -186,6 +186,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
                 alt={meta.heroAlt}
                 fill
                 priority
+                quality={95}
                 sizes="(min-width: 1024px) 960px, 100vw"
                 className="object-cover"
               />

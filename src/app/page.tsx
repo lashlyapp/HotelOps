@@ -301,6 +301,7 @@ export default async function HomePage() {
                 alt="Hotel manager reviewing operations on a tablet"
                 fill
                 priority
+                quality={95}
                 sizes="(min-width: 1024px) 540px, (min-width: 640px) 90vw, 100vw"
                 className="object-cover"
               />
@@ -373,6 +374,7 @@ export default async function HomePage() {
                   src={LOBBY_IMAGE}
                   alt="Hotel lobby — work order capture in context"
                   fill
+                  quality={95}
                   sizes="(min-width: 1024px) 480px, 100vw"
                   className="object-cover"
                 />
@@ -390,6 +392,7 @@ export default async function HomePage() {
                   src={EXTERIOR_IMAGE}
                   alt="Hotel exterior — signage across the property"
                   fill
+                  quality={95}
                   sizes="(min-width: 1024px) 480px, 100vw"
                   className="object-cover"
                 />
@@ -463,6 +466,7 @@ export default async function HomePage() {
                   src={GUEST_ROOM_IMAGE}
                   alt="Modern hotel guest room with QR card on the desk"
                   fill
+                  quality={95}
                   sizes="(min-width: 1024px) 480px, 100vw"
                   className="object-cover"
                 />
@@ -506,6 +510,7 @@ export default async function HomePage() {
             src={RECEPTION_IMAGE}
             alt="Hotel reception desk with brass service bell"
             fill
+            quality={95}
             sizes="100vw"
             className="object-cover"
           />

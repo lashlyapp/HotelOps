@@ -108,6 +108,7 @@ export default async function AboutPage() {
                 alt="Hotel reception desk with brass service bell"
                 fill
                 priority
+                quality={95}
                 sizes="(min-width: 1024px) 540px, (min-width: 640px) 90vw, 100vw"
                 className="object-cover"
               />
