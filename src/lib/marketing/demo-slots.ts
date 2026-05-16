@@ -155,6 +155,12 @@ export function buildDemoSlotDays(now: Date = new Date()): SlotDay[] {
 export function parseSlotId(slotId: string): {
   date: string
   hour: number
+  /** UTC instant representing the slot. The slot hour is in
+   *  America/Los_Angeles (PT) — we naively offset by 8h to get
+   *  UTC, which is correct for PST and one hour off during PDT.
+   *  Acceptable for an admin sort/group key; not used to send a
+   *  calendar invite (the founder does that by hand). */
+  at: Date
   humanLabel: string
 } | null {
   const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}):00PT$/.exec(slotId)
@@ -162,6 +168,8 @@ export function parseSlotId(slotId: string): {
   const [, date, hourStr] = m
   const hour = Number.parseInt(hourStr, 10)
   if (!Number.isFinite(hour) || hour < 0 || hour > 23) return null
+  const at = new Date(`${date}T${String(hour).padStart(2, '0')}:00:00-08:00`)
+  if (Number.isNaN(at.getTime())) return null
   const dayLabel = new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -172,6 +180,7 @@ export function parseSlotId(slotId: string): {
   return {
     date,
     hour,
+    at,
     humanLabel: `${formatHourLabel(hour)} on ${dayLabel}`,
   }
 }

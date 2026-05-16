@@ -25,6 +25,7 @@ export default async function AdminLayout({
         <nav className="flex-1 px-3 py-4 space-y-1 text-sm">
           <NavLink href="/admin">Tenants</NavLink>
           <NavLink href="/admin/tenants/new">Create tenant</NavLink>
+          <NavLink href="/admin/appointments">Appointments</NavLink>
         </nav>
 
         <form

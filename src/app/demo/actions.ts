@@ -248,10 +248,36 @@ export async function verifyDemoBookingOtp(
     return { error: interpolate(e.codeMismatchMany, { n: left }) }
   }
 
-  // Verified. Render slot label, fire notification + confirmation
-  // emails, then delete the pending row.
+  // Verified. Persist the appointment, fire notification +
+  // confirmation emails, then delete the pending row.
   const parsed = parseSlotId(pending.slot_id)
   const slotHumanLabel = parsed?.humanLabel ?? pending.slot_id
+
+  // Persist to demo_appointments so the admin UI has a row to
+  // show. We do this BEFORE the notification email so a successful
+  // verify always leaves a queryable record even if Resend is down
+  // — the founder might miss the email but won't lose the booking.
+  // slot_at falls back to "now" if parseSlotId failed, which
+  // shouldn't happen but keeps the insert from silently dropping.
+  const { error: appointmentErr } = await admin
+    .from('demo_appointments')
+    .insert({
+      visitor_email: pending.email,
+      visitor_name: pending.visitor_name,
+      hotel_name: pending.hotel_name,
+      property_count: pending.property_count,
+      visitor_notes: pending.notes,
+      preferred_language: pending.preferred_language,
+      visitor_locale: pending.visitor_locale,
+      slot_id: pending.slot_id,
+      slot_at: (parsed?.at ?? new Date()).toISOString(),
+      status: 'scheduled',
+    })
+  if (appointmentErr) {
+    console.error('[demo] appointment insert failed', appointmentErr)
+    // Continue anyway — losing the appointment row is worse than
+    // continuing without it, since the email still gets through.
+  }
 
   const notified = await sendDemoBookingNotification({
     to: BRAND.supportEmail,
