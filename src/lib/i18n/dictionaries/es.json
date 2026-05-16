@@ -357,17 +357,20 @@
     "items": [
       {
         "headline": "Redujeron el tiempo de mantenimiento de días a horas",
-        "type": "Boutique de 32 habitaciones · Costa Este EE. UU.",
+        "type": "Boutique de 32 habitaciones",
+        "region": "Lisboa, Portugal",
         "body": "Recepción enviaba correos a mantenimiento; los tickets se acumulaban. Con órdenes de trabajo basadas en fotos, el ciclo desde el reporte del huésped hasta la reparación pasó de una mediana de 2-3 días a menos de 4 horas. La propiedad por fin tiene una vista Kanban de todas las incidencias abiertas en un solo lugar."
       },
       {
         "headline": "Sustituyeron cuatro suscripciones SaaS independientes",
-        "type": "Grupo hotelero de diseño con dos propiedades · Costa Oeste EE. UU.",
+        "type": "Grupo hotelero de diseño con dos propiedades",
+        "region": "Ciudad de México, México",
         "body": "Cancelaron su herramienta de tickets de mantenimiento, su plataforma de eventos y banquetes, su suscripción de señalización digital y su app de conserjería. El gasto neto bajó unos $400/propiedad/mes con los mismos flujos de trabajo — todo consolidado en una sola línea de $188."
       },
       {
         "headline": "Director nuevo operativo en una tarde, no en una semana",
-        "type": "Pequeño grupo hotelero · Noroeste del Pacífico",
+        "type": "Pequeño grupo hotelero",
+        "region": "Tokio, Japón",
         "body": "El nuevo Director empezó un martes. Al final del día tenía las órdenes de trabajo, los contactos de proveedores, las credenciales Wi-Fi, las tarjetas de bienvenida imprimibles y la canalización de eventos en una sola pestaña. El propietario solía reservar dos semanas para la incorporación y ahora dedica una tarde."
       }
     ],

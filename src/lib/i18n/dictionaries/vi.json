@@ -357,17 +357,20 @@
     "items": [
       {
         "headline": "Cắt giảm độ trễ bảo trì từ vài ngày xuống vài giờ",
-        "type": "Boutique 32 phòng · Bờ Đông Hoa Kỳ",
+        "type": "Boutique 32 phòng",
+        "region": "Lisbon, Bồ Đào Nha",
         "body": "Lễ tân từng gửi email đến kỹ thuật; các phiếu nằm yên trong hộp thư. Với phiếu công việc ưu tiên ảnh, chu kỳ từ báo cáo của khách → sửa chữa hoàn thành giảm từ trung vị 2-3 ngày xuống dưới 4 giờ. Chủ sở hữu cuối cùng có một bảng xem Kanban của mọi vấn đề đang mở khắp tài sản ở một nơi."
       },
       {
         "headline": "Thay thế bốn gói thuê bao SaaS riêng biệt",
-        "type": "Nhóm khách sạn thiết kế hai tài sản · Bờ Tây Hoa Kỳ",
+        "type": "Nhóm khách sạn thiết kế hai tài sản",
+        "region": "Thành phố Mexico, Mexico",
         "body": "Hủy công cụ đặt phiếu bảo trì, nền tảng tiệc-sự kiện, gói thuê bao biển hiển thị kỹ thuật số và ứng dụng concierge khách. Chi tiêu ròng giảm khoảng $400/tài sản/tháng với cùng tất cả các quy trình công việc vẫn chạy — chỉ được củng cố dưới một mục dòng $188."
       },
       {
         "headline": "Đào tạo GM trong một buổi chiều, không phải một tuần",
-        "type": "Nhà điều hành nhóm nhỏ · Tây Bắc Thái Bình Dương",
+        "type": "Nhà điều hành nhóm nhỏ",
+        "region": "Tokyo, Nhật Bản",
         "body": "GM mới bắt đầu vào thứ Ba. Đến cuối ngày họ đã có phiếu công việc, danh bạ nhà cung cấp, thông tin Wi-Fi, thẻ đón khách in được và đường ống sự kiện tất cả trong một tab. Chủ sở hữu từng dành ngân sách hai tuần cho việc tăng tốc GM mới và giờ phân bổ một buổi chiều."
       }
     ],
