@@ -26,8 +26,12 @@ type View = 'list' | 'calendar'
  */
 export function AppointmentsClient({
   appointments,
+  upcoming,
+  past,
 }: {
   appointments: AppointmentRow[]
+  upcoming: AppointmentRow[]
+  past: AppointmentRow[]
 }) {
   const [view, setView] = useState<View>('list')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -58,7 +62,8 @@ export function AppointmentsClient({
         <div className="min-w-0">
           {view === 'list' ? (
             <ListView
-              appointments={appointments}
+              upcoming={upcoming}
+              past={past}
               selectedId={selectedId}
               onSelect={setSelectedId}
             />
@@ -120,21 +125,16 @@ function TabButton({
 // List view — table grouped into Upcoming / Past
 // ---------------------------------------------------------------------------
 function ListView({
-  appointments,
+  upcoming,
+  past,
   selectedId,
   onSelect,
 }: {
-  appointments: AppointmentRow[]
+  upcoming: AppointmentRow[]
+  past: AppointmentRow[]
   selectedId: string | null
   onSelect: (id: string) => void
 }) {
-  const now = Date.now()
-  const upcoming = appointments.filter(
-    (a) => new Date(a.slot_at).getTime() >= now && a.status === 'scheduled',
-  )
-  const past = appointments.filter(
-    (a) => !upcoming.includes(a),
-  )
 
   return (
     <div className="space-y-6">
@@ -148,7 +148,7 @@ function ListView({
       <ListSection
         heading="Past & resolved"
         empty="No past appointments."
-        rows={past.slice().reverse()}
+        rows={past}
         selectedId={selectedId}
         onSelect={onSelect}
       />

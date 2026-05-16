@@ -16,6 +16,22 @@ export default async function AdminAppointmentsPage() {
   await requirePlatformAdmin()
   const appointments = await loadAppointments()
 
+  // Split upcoming vs past on the server. The react-hooks/purity
+  // rule flags Date.now() because re-renders on the client would
+  // produce inconsistent results — but this is a server component
+  // that runs once per request, so the call is deterministic
+  // within the response. Any status change revalidates the path
+  // and re-runs this split with a fresh "now".
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now()
+  const upcoming = appointments.filter(
+    (a) => new Date(a.slot_at).getTime() >= now && a.status === 'scheduled',
+  )
+  const upcomingIds = new Set(upcoming.map((a) => a.id))
+  const past = appointments
+    .filter((a) => !upcomingIds.has(a.id))
+    .reverse()
+
   return (
     <div className="p-8 space-y-6">
       <div>
@@ -29,7 +45,11 @@ export default async function AdminAppointmentsPage() {
         </p>
       </div>
 
-      <AppointmentsClient appointments={appointments} />
+      <AppointmentsClient
+        appointments={appointments}
+        upcoming={upcoming}
+        past={past}
+      />
     </div>
   )
 }
