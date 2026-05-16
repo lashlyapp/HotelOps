@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
+import { DestinationsBand } from '@/components/marketing/destinations-band'
 import { Card, CardBody } from '@/components/ui/card'
 import { BRAND } from '@/lib/brand'
 import { getDictionary } from '@/lib/i18n/dictionaries'
@@ -127,6 +128,28 @@ export default async function HomePage() {
             priceCurrency: 'USD',
             unitText: 'property/month',
           },
+        },
+      },
+      {
+        '@type': 'Service',
+        '@id': `https://www.${BRAND.domain}/#service-area`,
+        name: `${BRAND.name} back-office operations for boutique hotels`,
+        description:
+          "Hotel back-office software that runs alongside any PMS — maintenance, events, vendors, signage, guest arrival. Built for boutique hotels in major European and Latin American markets.",
+        provider: { '@id': `https://www.${BRAND.domain}/#org` },
+        // Cities we localize for + bill in the local currency. Drives
+        // the destinations band on / and signals regional intent to
+        // search engines so the page surfaces on geo-targeted queries
+        // like "hotel maintenance software Barcelona".
+        areaServed: [
+          { '@type': 'City', name: 'Lisbon', sameAs: 'https://en.wikipedia.org/wiki/Lisbon' },
+          { '@type': 'City', name: 'Barcelona', sameAs: 'https://en.wikipedia.org/wiki/Barcelona' },
+          { '@type': 'City', name: 'Paris', sameAs: 'https://en.wikipedia.org/wiki/Paris' },
+          { '@type': 'City', name: 'Mexico City', sameAs: 'https://en.wikipedia.org/wiki/Mexico_City' },
+        ],
+        audience: {
+          '@type': 'BusinessAudience',
+          audienceType: 'Boutique hotel owners, general managers, and operations managers',
         },
       },
       {
@@ -272,6 +295,9 @@ export default async function HomePage() {
             </p>
           </div>
         </section>
+
+        {/* ─── Destinations: city-targeted cards in local languages ──── */}
+        <DestinationsBand t={t} />
 
         {/* ─── Module: Work Orders (SEO: "hotel maintenance software") ─ */}
         <section

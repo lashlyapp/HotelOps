@@ -39,5 +39,10 @@
     "eyebrow": "Commencer gratuitement",
     "headline": "Essayez MyHotelOps gratuitement pendant 7 jours",
     "sub": "Accès complet. Sans carte bancaire. 10 Go de médias inclus. Nous vous enverrons un code de vérification par email pour confirmer votre adresse — moins d'une minute du début à la fin."
+  },
+  "destinations": {
+    "eyebrow": "Les marchés pour lesquels nous sommes faits",
+    "title": "Pour les hôtels boutique, là où ils se concentrent vraiment.",
+    "sub": "Lisbonne, Barcelone, Paris, Mexico — les quartiers où les hôtels indépendants et des petits groupes opèrent réellement. Facturation en devise locale, inscription dans votre langue, la même base opérationnelle partout."
   }
 }
