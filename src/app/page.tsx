@@ -6,6 +6,8 @@ import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
 import { Card, CardBody } from '@/components/ui/card'
 import { BRAND } from '@/lib/brand'
+import { getDictionary } from '@/lib/i18n/dictionaries'
+import { getLocale } from '@/lib/i18n/get-locale'
 import { createClient } from '@/lib/supabase/server'
 
 // Public marketing imagery. The originals are large (multi-MB) JPEGs in
@@ -18,23 +20,23 @@ const LOBBY_IMAGE = '/AdobeStock_1896833868.jpeg'
 const EXTERIOR_IMAGE = '/AdobeStock_1951250090.jpeg'
 
 export const metadata: Metadata = {
-  title: `${BRAND.name} — Hotel maintenance, signage, and guest experience software`,
+  title: `${BRAND.name} — The operations layer for boutique hotels`,
   description:
-    'HotelOps is hotel operations software for independent and boutique properties. Photo-based maintenance work orders, digital signage for every TV, and guest arrival pages — flat per-property pricing instead of per-screen or per-room.',
+    "MyHotelOps is the back-office software boutique hotels run alongside their PMS. Maintenance, events, vendors, signage, guest arrival — everything your reservation system doesn't do, in one place. Built for owners, GMs, and managers.",
   alternates: { canonical: `https://www.${BRAND.domain}/` },
   openGraph: {
     type: 'website',
-    title: `${BRAND.name} — One platform for hotel operations`,
+    title: `${BRAND.name} — Everything your PMS doesn't do`,
     description:
-      'Maintenance work orders, digital signage, and guest arrival pages — flat per-property pricing.',
+      "Back-office operations for boutique hotels — maintenance, events, vendors, signage, guest arrival. Runs alongside any PMS. Flat per-property pricing.",
     url: `https://www.${BRAND.domain}/`,
     siteName: BRAND.name,
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${BRAND.name} — One platform for hotel operations`,
+    title: `${BRAND.name} — Everything your PMS doesn't do`,
     description:
-      'Maintenance work orders, digital signage, and guest arrival pages — flat per-property pricing.',
+      "Back-office operations for boutique hotels. Runs alongside any PMS. Flat per-property pricing.",
   },
 }
 
@@ -51,6 +53,14 @@ export default async function HomePage() {
       .maybeSingle()
     redirect(profile?.role === 'platform_admin' ? '/admin' : '/dashboard')
   }
+
+  // Localized strings for the hero + positioning band. Module-level
+  // sections below (work-orders / signage / arrival cards) stay
+  // English-only for now — we localize the first-touch surface first
+  // and translate the deeper sections in a follow-up once we have
+  // signal that international leads convert.
+  const locale = await getLocale()
+  const t = getDictionary(locale)
 
   // Structured data: three SoftwareApplication entries (one per anchor
   // keyword section) plus the Organization. Google understands these as
@@ -161,25 +171,25 @@ export default async function HomePage() {
               href="/#work-orders"
               className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
             >
-              Work Orders
+              {t.nav.workOrders}
             </Link>
             <Link
               href="/#signage"
               className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
             >
-              Signage
+              {t.nav.signage}
             </Link>
             <Link
               href="/#arrival"
               className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
             >
-              Arrival
+              {t.nav.arrival}
             </Link>
             <Link
               href="/pricing"
               className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
             >
-              Pricing
+              {t.nav.pricing}
             </Link>
           </nav>
           <div className="flex items-center gap-2">
@@ -187,13 +197,13 @@ export default async function HomePage() {
               href="/login"
               className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
             >
-              Log in
+              {t.common.logIn}
             </Link>
             <Link
               href="/signup"
               className="focus-ring inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-fg hover:bg-primary-hover transition-colors"
             >
-              Sign up
+              {t.common.signUp}
             </Link>
           </div>
         </div>
@@ -205,38 +215,33 @@ export default async function HomePage() {
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                Hotel operations software · per property, not per seat
+                {t.marketing.hero.eyebrow}
               </p>
               <h1 className="mt-4 text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-fg leading-[1.05]">
-                Maintenance, signage,
-                <br />
-                and guest experience — in one place.
+                {t.marketing.hero.headline}
               </h1>
               <p className="mt-6 text-lg text-muted max-w-xl leading-relaxed">
-                {BRAND.name} replaces three line items every independent
-                hotel pays for separately: maintenance ticketing, digital
-                signage, and the guest arrival concierge. Flat per-property
-                pricing — no per-screen, per-room, or per-seat surprise on
-                the invoice.
+                {t.marketing.hero.sub}
+              </p>
+              <p className="mt-3 text-sm text-muted max-w-xl leading-relaxed">
+                {t.marketing.hero.personaLine}
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
                   href="/signup"
                   className="focus-ring inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-base font-medium text-primary-fg hover:bg-primary-hover transition-colors"
                 >
-                  Sign up
+                  {t.marketing.hero.ctaPrimary}
                 </Link>
                 <Link
                   href="/pricing"
                   className="focus-ring inline-flex h-11 items-center rounded-md px-5 text-base font-medium text-fg hover:bg-surface-muted transition-colors"
                 >
-                  See pricing →
+                  {t.marketing.hero.ctaSecondary} →
                 </Link>
               </div>
               <p className="mt-6 text-xs text-subtle">
-                We onboard you and your team personally so you&apos;re
-                running on day one — no setup wizard, no months of
-                implementation.
+                {t.marketing.hero.trialLine}
               </p>
             </div>
 
@@ -250,6 +255,21 @@ export default async function HomePage() {
                 className="object-cover"
               />
             </div>
+          </div>
+        </section>
+
+        {/* ─── Positioning band: what we are NOT ─────────────────────── */}
+        <section className="border-y border-border-subtle bg-fg/[0.02]">
+          <div className="mx-auto max-w-4xl px-6 py-12 lg:py-16 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+              Scope
+            </p>
+            <h2 className="mt-3 text-2xl sm:text-3xl font-semibold tracking-tight text-fg">
+              {t.marketing.positioning.title}
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-base text-muted leading-relaxed">
+              {t.marketing.positioning.body}
+            </p>
           </div>
         </section>
 

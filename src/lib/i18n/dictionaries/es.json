@@ -1,0 +1,43 @@
+{
+  "common": {
+    "signIn": "Iniciar sesión",
+    "signUp": "Registrarse",
+    "startFree": "Empezar gratis",
+    "seePricing": "Ver precios",
+    "openDashboard": "Abrir panel",
+    "backToHome": "Volver al inicio",
+    "logIn": "Acceder",
+    "language": "Idioma"
+  },
+  "nav": {
+    "workOrders": "Órdenes de trabajo",
+    "events": "Eventos y banquetes",
+    "signage": "Señalización",
+    "arrival": "Bienvenida",
+    "pricing": "Precios"
+  },
+  "marketing": {
+    "hero": {
+      "eyebrow": "Software de back-office hotelero · compatible con cualquier PMS",
+      "headline": "Todo lo que tu PMS no hace.",
+      "sub": "MyHotelOps es la capa de operaciones que funciona junto a tu sistema de reservas. Mantenimiento, eventos, proveedores, señalización, llegada del huésped — todo lo que implica gestionar un hotel boutique fuera del PMS, en un solo lugar.",
+      "personaLine": "Diseñado para propietarios, directores y gerentes — no para el personal que lucha con tu sistema de reservas.",
+      "trialLine": "Prueba gratuita de 7 días. Sin tarjeta de crédito. 10 GB incluidos.",
+      "ctaPrimary": "Empezar prueba gratuita",
+      "ctaSecondary": "Ver precios"
+    },
+    "positioning": {
+      "title": "La categoría en la que no entramos: tu PMS.",
+      "body": "Nunca reemplazaremos a Cloudbeds, Mews, Opera o Little Hotelier. Nos colocamos junto a ellos y gestionamos cada superficie operativa que dejan en hojas de cálculo y chats de grupo — órdenes de trabajo, propuestas de eventos, accesos de proveedores, señalización en cada televisor, la tarjeta de bienvenida impresa de cada habitación."
+    },
+    "footer": {
+      "tagline": "La capa de operaciones para hoteles boutique.",
+      "rights": "Todos los derechos reservados."
+    }
+  },
+  "signup": {
+    "eyebrow": "Empezar gratis",
+    "headline": "Prueba MyHotelOps gratis durante 7 días",
+    "sub": "Acceso completo. Sin tarjeta de crédito. 10 GB de contenido multimedia incluidos. Te enviaremos un código de verificación por correo — toma menos de un minuto de principio a fin."
+  }
+}

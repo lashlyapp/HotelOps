@@ -1,10 +1,12 @@
 import Link from 'next/link'
 import { BRAND, BRAND_ADDRESS_LINES } from '@/lib/brand'
 import { Wordmark } from '@/components/brand/wordmark'
+import { LocaleSwitcher } from '@/components/i18n/locale-switcher'
+import { getLocale } from '@/lib/i18n/get-locale'
 
 type Variant = 'public' | 'app'
 
-export function Footer({ variant = 'public' }: { variant?: Variant }) {
+export async function Footer({ variant = 'public' }: { variant?: Variant }) {
   const year = new Date().getFullYear()
 
   if (variant === 'app') {
@@ -33,6 +35,10 @@ export function Footer({ variant = 'public' }: { variant?: Variant }) {
       </footer>
     )
   }
+
+  // Public footer only — locale is irrelevant inside the (app) shell
+  // (authenticated UI isn't localized yet) so we resolve it just here.
+  const locale = await getLocale()
 
   return (
     <footer className="mt-auto border-t border-border-subtle bg-surface-muted">
@@ -91,8 +97,9 @@ export function Footer({ variant = 'public' }: { variant?: Variant }) {
       </div>
 
       <div className="border-t border-border-subtle">
-        <div className="mx-auto max-w-6xl px-6 py-4 text-xs text-subtle">
-          © {year} {BRAND.legalName}. All rights reserved.
+        <div className="mx-auto max-w-6xl px-6 py-4 flex flex-wrap items-center justify-between gap-3 text-xs text-subtle">
+          <span>© {year} {BRAND.legalName}. All rights reserved.</span>
+          <LocaleSwitcher current={locale} />
         </div>
       </div>
     </footer>

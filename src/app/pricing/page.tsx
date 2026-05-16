@@ -8,13 +8,13 @@ import { BRAND } from '@/lib/brand'
 export const metadata: Metadata = {
   title: `Pricing — ${BRAND.name}`,
   description:
-    'Flat per-property pricing for hotel operations software. $100/property/month base with Work Orders, Events & Catering, IT Hub, and Media. Optional add-ons for unlimited signage and guest experience.',
+    "Flat per-property pricing for the boutique-hotel back-office layer that runs alongside your PMS. $100/property/month base. Optional add-ons for unlimited signage and guest arrival.",
   alternates: { canonical: `https://www.${BRAND.domain}/pricing` },
   openGraph: {
     type: 'website',
     title: `Pricing — ${BRAND.name}`,
     description:
-      'Hotel operations software with flat per-property pricing. Replace Quore, Yodeck, and Duve under one $188/property/mo cap.',
+      "Back-office operations for boutique hotels, alongside any PMS. Flat per-property pricing — $100/mo base, $188 with everything on.",
     url: `https://www.${BRAND.domain}/pricing`,
     siteName: BRAND.name,
   },

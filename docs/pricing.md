@@ -8,6 +8,28 @@ at runtime from the lookup keys listed below — pricing changes happen in
 the Stripe Dashboard (create a new Price, transfer the lookup key), not
 in this file.
 
+## Positioning
+
+**We are not your PMS.** We sit alongside Cloudbeds, Mews, Opera, Little
+Hotelier, and every other reservation system, and we handle the
+operational surfaces those tools leave to spreadsheets and group chats:
+maintenance work orders, event proposals, vendor logins, signage on
+every TV, the printable arrival card in every room.
+
+**Buyer:** owners, GMs, and operations managers of boutique hotels
+(roughly 10–100 rooms, independent or small group). Not line staff
+fighting the reservation system — the people who live *outside* the
+PMS, in the operational chaos around it.
+
+**Why this positioning matters for pricing:**
+- We don't compete head-on with PMS-led suites that bundle reservation
+  + everything else. That comparison always loses.
+- We compete with the *stack of 4–5 separate tools* a boutique uses
+  on top of their PMS today. That comparison wins on price and
+  cognitive load.
+- The flat per-property number lands cleanly because owners think in
+  properties, not in seats / rooms / screens.
+
 ## Plan
 
 One base subscription plus two optional add-ons. All three line items

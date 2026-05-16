@@ -1,0 +1,43 @@
+{
+  "common": {
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "startFree": "Start free",
+    "seePricing": "See pricing",
+    "openDashboard": "Open dashboard",
+    "backToHome": "Back to home",
+    "logIn": "Log in",
+    "language": "Language"
+  },
+  "nav": {
+    "workOrders": "Work Orders",
+    "events": "Events & Catering",
+    "signage": "Signage",
+    "arrival": "Arrival",
+    "pricing": "Pricing"
+  },
+  "marketing": {
+    "hero": {
+      "eyebrow": "Hotel back-office software · works alongside any PMS",
+      "headline": "Everything your PMS doesn't do.",
+      "sub": "MyHotelOps is the operations layer that runs alongside your hotel's reservation system. Maintenance, events, vendors, signage, guest arrival — every part of running a boutique hotel that lives outside your PMS, in one place.",
+      "personaLine": "Built for owners, GMs, and managers — not for line staff fighting your reservation system.",
+      "trialLine": "7-day free trial. No credit card. 10 GB included.",
+      "ctaPrimary": "Start free trial",
+      "ctaSecondary": "See pricing"
+    },
+    "positioning": {
+      "title": "The category we're not in: your PMS.",
+      "body": "We will never replace Cloudbeds, Mews, Opera, or Little Hotelier. We sit next to them and handle every operational surface they leave to spreadsheets and group chats — work orders, event proposals, vendor logins, signage on every TV, the printable arrival card in every room."
+    },
+    "footer": {
+      "tagline": "The operations layer for boutique hotels.",
+      "rights": "All rights reserved."
+    }
+  },
+  "signup": {
+    "eyebrow": "Start free",
+    "headline": "Try MyHotelOps free for 7 days",
+    "sub": "Full access. No credit card. 10 GB of media included. We'll email you a verification code to confirm your address — takes under a minute end to end."
+  }
+}
