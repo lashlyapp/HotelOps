@@ -191,7 +191,7 @@
     "allLabel": "All features",
     "eyebrow": "Everything included",
     "title": "Built like the boutique back office actually works.",
-    "sub": "The full surface area, in one place. No per-module pricing — every feature below is in the $100/property base or one of the two flat-rate add-ons. Nothing here costs extra by seat, by screen, or by room.",
+    "sub": "The full surface area, in one place. No per-module pricing — every feature below is in the $100/property base or one of the three flat-rate add-ons. Nothing here costs extra by seat, by screen, or by room.",
     "categories": [
       {
         "title": "Operations",
@@ -253,6 +253,10 @@
           {
             "name": "Restaurant & Room Service Menus",
             "description": "Editable menus that auto-publish to the arrival page and signage. Update once, every surface refreshes."
+          },
+          {
+            "name": "Social Studio (add-on)",
+            "description": "One AI-drafted social post per property per day — captions, hashtags, and a photo picked from this catalog. Copy, download, or email it to yourself; you publish from your phone. No platform integrations."
           }
         ]
       },
@@ -366,7 +370,7 @@
         "headline": "Replaced four separate SaaS subscriptions",
         "type": "Two-property design hotel group",
         "region": "Mexico City, Mexico",
-        "body": "Cancelled their maintenance ticketing tool, their event-banquet platform, their digital signage subscription, and their guest concierge app. Net spend dropped about $400/property/mo with all the same workflows still running — just consolidated under one $188 line item."
+        "body": "Cancelled their maintenance ticketing tool, their event-banquet platform, their digital signage subscription, their guest concierge app, and the freelance social-media manager who wrote their captions. Net spend dropped about $500/property/mo with all the same workflows still running — just consolidated under one $207 line item."
       },
       {
         "headline": "Onboarded GM in an afternoon, not a week",
@@ -451,7 +455,7 @@
   "pricing": {
     "eyebrow": "Pricing",
     "headline": "Per property. Not per seat. Not per screen. Not per room.",
-    "sub": "One $100/property/month base. Two optional add-ons. That’s the whole price list — and the maximum a single property can possibly cost you is $188/month, regardless of how many screens, rooms, or staff you have.",
+    "sub": "One $100/property/month base. Three optional add-ons. That’s the whole price list — and the maximum a single property can possibly cost you is $207/month, regardless of how many screens, rooms, or staff you have.",
     "midCycleNote": "No contracts. No annual commitments. Add or remove options whenever you want — cancel any time from your account.",
     "cadence": "property / month",
     "tagRequired": "Required",
@@ -492,6 +496,18 @@
           "No guest account, no app",
           "Activated org-wide with one click"
         ]
+      },
+      "social": {
+        "label": "Social Studio",
+        "body": "An AI-drafted social post per property, every morning. Captions, hashtags, and a photo pick from your media library — ready to copy, download, or email to yourself. We never touch the social platforms.",
+        "features": [
+          "One on-brand post per property per day",
+          "Three caption variants, topical hashtags",
+          "Image suggested from your media catalog",
+          "Instagram / Facebook / TikTok preview",
+          "Thumbs up/down trains your brand voice",
+          "Activated org-wide with one click"
+        ]
       }
     },
     "compare": {
@@ -526,11 +542,15 @@
         },
         {
           "q": "What if I only want maintenance, or only signage?",
-          "a": "You can. The base subscription includes maintenance work orders, events & catering, IT Hub, media, and three signage screens at $100/property. Add Signage Unlimited or Guest Experience only if you want them — toggle on /billing, billed prorated."
+          "a": "You can. The base subscription includes maintenance work orders, events & catering, IT Hub, media, and three signage screens at $100/property. Add Signage Unlimited, Guest Experience, or Social Studio only if you want them — toggle on /billing, billed prorated."
         },
         {
           "q": "How is the signage add-on different from Yodeck or OptiSigns?",
           "a": "Flat per-property pricing — unlimited screens at a property for $49 versus $8–$30 per screen per month elsewhere. Same player concept (any browser-capable TV), same scheduling. Break-even versus Yodeck at about 6 screens; cheaper above that."
+        },
+        {
+          "q": "Does Social Studio post to my Instagram for me?",
+          "a": "No, and that's by design. Social Studio drafts the post each morning — caption, hashtags, suggested photo — and lets you copy, download, or email it to yourself. You publish it from your phone. No platform integrations to break, no OAuth grants to manage, and your social accounts stay yours."
         },
         {
           "q": "Do you integrate with our PMS (Mews, Cloudbeds, Opera)?",

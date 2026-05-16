@@ -191,7 +191,7 @@
     "allLabel": "Todas las funciones",
     "eyebrow": "Todo incluido",
     "title": "Construido como realmente funciona el back-office boutique.",
-    "sub": "Toda la superficie, en un solo lugar. Sin precios por módulo — cada función a continuación está en la base de $100/propiedad o en uno de los dos complementos de tarifa plana. Nada aquí cuesta extra por puesto, pantalla o habitación.",
+    "sub": "Toda la superficie, en un solo lugar. Sin precios por módulo — cada función a continuación está en la base de $100/propiedad o en uno de los tres complementos de tarifa plana. Nada aquí cuesta extra por puesto, pantalla o habitación.",
     "categories": [
       {
         "title": "Operaciones",
@@ -253,6 +253,10 @@
           {
             "name": "Menús de Restaurante y Servicio",
             "description": "Menús editables que se publican automáticamente en la página de llegada y señalización. Actualiza una vez, cada superficie se refresca."
+          },
+          {
+            "name": "Social Studio (complemento)",
+            "description": "Una publicación social redactada por IA por propiedad, cada día — texto, hashtags y una foto elegida de este catálogo. Cópiala, descárgala o envíatela por email; tú publicas desde el móvil. Sin integraciones de plataforma."
           }
         ]
       },
@@ -366,7 +370,7 @@
         "headline": "Sustituyeron cuatro suscripciones SaaS independientes",
         "type": "Grupo hotelero de diseño con dos propiedades",
         "region": "Ciudad de México, México",
-        "body": "Cancelaron su herramienta de tickets de mantenimiento, su plataforma de eventos y banquetes, su suscripción de señalización digital y su app de conserjería. El gasto neto bajó unos $400/propiedad/mes con los mismos flujos de trabajo — todo consolidado en una sola línea de $188."
+        "body": "Cancelaron su herramienta de tickets de mantenimiento, su plataforma de eventos y banquetes, su suscripción de señalización digital, su app de conserjería y el freelancer que les escribía los posts en redes. El gasto neto bajó unos $500/propiedad/mes con los mismos flujos de trabajo — todo consolidado en una sola línea de $207."
       },
       {
         "headline": "Director nuevo operativo en una tarde, no en una semana",
@@ -451,7 +455,7 @@
   "pricing": {
     "eyebrow": "Precios",
     "headline": "Por propiedad. No por usuario. No por pantalla. No por habitación.",
-    "sub": "Una base de $100/propiedad/mes. Dos complementos opcionales. Esa es toda la lista de precios — y el máximo que una sola propiedad puede costarte es $188/mes, sin importar cuántas pantallas, habitaciones o personal tengas.",
+    "sub": "Una base de $100/propiedad/mes. Tres complementos opcionales. Esa es toda la lista de precios — y el máximo que una sola propiedad puede costarte es $207/mes, sin importar cuántas pantallas, habitaciones o personal tengas.",
     "midCycleNote": "Sin contratos. Sin compromisos anuales. Añade o quita opciones cuando quieras — cancela en cualquier momento desde tu cuenta.",
     "cadence": "propiedad / mes",
     "tagRequired": "Obligatorio",
@@ -492,6 +496,18 @@
           "Sin cuenta de huésped, sin app",
           "Activado para toda la organización con un clic"
         ]
+      },
+      "social": {
+        "label": "Social Studio",
+        "body": "Una publicación social redactada por IA por propiedad, cada mañana. Texto, hashtags y una foto elegida de tu biblioteca multimedia — lista para copiar, descargar o enviarte por correo. Nunca tocamos las plataformas sociales.",
+        "features": [
+          "Una publicación de marca por propiedad al día",
+          "Tres variantes de texto, hashtags temáticos",
+          "Imagen sugerida desde tu catálogo multimedia",
+          "Vista previa Instagram / Facebook / TikTok",
+          "Pulgares arriba/abajo entrenan tu voz de marca",
+          "Activado para toda la organización con un clic"
+        ]
       }
     },
     "compare": {
@@ -526,11 +542,15 @@
         },
         {
           "q": "¿Y si solo quiero mantenimiento, o solo señalización?",
-          "a": "Puedes. La suscripción base incluye órdenes de trabajo de mantenimiento, eventos y banquetes, IT Hub, multimedia y tres pantallas de señalización por $100/propiedad. Añade Señalización Ilimitada o Experiencia del Huésped solo si las quieres — actívalas en /billing, facturadas prorrateadas."
+          "a": "Puedes. La suscripción base incluye órdenes de trabajo de mantenimiento, eventos y banquetes, IT Hub, multimedia y tres pantallas de señalización por $100/propiedad. Añade Señalización Ilimitada, Experiencia del Huésped o Social Studio solo si las quieres — actívalas en /billing, facturadas prorrateadas."
         },
         {
           "q": "¿En qué se diferencia el complemento de señalización de Yodeck u OptiSigns?",
           "a": "Precio plano por propiedad — pantallas ilimitadas en una propiedad por $49 frente a $8–$30 por pantalla al mes en otros sitios. Mismo concepto de player (cualquier TV con navegador), misma programación. Punto de equilibrio frente a Yodeck en torno a 6 pantallas; más barato por encima."
+        },
+        {
+          "q": "¿Social Studio publica en mi Instagram automáticamente?",
+          "a": "No, y es a propósito. Social Studio redacta el post cada mañana — texto, hashtags, foto sugerida — y te deja copiarlo, descargarlo o enviártelo por email. Tú publicas desde tu móvil. Sin integraciones de plataforma que se rompan, sin OAuth que gestionar, y tus cuentas sociales siguen siendo tuyas."
         },
         {
           "q": "¿Os integráis con nuestro PMS (Mews, Cloudbeds, Opera)?",

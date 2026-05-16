@@ -10,13 +10,13 @@ import { getLocale } from '@/lib/i18n/get-locale'
 export const metadata: Metadata = {
   title: `Pricing — ${BRAND.name}`,
   description:
-    "Flat per-property pricing for the boutique-hotel back-office layer that runs alongside your PMS. $100/property/month base. Optional add-ons for unlimited signage and guest arrival.",
+    "Flat per-property pricing for the boutique-hotel back-office layer that runs alongside your PMS. $100/property/month base. Optional add-ons for unlimited signage, guest arrival, and AI-drafted daily social posts.",
   alternates: { canonical: `https://www.${BRAND.domain}/pricing` },
   openGraph: {
     type: 'website',
     title: `Pricing — ${BRAND.name}`,
     description:
-      "Back-office operations for boutique hotels, alongside any PMS. Flat per-property pricing — $100/mo base, $188 with everything on.",
+      "Back-office operations for boutique hotels, alongside any PMS. Flat per-property pricing — $100/mo base, $207 with everything on.",
     url: `https://www.${BRAND.domain}/pricing`,
     siteName: BRAND.name,
   },
@@ -46,7 +46,7 @@ export default async function PricingPage() {
 
         {/* ─── Plan cards ────────────────────────────────────────────── */}
         <section className="mx-auto max-w-6xl px-6 py-8">
-          <div className="grid gap-5 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <PlanCard
               label={t.plans.base.label}
               price="$100"
@@ -71,6 +71,14 @@ export default async function PricingPage() {
               tag={t.tagOptional}
               body={t.plans.guest.body}
               features={t.plans.guest.features}
+            />
+            <PlanCard
+              label={t.plans.social.label}
+              price="+$19"
+              cadence={t.cadence}
+              tag={t.tagOptional}
+              body={t.plans.social.body}
+              features={t.plans.social.features}
             />
           </div>
           <p className="mt-6 text-center text-xs text-subtle">
@@ -152,6 +160,12 @@ export default async function PricingPage() {
                     competitorCost="$120–$240"
                     hotelopsCost="$39"
                   />
+                  <CompareRow
+                    need="Daily social posts"
+                    competitor="Freelancer / Hootsuite + ChatGPT"
+                    competitorCost="$99–$199"
+                    hotelopsCost="$19"
+                  />
                   <tr className="bg-surface-muted/60 font-medium">
                     <td className="px-4 py-3 text-fg">
                       {t.compare.monthlyTotal}
@@ -160,10 +174,10 @@ export default async function PricingPage() {
                       {t.compare.alaCarte}
                     </td>
                     <td className="px-4 py-3 text-right text-fg tabular-nums">
-                      ~$580
+                      ~$679
                     </td>
                     <td className="px-4 py-3 text-right text-fg tabular-nums">
-                      $188
+                      $207
                     </td>
                   </tr>
                   <tr className="bg-success-bg/30 font-semibold">
@@ -174,7 +188,7 @@ export default async function PricingPage() {
                       className="px-4 py-3 text-right text-success-fg tabular-nums"
                       colSpan={2}
                     >
-                      $392 / month (68%)
+                      $472 / month (70%)
                     </td>
                   </tr>
                 </tbody>

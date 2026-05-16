@@ -191,7 +191,7 @@
     "allLabel": "Tất cả tính năng",
     "eyebrow": "Tất cả bao gồm",
     "title": "Được xây dựng theo cách back-office boutique thực sự hoạt động.",
-    "sub": "Toàn bộ bề mặt, ở một nơi. Không có giá theo mô-đun — mọi tính năng dưới đây đều nằm trong nền tảng $100/tài sản hoặc một trong hai bổ sung giá đồng nhất. Không có gì ở đây tốn thêm theo chỗ ngồi, theo màn hình, hay theo phòng.",
+    "sub": "Toàn bộ bề mặt, ở một nơi. Không có giá theo mô-đun — mọi tính năng dưới đây đều nằm trong nền tảng $100/tài sản hoặc một trong ba bổ sung giá đồng nhất. Không có gì ở đây tốn thêm theo chỗ ngồi, theo màn hình, hay theo phòng.",
     "categories": [
       {
         "title": "Vận hành",
@@ -253,6 +253,10 @@
           {
             "name": "Thực Đơn Nhà Hàng & Dịch Vụ Phòng",
             "description": "Thực đơn có thể chỉnh sửa tự động xuất bản trên trang đón khách và biển hiển thị. Cập nhật một lần, mọi bề mặt làm mới."
+          },
+          {
+            "name": "Social Studio (bổ sung)",
+            "description": "Một bài đăng mạng xã hội do AI soạn cho mỗi tài sản, mỗi ngày — chú thích, hashtag, và một bức ảnh được chọn từ catalog này. Sao chép, tải xuống hoặc gửi qua email cho bạn; bạn đăng từ điện thoại. Không có tích hợp nền tảng."
           }
         ]
       },
@@ -366,7 +370,7 @@
         "headline": "Thay thế bốn gói thuê bao SaaS riêng biệt",
         "type": "Nhóm khách sạn thiết kế hai tài sản",
         "region": "Thành phố Mexico, Mexico",
-        "body": "Hủy công cụ đặt phiếu bảo trì, nền tảng tiệc-sự kiện, gói thuê bao biển hiển thị kỹ thuật số và ứng dụng concierge khách. Chi tiêu ròng giảm khoảng $400/tài sản/tháng với cùng tất cả các quy trình công việc vẫn chạy — chỉ được củng cố dưới một mục dòng $188."
+        "body": "Hủy công cụ đặt phiếu bảo trì, nền tảng tiệc-sự kiện, gói thuê bao biển hiển thị kỹ thuật số, ứng dụng concierge khách và freelancer viết chú thích mạng xã hội. Chi tiêu ròng giảm khoảng $500/tài sản/tháng với cùng tất cả các quy trình công việc vẫn chạy — chỉ được củng cố dưới một mục dòng $207."
       },
       {
         "headline": "Đào tạo GM trong một buổi chiều, không phải một tuần",
@@ -451,7 +455,7 @@
   "pricing": {
     "eyebrow": "Giá",
     "headline": "Theo tài sản. Không phải theo chỗ ngồi. Không theo màn hình. Không theo phòng.",
-    "sub": "Một nền tảng $100/tài sản/tháng. Hai tùy chọn bổ sung. Đó là toàn bộ bảng giá — và tối đa một tài sản có thể tốn cho bạn là $188/tháng, bất kể bạn có bao nhiêu màn hình, phòng hay nhân viên.",
+    "sub": "Một nền tảng $100/tài sản/tháng. Ba tùy chọn bổ sung. Đó là toàn bộ bảng giá — và tối đa một tài sản có thể tốn cho bạn là $207/tháng, bất kể bạn có bao nhiêu màn hình, phòng hay nhân viên.",
     "midCycleNote": "Không hợp đồng. Không cam kết hàng năm. Thêm hoặc loại bỏ tùy chọn bất cứ khi nào bạn muốn — hủy bất cứ lúc nào từ tài khoản của bạn.",
     "cadence": "tài sản / tháng",
     "tagRequired": "Bắt buộc",
@@ -492,6 +496,18 @@
           "Không tài khoản khách, không ứng dụng",
           "Kích hoạt toàn tổ chức với một cú nhấp"
         ]
+      },
+      "social": {
+        "label": "Social Studio",
+        "body": "Mỗi sáng, một bài đăng mạng xã hội do AI soạn cho mỗi tài sản. Chú thích, hashtag và một bức ảnh được chọn từ thư viện media — sẵn sàng để sao chép, tải xuống hoặc gửi qua email cho bạn. Chúng tôi không bao giờ kết nối trực tiếp với các nền tảng xã hội.",
+        "features": [
+          "Một bài đăng đúng thương hiệu mỗi ngày cho mỗi tài sản",
+          "Ba biến thể chú thích, hashtag theo chủ đề",
+          "Hình ảnh được đề xuất từ catalog media",
+          "Xem trước Instagram / Facebook / TikTok",
+          "Thích/Không thích đào tạo giọng nói thương hiệu",
+          "Kích hoạt toàn tổ chức với một cú nhấp"
+        ]
       }
     },
     "compare": {
@@ -526,11 +542,15 @@
         },
         {
           "q": "Nếu tôi chỉ muốn bảo trì, hoặc chỉ biển hiển thị?",
-          "a": "Bạn có thể. Gói thuê bao nền tảng bao gồm phiếu công việc bảo trì, sự kiện & tiệc, Hub IT, phương tiện và ba màn hình biển hiển thị với $100/tài sản. Thêm Biển hiển thị không giới hạn hoặc Trải nghiệm khách chỉ khi bạn muốn — chuyển đổi trên /billing, thanh toán theo tỷ lệ."
+          "a": "Bạn có thể. Gói thuê bao nền tảng bao gồm phiếu công việc bảo trì, sự kiện & tiệc, Hub IT, phương tiện và ba màn hình biển hiển thị với $100/tài sản. Thêm Biển hiển thị không giới hạn, Trải nghiệm khách hoặc Social Studio chỉ khi bạn muốn — chuyển đổi trên /billing, thanh toán theo tỷ lệ."
         },
         {
           "q": "Bổ sung biển hiển thị khác với Yodeck hoặc OptiSigns như thế nào?",
           "a": "Giá đồng nhất theo tài sản — màn hình không giới hạn tại một tài sản với $49 so với $8-$30 mỗi màn hình mỗi tháng ở nơi khác. Cùng khái niệm player (bất kỳ TV nào hỗ trợ trình duyệt), cùng lập lịch. Hòa vốn so với Yodeck ở khoảng 6 màn hình; rẻ hơn trên đó."
+        },
+        {
+          "q": "Social Studio có tự động đăng lên Instagram của tôi không?",
+          "a": "Không, và đó là có chủ ý. Social Studio soạn bài đăng mỗi sáng — chú thích, hashtag, ảnh đề xuất — và cho phép bạn sao chép, tải xuống hoặc gửi qua email. Bạn đăng từ điện thoại của mình. Không có tích hợp nền tảng nào có thể hỏng, không có OAuth nào để quản lý, và tài khoản mạng xã hội của bạn vẫn là của bạn."
         },
         {
           "q": "Bạn có tích hợp với PMS của chúng tôi (Mews, Cloudbeds, Opera) không?",

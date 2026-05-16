@@ -457,13 +457,14 @@ export default async function HomePage() {
                 Pricing
               </p>
               <h2 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-                One $100/property line item. Two add-ons. That&apos;s it.
+                One $100/property line item. Three add-ons. That&apos;s it.
               </h2>
               <p className="mt-4 max-w-2xl text-base text-muted leading-relaxed">
                 A 40-room boutique buying the same features à la carte from
-                Quore, Yodeck, and Duve pays around $580/month. With us,
-                everything-on costs $188/month per property — and you can
-                drop either add-on with a single click.
+                Quore, Yodeck, Duve, and a freelance social-media manager
+                pays around $679/month. With us, everything-on costs
+                $207/month per property — and you can drop any add-on with
+                a single click.
               </p>
             </div>
             <PricingMini />
@@ -544,6 +545,9 @@ function PricingMini() {
         </Row>
         <Row label="Guest Experience" sub="optional · arrival pages + QR cards">
           +$39
+        </Row>
+        <Row label="Social Studio" sub="optional · AI-drafted daily social post">
+          +$19
         </Row>
         <p className="border-t border-border-subtle pt-3 text-xs text-subtle">
           Per property, per month. Cancel any add-on with one click.
