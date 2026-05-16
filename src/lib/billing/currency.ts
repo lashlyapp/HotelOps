@@ -11,7 +11,21 @@
  * need any Price migration when we add a new currency.
  */
 
-export const SUPPORTED_CURRENCIES = ['usd', 'eur', 'gbp', 'mxn', 'aud'] as const
+export const SUPPORTED_CURRENCIES = [
+  'usd',
+  'eur',
+  'gbp',
+  'mxn',
+  'aud',
+  // APAC additions. SGD is in the list even though no locale maps
+  // to it — Singapore visitors land in English, and operators can
+  // hand-set SGD via admin tooling until we wire geo-aware currency
+  // hinting (Stripe Tax has this; it's a separate workstream).
+  'jpy',
+  'krw',
+  'vnd',
+  'sgd',
+] as const
 export type Currency = (typeof SUPPORTED_CURRENCIES)[number]
 
 export const DEFAULT_CURRENCY: Currency = 'usd'
@@ -24,6 +38,9 @@ const LOCALE_TO_CURRENCY: Record<string, Currency> = {
   en: 'usd',
   es: 'eur',
   fr: 'eur',
+  ja: 'jpy',
+  ko: 'krw',
+  vi: 'vnd',
 }
 
 /** Resolve the default currency for a given locale. Falls back to

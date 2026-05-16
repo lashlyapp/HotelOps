@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
+import { AsianDestinationsBand } from '@/components/marketing/asian-destinations-band'
 import { DestinationsBand } from '@/components/marketing/destinations-band'
 import { UseCasesBand } from '@/components/marketing/use-cases-band'
 import { Card, CardBody } from '@/components/ui/card'
@@ -311,6 +312,9 @@ export default async function HomePage() {
 
         {/* ─── Destinations: city-targeted cards in local languages ──── */}
         <DestinationsBand t={t} />
+
+        {/* ─── APAC destinations: Tokyo / Seoul / Hanoi / Singapore ──── */}
+        <AsianDestinationsBand t={t} />
 
         {/* ─── Use cases: anonymized real-customer stories ────────────── */}
         <UseCasesBand t={t.useCases} />

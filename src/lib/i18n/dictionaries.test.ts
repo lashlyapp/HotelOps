@@ -3,6 +3,9 @@ import { describe, it } from 'node:test'
 import en from './dictionaries/en.json'
 import es from './dictionaries/es.json'
 import fr from './dictionaries/fr.json'
+import ja from './dictionaries/ja.json'
+import ko from './dictionaries/ko.json'
+import vi from './dictionaries/vi.json'
 
 /**
  * Runtime parity check between EN (authoritative) and every other
@@ -15,6 +18,9 @@ describe('dictionaries shape parity', () => {
   for (const [name, dict] of [
     ['es', es],
     ['fr', fr],
+    ['ja', ja],
+    ['ko', ko],
+    ['vi', vi],
   ] as const) {
     it(`${name}.json mirrors en.json key-for-key`, () => {
       const missing = diffShape(en, dict, '')

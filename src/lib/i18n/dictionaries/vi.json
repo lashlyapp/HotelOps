@@ -1,0 +1,418 @@
+{
+  "common": {
+    "signIn": "Đăng nhập",
+    "signUp": "Đăng ký",
+    "startFree": "Bắt đầu miễn phí",
+    "seePricing": "Xem giá",
+    "openDashboard": "Mở bảng điều khiển",
+    "backToHome": "Về trang chủ",
+    "logIn": "Đăng nhập",
+    "language": "Ngôn ngữ"
+  },
+  "login": {
+    "title": "Đăng nhập vào tài khoản của bạn",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "forgotPassword": "Quên mật khẩu?",
+    "cta": "Đăng nhập",
+    "noAccount": "Chưa có tài khoản?",
+    "signUpLink": "Đăng ký",
+    "errors": {
+      "missing": "Email và mật khẩu là bắt buộc.",
+      "invalid": "Email hoặc mật khẩu không đúng.",
+      "no_org": "Tài khoản của bạn không liên kết với tổ chức nào. Hãy liên hệ quản trị viên.",
+      "unauthorized": "Tài khoản của bạn không được phép truy cập cổng quản trị.",
+      "session_expired": "Bạn đã bị đăng xuất sau một thời gian không hoạt động. Vui lòng đăng nhập lại.",
+      "rate_limited": "Quá nhiều lần đăng nhập thất bại. Hãy đợi vài phút và thử lại."
+    }
+  },
+  "forgotPassword": {
+    "title": "Đặt lại mật khẩu",
+    "backToLogin": "Quay lại đăng nhập",
+    "email": "Email",
+    "hint": "Chúng tôi sẽ gửi một liên kết một lần để đặt mật khẩu mới. Liên kết hết hạn sau khoảng một giờ.",
+    "cta": "Gửi liên kết đặt lại",
+    "remembered": "Đã nhớ ra?",
+    "loginLink": "Đăng nhập",
+    "errors": {
+      "invalid": "Vui lòng nhập địa chỉ email hợp lệ."
+    },
+    "sent": {
+      "headline": "Hãy kiểm tra hộp thư của bạn.",
+      "body": "Nếu có tài khoản tồn tại với địa chỉ bạn đã nhập, chúng tôi đã gửi một liên kết một lần để đặt lại mật khẩu. Liên kết hết hạn sau khoảng một giờ.",
+      "tryAgain": "Không thấy gì?",
+      "tryAgainLink": "Thử lại",
+      "orEmail": "hoặc email"
+    }
+  },
+  "setPassword": {
+    "title": "Đặt mật khẩu để hoàn tất đăng ký",
+    "newPassword": "Mật khẩu mới",
+    "confirmPassword": "Xác nhận mật khẩu",
+    "cta": "Lưu mật khẩu",
+    "errors": {
+      "too_short": "Mật khẩu quá ngắn.",
+      "weak": "Mật khẩu không đáp ứng yêu cầu.",
+      "mismatch": "Mật khẩu không khớp.",
+      "failed": "Không thể lưu mật khẩu. Hãy đảm bảo nó đáp ứng các yêu cầu bên dưới và thử lại."
+    }
+  },
+  "loginMfa": {
+    "eyebrow": "Xác thực hai yếu tố",
+    "headline": "Nhập mã 6 chữ số",
+    "sub": "Mở ứng dụng xác thực của bạn và nhập mã hiện tại cho tài khoản {email}.",
+    "lostAccess": "Mất quyền truy cập?",
+    "signInAgain": "Đăng nhập lại",
+    "lostAccessSuffix": "hoặc liên hệ quản trị viên để tắt 2FA trên tài khoản của bạn.",
+    "codeLabel": "Mã",
+    "ctaVerifying": "Đang xác minh…",
+    "ctaVerify": "Xác minh và tiếp tục",
+    "errors": {
+      "wrong_code": "Mã không khớp. Hãy thử mã tiếp theo mà ứng dụng hiển thị.",
+      "invalid": "Nhập mã 6 chữ số từ ứng dụng xác thực của bạn.",
+      "unknown": "Đã xảy ra lỗi. Hãy thử lại hoặc đăng nhập mới."
+    }
+  },
+  "nav": {
+    "workOrders": "Phiếu công việc",
+    "events": "Sự kiện & Tiệc",
+    "signage": "Biển hiển thị",
+    "arrival": "Đón khách",
+    "pricing": "Giá"
+  },
+  "marketing": {
+    "hero": {
+      "eyebrow": "Phần mềm back-office khách sạn · hoạt động cùng mọi PMS",
+      "headline": "Mọi thứ mà PMS của bạn không làm.",
+      "sub": "MyHotelOps là lớp vận hành chạy song song với hệ thống đặt phòng của khách sạn. Bảo trì, sự kiện, nhà cung cấp, biển hiển thị, đón khách — mọi phần của việc vận hành một khách sạn boutique tồn tại bên ngoài PMS của bạn, ở một nơi.",
+      "personaLine": "Được xây dựng cho chủ sở hữu, GM và quản lý — không phải cho nhân viên tuyến đầu vật lộn với hệ thống đặt phòng.",
+      "trialLine": "Dùng thử miễn phí 7 ngày. Không cần thẻ tín dụng. Bao gồm 10 GB.",
+      "ctaPrimary": "Bắt đầu dùng thử miễn phí",
+      "ctaSecondary": "Xem giá"
+    },
+    "positioning": {
+      "title": "Danh mục mà chúng tôi không thuộc về: PMS của bạn.",
+      "body": "Chúng tôi sẽ không bao giờ thay thế Cloudbeds, Mews, Opera hay Little Hotelier. Chúng tôi ngồi bên cạnh chúng và xử lý mọi bề mặt vận hành mà chúng để lại cho bảng tính và chat nhóm — phiếu công việc, đề xuất sự kiện, đăng nhập nhà cung cấp, biển hiển thị trên mọi TV, thẻ đón khách in được trong mọi phòng."
+    },
+    "footer": {
+      "tagline": "Lớp vận hành cho khách sạn boutique.",
+      "rights": "All rights reserved."
+    }
+  },
+  "signup": {
+    "eyebrow": "Bắt đầu miễn phí",
+    "headline": "Dùng thử MyHotelOps miễn phí 7 ngày",
+    "sub": "Truy cập đầy đủ. Không cần thẻ tín dụng. Bao gồm 10 GB phương tiện. Chúng tôi sẽ gửi cho bạn mã xác minh để xác nhận địa chỉ — toàn bộ quá trình mất chưa đến một phút.",
+    "form": {
+      "yourName": "Tên của bạn",
+      "hotelName": "Tên khách sạn",
+      "hotelNamePlaceholder": "ví dụ: The Coastal Inn",
+      "workEmail": "Email công việc",
+      "password": "Mật khẩu",
+      "passwordHint": "Ít nhất 8 ký tự, với ít nhất một chữ thường, một chữ hoa, một số và một ký hiệu.",
+      "consentPrefix": "Tôi đồng ý với ",
+      "consentTerms": "Điều khoản dịch vụ",
+      "consentAnd": " và ",
+      "consentPrivacy": "Chính sách bảo mật",
+      "consentSuffix": ".",
+      "ctaSending": "Đang gửi mã xác minh…",
+      "ctaSend": "Gửi mã xác minh",
+      "noCardLine": "Không cần thẻ tín dụng. Bao gồm 10 GB phương tiện."
+    },
+    "verify": {
+      "eyebrow": "Xác minh email của bạn",
+      "headline": "Nhập mã {n} chữ số",
+      "sub": "Chúng tôi đã gửi mã đến {email}. Nó hết hạn trong {minutes} phút.",
+      "startOver": "Bắt đầu lại",
+      "wrongEmail": "Sai email?",
+      "needHelp": "Cần trợ giúp?",
+      "codeLabel": "Mã xác minh",
+      "codeHint": "{n} chữ số, từ email chúng tôi vừa gửi.",
+      "ctaVerifying": "Đang xác minh…",
+      "ctaVerify": "Xác minh và bắt đầu dùng thử",
+      "noEmail": "Không nhận được email?",
+      "resending": "Đang gửi…",
+      "resend": "Gửi lại mã",
+      "resentRecently": "Một mã mới đang được gửi."
+    },
+    "errors": {
+      "missingFields": "Email, mật khẩu, tên của bạn và tên khách sạn là bắt buộc.",
+      "invalidEmail": "Vui lòng nhập địa chỉ email hợp lệ.",
+      "tooLong": "Có vẻ quá dài — giữ tên dưới 200 ký tự.",
+      "consentRequired": "Vui lòng đồng ý với Điều khoản dịch vụ và Chính sách bảo mật để tiếp tục.",
+      "rateLimitIp": "Quá nhiều lần đăng ký từ mạng này. Hãy thử lại sau vài phút hoặc gửi email cho {email}.",
+      "rateLimitEmail": "Chúng tôi đã gửi mã đến {email} gần đây. Hãy kiểm tra hộp thư hoặc đợi vài phút trước khi thử lại.",
+      "emailExists": "{email} đã có tài khoản MyHotelOps. Hãy đăng nhập hoặc đặt lại mật khẩu thay vì vậy.",
+      "internalError": "Đã xảy ra lỗi. Vui lòng thử lại.",
+      "tempUnavailable": "Đăng ký tạm thời không khả dụng. Vui lòng thử lại sau.",
+      "createAccountFailed": "Đã xảy ra lỗi khi tạo tài khoản. Vui lòng thử lại.",
+      "profileFailed": "Đã xảy ra lỗi khi thiết lập hồ sơ. Vui lòng thử lại.",
+      "codeRequired": "Nhập mã từ email của bạn.",
+      "codeLength": "Mã có {n} chữ số.",
+      "codeExpired": "Mã đã hết hạn. Bắt đầu lại từ /signup.",
+      "codeTooManyAttempts": "Quá nhiều mã sai. Bắt đầu lại từ /signup.",
+      "codeMismatchOne": "Mã không khớp. Còn 1 lần thử.",
+      "codeMismatchMany": "Mã không khớp. Còn {n} lần thử.",
+      "codeMismatchFinal": "Mã không khớp. Bắt đầu lại từ /signup.",
+      "noPendingSignup": "Chúng tôi không có đăng ký đang chờ cho email đó. Bắt đầu lại từ /signup.",
+      "tooManyResends": "Quá nhiều lần gửi lại. Bắt đầu lại từ /signup.",
+      "resendCooldown": "Hãy đợi một chút trước khi yêu cầu mã khác.",
+      "resendNeedsEmail": "Chúng tôi cần một email hợp lệ để gửi lại mã."
+    }
+  },
+  "about": {
+    "navLabel": "Về chúng tôi",
+    "eyebrow": "Tại sao chúng tôi xây dựng cái này",
+    "headline": "Khách sạn boutique xứng đáng có phần mềm được xây dựng cho họ.",
+    "missionHeading": "Sứ mệnh của chúng tôi",
+    "missionBody": "Các bộ PMS lớn và công cụ chuỗi lớn chưa bao giờ được xây dựng cho boutique 20, 40, 60 phòng. Họ đóng gói các mô-đun mà không ai yêu cầu với giá không phù hợp, sau đó để vận hành hàng ngày thực tế cho bảng tính, chat nhóm và giấy. Chúng tôi nghĩ điều đó là ngược lại. Thị trường boutique được phục vụ kém bởi phần mềm, và những người vận hành các tài sản này — các GM, chủ sở hữu, quản lý thực sự sống trong sự hỗn loạn — xứng đáng có những công cụ phù hợp với thực tế của họ.",
+    "sectionTwoHeading": "Những gì chúng tôi làm",
+    "sectionTwoBody": "MyHotelOps là lớp vận hành chạy song song với bất kỳ PMS nào bạn đã sử dụng. Chúng tôi xử lý những thứ mà hệ thống đặt phòng của bạn không làm — phiếu công việc bảo trì, đề xuất sự kiện, đăng nhập nhà cung cấp, biển hiển thị trên mọi TV, thẻ đón khách in được trong mọi phòng. Một gói thuê bao cho mỗi tài sản, không tính theo người, không tính thuế theo màn hình. Loại định giá mà một doanh nghiệp nhỏ có thể lập kế hoạch.",
+    "sectionThreeHeading": "Chúng tôi phục vụ ai",
+    "sectionThreeBody": "Khách sạn boutique độc lập và các nhóm nhỏ, bất kỳ nơi nào họ tập trung — Hoa Kỳ, Mexico, Châu Âu và Châu Á. Những người quan tâm đến hiếu khách như một nghề thủ công và muốn phần mềm của họ cũng làm điều tương tự. Nếu đó là bạn, chúng tôi đã xây dựng cái này cho bạn.",
+    "addressHeading": "Địa chỉ thư",
+    "supportHeading": "Liên hệ",
+    "ctaHeading": "Dùng thử miễn phí trong 7 ngày.",
+    "ctaSub": "Không cần thẻ tín dụng. Bao gồm 10 GB.",
+    "ctaButton": "Bắt đầu dùng thử miễn phí"
+  },
+  "destinations": {
+    "eyebrow": "Thị trường chúng tôi được xây dựng cho",
+    "title": "Được làm cho khách sạn boutique ở mọi nơi.",
+    "sub": "Lisbon, Barcelona, Paris, Mexico City — các khu vực nơi khách sạn độc lập và nhóm nhỏ thực sự vận hành. Thanh toán bằng tiền tệ địa phương, đăng ký bằng ngôn ngữ của bạn, cùng một ngăn xếp back-office ở mọi nơi."
+  },
+  "asianDestinations": {
+    "eyebrow": "Nay phục vụ APAC",
+    "title": "Cũng được xây dựng cho cảnh boutique khắp Châu Á.",
+    "sub": "Tokyo, Seoul, Hà Nội, Singapore — khách sạn thiết kế, ryokan, tài sản lifestyle và nhóm sang trọng nhỏ. Đăng ký bằng ngôn ngữ của bạn, được thanh toán bằng tiền tệ của bạn, vận hành cùng ngăn xếp mà chúng tôi vận hành cho các boutique ở Châu Âu và Châu Mỹ.",
+    "items": [
+      {
+        "city": "Tokyo",
+        "country": "Nhật Bản",
+        "blurb": "Khách sạn thiết kế Shibuya, ryokan Asakusa, tài sản lifestyle Ginza — thanh toán JPY, đăng ký 日本語, cùng ngăn xếp bảo trì + sự kiện + biển hiển thị."
+      },
+      {
+        "city": "Seoul",
+        "country": "Hàn Quốc",
+        "blurb": "Boutique Gangnam, hostel Itaewon, chi nhánh resort Jeju — thanh toán KRW, đăng ký 한국어, một gói thuê bao cho mỗi tài sản."
+      },
+      {
+        "city": "Hà Nội",
+        "country": "Việt Nam",
+        "blurb": "Boutique Phố Cổ, khách sạn di sản Hội An, tài sản bãi biển Đà Nẵng — thanh toán VND, đăng ký Tiếng Việt, giá đồng nhất cho mỗi tài sản có thể mở rộng."
+      },
+      {
+        "city": "Singapore",
+        "country": "Singapore",
+        "blurb": "Khách sạn shophouse Chinatown, tài sản lifestyle Tanjong Pagar, các nhóm thiết kế khắp đảo — thanh toán SGD, đăng ký tiếng Anh, không có bất ngờ theo màn hình."
+      }
+    ]
+  },
+  "useCases": {
+    "eyebrow": "Khách hàng sử dụng nó như thế nào",
+    "title": "Ba boutique, ba chiến thắng hàng ngày khác nhau.",
+    "sub": "Đây là những khách hàng thực sự đang chạy MyHotelOps hôm nay. Tên được giữ kín theo yêu cầu của họ — các nhà vận hành boutique coi trọng quyền riêng tư và chúng tôi tôn trọng điều đó. Các trường hợp sử dụng là của họ.",
+    "items": [
+      {
+        "headline": "Cắt giảm độ trễ bảo trì từ vài ngày xuống vài giờ",
+        "type": "Boutique 32 phòng · Bờ Đông Hoa Kỳ",
+        "body": "Lễ tân từng gửi email đến kỹ thuật; các phiếu nằm yên trong hộp thư. Với phiếu công việc ưu tiên ảnh, chu kỳ từ báo cáo của khách → sửa chữa hoàn thành giảm từ trung vị 2-3 ngày xuống dưới 4 giờ. Chủ sở hữu cuối cùng có một bảng xem Kanban của mọi vấn đề đang mở khắp tài sản ở một nơi."
+      },
+      {
+        "headline": "Thay thế bốn gói thuê bao SaaS riêng biệt",
+        "type": "Nhóm khách sạn thiết kế hai tài sản · Bờ Tây Hoa Kỳ",
+        "body": "Hủy công cụ đặt phiếu bảo trì, nền tảng tiệc-sự kiện, gói thuê bao biển hiển thị kỹ thuật số và ứng dụng concierge khách. Chi tiêu ròng giảm khoảng $400/tài sản/tháng với cùng tất cả các quy trình công việc vẫn chạy — chỉ được củng cố dưới một mục dòng $188."
+      },
+      {
+        "headline": "Đào tạo GM trong một buổi chiều, không phải một tuần",
+        "type": "Nhà điều hành nhóm nhỏ · Tây Bắc Thái Bình Dương",
+        "body": "GM mới bắt đầu vào thứ Ba. Đến cuối ngày họ đã có phiếu công việc, danh bạ nhà cung cấp, thông tin Wi-Fi, thẻ đón khách in được và đường ống sự kiện tất cả trong một tab. Chủ sở hữu từng dành ngân sách hai tuần cho việc tăng tốc GM mới và giờ phân bổ một buổi chiều."
+      }
+    ],
+    "footnote": "Muốn chia sẻ câu chuyện của bạn? Gửi email cho {email} — chúng tôi sẽ viết nó lên để đọc trung thực, không như một bài chào hàng."
+  },
+  "demo": {
+    "navLabel": "Trao đổi với chúng tôi",
+    "eyebrow": "Dành cho nhóm đa tài sản",
+    "headline": "Muốn tham quan trước khi đăng ký?",
+    "sub": "Nếu bạn vận hành nhiều hơn một tài sản — hoặc bạn muốn được hướng dẫn sản phẩm hơn là tự mày mò bản dùng thử — hãy đặt 30 phút với chúng tôi. Chúng tôi sẽ chỉ cho bạn các phần quan trọng đối với hoạt động của bạn, trả lời các câu hỏi thanh toán khó xử và bỏ qua các phần không áp dụng.",
+    "alternative": {
+      "heading": "Không cần cuộc gọi?",
+      "body": "Bản dùng thử miễn phí 7 ngày cung cấp cùng quyền truy cập. Không cần thẻ tín dụng, đầy đủ tính năng, dữ liệu của bạn được giữ nếu không chuyển đổi.",
+      "cta": "Bắt đầu dùng thử miễn phí thay vì vậy"
+    },
+    "calendar": {
+      "heading": "Chọn thời gian",
+      "intro": "Cuộc gọi 30 phút trên Google Meet. Tất cả thời gian hiển thị theo giờ Miền Đông Hoa Kỳ (ET).",
+      "takenLabel": "Đã đặt",
+      "selectInstruction": "Chạm vào khung giờ trống để đặt.",
+      "fallback": "Không phù hợp? Gửi email cho {email} và chúng tôi sẽ tìm thời gian."
+    },
+    "booking": {
+      "heading": "Đặt {slot}",
+      "subtitle": "Chúng tôi sẽ gửi lời mời lịch Google Meet đến email bên dưới.",
+      "changeSlot": "Đổi thời gian",
+      "yourName": "Tên của bạn",
+      "workEmail": "Email công việc",
+      "hotelName": "Tên khách sạn",
+      "propertyCount": "Bao nhiêu tài sản?",
+      "propertyCountPlaceholder": "ví dụ: 1, 3, 12",
+      "notes": "Có gì chúng tôi nên biết không? (tùy chọn)",
+      "notesPlaceholder": "Điều bạn hy vọng giải quyết, ngăn xếp hiện tại, cảnh báo múi giờ…",
+      "cta": "Xác nhận đặt",
+      "ctaSending": "Đang gửi…",
+      "successHeading": "Đã đặt xong.",
+      "successBody": "Chúng tôi sẽ gửi lời mời Google Meet đến {email} sớm. Trả lời nếu có gì thay đổi.",
+      "errorMissing": "Tên, email, tên khách sạn và khung giờ là bắt buộc.",
+      "errorEmail": "Vui lòng nhập địa chỉ email hợp lệ.",
+      "errorSlot": "Khung giờ đó không còn khả dụng — chọn khung khác.",
+      "errorGeneric": "Không thể gửi yêu cầu. Vui lòng gửi email trực tiếp cho {email}."
+    }
+  },
+  "pricing": {
+    "eyebrow": "Giá",
+    "headline": "Theo tài sản. Không phải theo chỗ ngồi. Không theo màn hình. Không theo phòng.",
+    "sub": "Một nền tảng $100/tài sản/tháng. Hai tùy chọn bổ sung. Đó là toàn bộ bảng giá — và tối đa một tài sản có thể tốn cho bạn là $188/tháng, bất kể bạn có bao nhiêu màn hình, phòng hay nhân viên.",
+    "midCycleNote": "Không hợp đồng. Không cam kết hàng năm. Thêm hoặc loại bỏ tùy chọn bất cứ khi nào bạn muốn — hủy bất cứ lúc nào từ tài khoản của bạn.",
+    "cadence": "tài sản / tháng",
+    "tagRequired": "Bắt buộc",
+    "tagOptional": "Tùy chọn",
+    "plans": {
+      "base": {
+        "label": "Nền tảng",
+        "body": "Mọi thứ mọi tài sản cần từ ngày đầu — phiếu công việc bảo trì, đề xuất sự kiện, hồ sơ IT, thư viện phương tiện và 3 màn hình biển hiển thị.",
+        "features": [
+          "Phiếu công việc (Kanban với bằng chứng ảnh/video)",
+          "Sự kiện & Tiệc (yêu cầu → đề xuất → hóa đơn)",
+          "Hub IT (Wi-Fi, đăng nhập nhà cung cấp, thiết bị)",
+          "Danh mục phương tiện với CDN toàn cầu",
+          "Bao gồm 3 màn hình biển hiển thị",
+          "Thành viên nhóm không giới hạn"
+        ]
+      },
+      "signage": {
+        "label": "Biển hiển thị không giới hạn",
+        "body": "Nâng giới hạn 3 màn hình. TV không giới hạn ở mọi tài sản — sảnh, phòng nghỉ, phòng họp, sàn hồ bơi. Cùng bộ lập lịch, cùng phát sóng khẩn cấp.",
+        "features": [
+          "Màn hình không giới hạn theo tài sản",
+          "Tiếp quản khẩn cấp theo từng tài sản",
+          "Lập lịch theo ngày + giờ trong ngày",
+          "Ghép cặp với bất kỳ TV nào hỗ trợ trình duyệt",
+          "Hình ảnh, video, web hoặc thẻ văn bản có thương hiệu",
+          "Kích hoạt toàn tổ chức với một cú nhấp"
+        ]
+      },
+      "guest": {
+        "label": "Trải nghiệm khách",
+        "body": "Trang đón khách có thương hiệu, thẻ QR in được cho mỗi phòng và tiếp nhận vấn đề của khách. Thay thế các công cụ concierge $3-$6 mỗi phòng được sử dụng với mức phí cố định.",
+        "features": [
+          "Trình tạo trang đón khách với màu thương hiệu",
+          "Wi-Fi tự động nhập từ Hub IT",
+          "Thực đơn nhà hàng + dịch vụ phòng",
+          "Thẻ QR in được khổ Letter / A4",
+          "Không tài khoản khách, không ứng dụng",
+          "Kích hoạt toàn tổ chức với một cú nhấp"
+        ]
+      }
+    },
+    "compare": {
+      "eyebrow": "Phép tính",
+      "headline": "Cho một boutique 40 phòng mua các công cụ này hôm nay.",
+      "intro": "Khách sạn thường vận hành công cụ đặt phiếu bảo trì, gói thuê bao biển hiển thị kỹ thuật số và nền tảng concierge / đón khách — mỗi cái trên một trục thanh toán khác nhau theo màn hình, theo phòng hoặc theo tài sản. Đây là những gì một tài sản trả cho cả ba mua riêng so với qua MyHotelOps.",
+      "headers": {
+        "need": "Nhu cầu",
+        "tool": "Công cụ độc lập",
+        "standaloneCost": "Chi phí độc lập",
+        "withUs": "Với MyHotelOps"
+      },
+      "monthlyTotal": "Tổng hàng tháng",
+      "alaCarte": "mua riêng",
+      "savings": "Tiết kiệm so với mua riêng độc lập",
+      "footnote": "Giá độc lập là các bậc nhập cảnh được niêm yết công khai tính đến tháng 5 năm 2026; một số nhà cung cấp chỉ báo giá khi yêu cầu và có thể cao hơn trong thực tế. Các nhà cung cấp đón khách tính phí theo phòng được sử dụng, vì vậy con số trên giả định một tài sản 40 phòng ở mức công suất trung bình điển hình."
+    },
+    "scale": {
+      "headline": "Các nhóm đa tài sản thực sự trả gì.",
+      "sub": "Các bổ sung kích hoạt toàn tổ chức và thanh toán trên hóa đơn của mọi tài sản. Một nhóm bốn tài sản với cả hai bổ sung trả 4 × $188 = $752/tháng — tất cả bao gồm.",
+      "headers": {
+        "properties": "Tài sản",
+        "baseOnly": "Chỉ nền tảng",
+        "baseSignage": "Nền tảng + Biển hiển thị",
+        "everything": "Bật mọi thứ"
+      },
+      "propertyOne": "1 tài sản",
+      "propertyMany": "{n} tài sản",
+      "perMonth": "/tháng"
+    },
+    "faq": {
+      "heading": "Câu hỏi thường gặp",
+      "items": [
+        {
+          "q": "Có phí cài đặt hoặc onboarding không?",
+          "a": "Một lần cho mỗi tenant khi bạn bắt đầu với chúng tôi — chúng tôi áp dụng nó cho hóa đơn đầu tiên của tài sản đầu tiên và không bao giờ tính lại nếu bạn thêm nhiều tài sản hơn hoặc đăng ký lại. Chúng tôi onboard nhóm của bạn một cách cá nhân; không có wizard DIY."
+        },
+        {
+          "q": "Dữ liệu của tôi sẽ ra sao nếu tôi hủy?",
+          "a": "Bạn giữ quyền truy cập vào thư viện phương tiện và hồ sơ Hub IT trong 30 ngày, với tùy chọn xuất từ ngày đầu. Sau 30 ngày, tài khoản của bạn được đóng và lưu trữ được thu hồi."
+        },
+        {
+          "q": "Bạn có tính phí theo người dùng hoặc theo chỗ ngồi không?",
+          "a": "Không. Mọi nhân viên ở mọi tài sản đều được bao gồm — lễ tân, dọn phòng, kỹ thuật, chủ sở hữu. Giá theo tài sản là trục duy nhất."
+        },
+        {
+          "q": "Nếu tôi chỉ muốn bảo trì, hoặc chỉ biển hiển thị?",
+          "a": "Bạn có thể. Gói thuê bao nền tảng bao gồm phiếu công việc bảo trì, sự kiện & tiệc, Hub IT, phương tiện và ba màn hình biển hiển thị với $100/tài sản. Thêm Biển hiển thị không giới hạn hoặc Trải nghiệm khách chỉ khi bạn muốn — chuyển đổi trên /billing, thanh toán theo tỷ lệ."
+        },
+        {
+          "q": "Bổ sung biển hiển thị khác với Yodeck hoặc OptiSigns như thế nào?",
+          "a": "Giá đồng nhất theo tài sản — màn hình không giới hạn tại một tài sản với $49 so với $8-$30 mỗi màn hình mỗi tháng ở nơi khác. Cùng khái niệm player (bất kỳ TV nào hỗ trợ trình duyệt), cùng lập lịch. Hòa vốn so với Yodeck ở khoảng 6 màn hình; rẻ hơn trên đó."
+        },
+        {
+          "q": "Bạn có tích hợp với PMS của chúng tôi (Mews, Cloudbeds, Opera) không?",
+          "a": "Không, và đó là cố ý. Chúng tôi sẽ không bao giờ thay thế hoặc đồng bộ với PMS của bạn — chúng tôi ngồi bên cạnh nó và xử lý mọi bề mặt vận hành mà nó để lại cho bảng tính và chat nhóm. Dữ liệu đặt phòng ở lại trong PMS của bạn nơi nó thuộc về; mọi thứ khác (phiếu công việc, sự kiện, nhà cung cấp, biển hiển thị, đón khách) sống ở đây."
+        }
+      ]
+    },
+    "cta": {
+      "headline": "Bắt đầu với nền tảng. Thêm phần còn lại chỉ khi bạn cần.",
+      "sub": "Đăng ký mất một phút. Truy cập đầy đủ trong 7 ngày, không cần thẻ tín dụng.",
+      "button": "Bắt đầu dùng thử miễn phí"
+    }
+  },
+  "email": {
+    "signoff": "— MyHotelOps",
+    "otp": {
+      "subject": "Mã xác minh MyHotelOps của bạn: {code}",
+      "greeting": "Chào {name},",
+      "intro": "Mã xác minh MyHotelOps của bạn là:",
+      "instructions": "Nhập nó trên trang đăng ký để hoàn tất việc tạo {hotel}.",
+      "ttl": "Mã hết hạn trong {minutes} phút. Nếu bạn không yêu cầu điều này, bạn có thể bỏ qua email này một cách an toàn."
+    },
+    "welcome": {
+      "subject": "Chào mừng đến với MyHotelOps — bản dùng thử {days} ngày của bạn đã hoạt động",
+      "greeting": "Chào {name},",
+      "intro": "{hotel} đã được thiết lập trên MyHotelOps. Bản dùng thử miễn phí của bạn cấp quyền truy cập đầy đủ trong {days} ngày — không cần thẻ tín dụng, bao gồm {gb} GB phương tiện.",
+      "ctaOpen": "Mở bảng điều khiển của bạn",
+      "tryFirstHeading": "Thử trước những gì",
+      "tryFirstTeam": "Thêm nhóm của bạn từ trang Nhóm",
+      "tryFirstMedia": "Tải lên sơ đồ tầng / ảnh đầu tiên vào Phương tiện",
+      "tryFirstWO": "Tạo phiếu công việc để xem bảng Kanban hoạt động",
+      "convertPrefix": "Sẵn sàng chuyển đổi? ",
+      "convertLink": "Thêm phương thức thanh toán",
+      "convertSuffix": " bất cứ lúc nào."
+    },
+    "reminder": {
+      "subjectOne": "Bản dùng thử MyHotelOps của bạn kết thúc trong 1 ngày",
+      "subjectMany": "Bản dùng thử MyHotelOps của bạn kết thúc trong {days} ngày",
+      "greeting": "Chào {name},",
+      "bodyOne": "Bản dùng thử MyHotelOps của bạn cho {hotel} kết thúc trong 1 ngày. Thêm phương thức thanh toán để tiếp tục chỉnh sửa — dữ liệu của bạn vẫn ở nơi đó bất kể.",
+      "bodyMany": "Bản dùng thử MyHotelOps của bạn cho {hotel} kết thúc trong {days} ngày. Thêm phương thức thanh toán để tiếp tục chỉnh sửa — dữ liệu của bạn vẫn ở nơi đó bất kể.",
+      "cta": "Mở Thanh toán"
+    },
+    "expired": {
+      "subject": "Bản dùng thử MyHotelOps của bạn đã kết thúc — dữ liệu của bạn an toàn",
+      "greeting": "Chào {name},",
+      "body": "Bản dùng thử MyHotelOps của bạn cho {hotel} đã kết thúc hôm nay. Chúng tôi đã chuyển tài khoản của bạn sang chỉ đọc và đang giữ tất cả dữ liệu của bạn — thêm phương thức thanh toán bất cứ lúc nào để tiếp tục chỉnh sửa.",
+      "cta": "Mở Thanh toán"
+    }
+  }
+}

@@ -181,6 +181,33 @@
     "title": "Pour les hôtels boutique, partout.",
     "sub": "Lisbonne, Barcelone, Paris, Mexico — les quartiers où les hôtels indépendants et des petits groupes opèrent réellement. Facturation en devise locale, inscription dans votre langue, la même base opérationnelle partout."
   },
+  "asianDestinations": {
+    "eyebrow": "Maintenant en APAC",
+    "title": "Conçu aussi pour la scène boutique en Asie.",
+    "sub": "Tokyo, Séoul, Hanoï, Singapour — hôtels de design, ryokans, propriétés lifestyle et petits groupes de luxe. Inscrivez-vous dans votre langue, facturez dans votre devise, exploitez la même base que nos boutiques en Europe et aux Amériques.",
+    "items": [
+      {
+        "city": "Tokyo",
+        "country": "Japon",
+        "blurb": "Hôtels de design à Shibuya, ryokans à Asakusa, propriétés lifestyle à Ginza — facturation en JPY, inscription en 日本語, la même base maintenance, événements et affichage."
+      },
+      {
+        "city": "Séoul",
+        "country": "Corée du Sud",
+        "blurb": "Boutiques à Gangnam, hostels à Itaewon, succursales de resort à Jeju — facturation en KRW, inscription en 한국어, un abonnement par propriété."
+      },
+      {
+        "city": "Hanoï",
+        "country": "Vietnam",
+        "blurb": "Boutiques du Old Quarter, hôtels patrimoniaux à Hội An, propriétés balnéaires à Da Nang — facturation en VND, inscription en Tiếng Việt, tarif forfaitaire par propriété qui s'adapte."
+      },
+      {
+        "city": "Singapour",
+        "country": "Singapour",
+        "blurb": "Hôtels shophouse à Chinatown, propriétés lifestyle à Tanjong Pagar, groupes de design sur toute l'île — facturation en SGD, inscription en anglais, sans surprise par écran."
+      }
+    ]
+  },
   "useCases": {
     "eyebrow": "Comment les clients l'utilisent",
     "title": "Trois boutiques, trois victoires quotidiennes différentes.",

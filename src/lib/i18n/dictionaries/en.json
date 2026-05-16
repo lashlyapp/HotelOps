@@ -181,6 +181,33 @@
     "title": "Made for boutique hotels everywhere.",
     "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Local-currency billing, signup in your language, the same back-office stack everywhere."
   },
+  "asianDestinations": {
+    "eyebrow": "Now serving APAC",
+    "title": "Built for the boutique scene across Asia, too.",
+    "sub": "Tokyo, Seoul, Hanoi, Singapore — design hotels, ryokans, lifestyle properties, and small luxury groups. Sign up in your language, get billed in your currency, run the same operational stack we run for boutiques in Europe and the Americas.",
+    "items": [
+      {
+        "city": "Tokyo",
+        "country": "Japan",
+        "blurb": "Shibuya design hotels, Asakusa ryokans, Ginza lifestyle properties — JPY billing, 日本語 signup, the same maintenance + events + signage stack."
+      },
+      {
+        "city": "Seoul",
+        "country": "South Korea",
+        "blurb": "Gangnam boutiques, Itaewon hostels, Jeju resort branches — KRW billing, 한국어 signup, one subscription per property."
+      },
+      {
+        "city": "Hanoi",
+        "country": "Vietnam",
+        "blurb": "Old Quarter boutiques, Hội An heritage hotels, Da Nang beach properties — VND billing, Tiếng Việt signup, flat per-property pricing that scales."
+      },
+      {
+        "city": "Singapore",
+        "country": "Singapore",
+        "blurb": "Chinatown shophouse hotels, Tanjong Pagar lifestyle properties, design groups across the island — SGD billing, English signup, no per-screen surprises."
+      }
+    ]
+  },
   "useCases": {
     "eyebrow": "How customers use it",
     "title": "Three boutiques, three different daily wins.",

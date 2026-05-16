@@ -18,17 +18,27 @@
  * cost. Add region tags only if/when a regional price page demands it.
  */
 
-export const LOCALES = ['en', 'es', 'fr'] as const
+export const LOCALES = ['en', 'es', 'fr', 'ja', 'ko', 'vi'] as const
 export type Locale = (typeof LOCALES)[number]
 
 export const DEFAULT_LOCALE: Locale = 'en'
 
 /** Human-readable name for each locale (in the locale itself).
- *  Authenticator-style: a Spanish speaker sees "Español", not "Spanish". */
+ *  Authenticator-style: a Spanish speaker sees "Español", not "Spanish".
+ *
+ *  Note on the APAC additions (ja / ko / vi): copy was AI-translated
+ *  for the initial launch. Japanese and Korean in particular are
+ *  formality-sensitive in B2B contexts (敬語 in JA, 존댓말 in KO) —
+ *  schedule a native-speaker review pass before scaling paid
+ *  acquisition in those markets. Vietnamese has fewer formality
+ *  landmines but should still get one editorial pass. */
 export const LOCALE_LABELS: Record<Locale, string> = {
   en: 'English',
   es: 'Español',
   fr: 'Français',
+  ja: '日本語',
+  ko: '한국어',
+  vi: 'Tiếng Việt',
 }
 
 /** Cookie name. Matches Next.js's default convention so a future
