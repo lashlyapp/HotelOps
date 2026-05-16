@@ -1,19 +1,42 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { AddressElement, Elements } from '@stripe/react-stripe-js'
+import type { StripeAddressElementChangeEvent } from '@stripe/stripe-js'
+import { useActionState, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getStripeJs } from '@/lib/stripe/client-publishable'
 import type { BillingDetails } from '@/lib/stripe/subscriptions'
 import { updateBillingDetailsAction, type ActionResult } from '../actions'
 
 const initial: ActionResult = {}
 
+/** Single Promise reused across mounts so the Stripe.js script
+ *  loads once per session. */
+const stripePromise = getStripeJs()
+
+/**
+ * In-app billing-details editor. Fully whitelabel — the address
+ * portion uses Stripe's Address Element which automatically
+ * renders the right fields per country (UK shows Postcode + County,
+ * JP shows 〒 + 都道府県, US shows ZIP + state, BR shows CEP +
+ * estado, IN shows PIN + state, …). The element runs entirely on
+ * myhotelops.com; nothing about it is "go to billing.stripe.com."
+ *
+ * Email + name stay as native inputs because (a) they're not
+ * country-formatted and (b) the existing server action expects
+ * them in formData.
+ *
+ * The Address Element doesn't post addresses through formData by
+ * default — it's a client-side widget. We capture its value via
+ * the onChange handler into a hidden input that the form submits,
+ * so the existing updateBillingDetailsAction (which reads from
+ * formData and forwards to customers.update server-side) keeps
+ * working unchanged.
+ */
 export function BillingDetailsForm({ details }: { details: BillingDetails }) {
   const [editing, setEditing] = useState(false)
-  // Wrap the server action so a successful save also flips us back to the
-  // read-only summary. Doing it here (inside the transition that
-  // useActionState already opens) avoids a follow-up setState-in-effect.
   const [state, action, pending] = useActionState(
     async (prev: ActionResult, fd: FormData): Promise<ActionResult> => {
       const result = await updateBillingDetailsAction(prev, fd)
@@ -42,7 +65,99 @@ export function BillingDetailsForm({ details }: { details: BillingDetails }) {
   }
 
   return (
-    <form action={action} className="space-y-4">
+    <BillingDetailsEditForm
+      details={details}
+      pending={pending}
+      action={action}
+      onCancel={() => setEditing(false)}
+      error={state.error}
+    />
+  )
+}
+
+function BillingDetailsEditForm({
+  details,
+  pending,
+  action,
+  onCancel,
+  error,
+}: {
+  details: BillingDetails
+  pending: boolean
+  action: (formData: FormData) => void
+  onCancel: () => void
+  error: string | undefined
+}) {
+  // Buffer the Address Element's latest value into refs so submit
+  // can serialize them into hidden inputs without triggering a
+  // re-render on every keystroke.
+  const addressRef = useRef<{
+    line1: string | null
+    line2: string | null
+    city: string | null
+    state: string | null
+    postal_code: string | null
+    country: string | null
+  }>({
+    line1: details.address.line1,
+    line2: details.address.line2,
+    city: details.address.city,
+    state: details.address.state,
+    postal_code: details.address.postal_code,
+    country: details.address.country,
+  })
+
+  function handleChange(e: StripeAddressElementChangeEvent) {
+    const a = e.value.address
+    addressRef.current = {
+      line1: a.line1 ?? null,
+      line2: a.line2 ?? null,
+      city: a.city ?? null,
+      state: a.state ?? null,
+      postal_code: a.postal_code ?? null,
+      country: a.country ?? null,
+    }
+  }
+
+  function handleSubmit(formData: FormData) {
+    // Strip any stale address.* values React might have appended and
+    // replace with the current Address Element snapshot.
+    for (const key of [
+      'address.line1',
+      'address.line2',
+      'address.city',
+      'address.state',
+      'address.postal_code',
+      'address.country',
+    ]) {
+      formData.delete(key)
+    }
+    const a = addressRef.current
+    if (a.line1) formData.set('address.line1', a.line1)
+    if (a.line2) formData.set('address.line2', a.line2)
+    if (a.city) formData.set('address.city', a.city)
+    if (a.state) formData.set('address.state', a.state)
+    if (a.postal_code) formData.set('address.postal_code', a.postal_code)
+    if (a.country) formData.set('address.country', a.country)
+    action(formData)
+  }
+
+  // Pre-fill the Address Element with whatever Stripe already has on
+  // the Customer so reopening the form doesn't show an empty form.
+  const defaultValues = {
+    name: details.name ?? '',
+    address: {
+      line1: details.address.line1 ?? '',
+      line2: details.address.line2 ?? '',
+      city: details.address.city ?? '',
+      state: details.address.state ?? '',
+      postal_code: details.address.postal_code ?? '',
+      country: details.address.country ?? 'US',
+    },
+  }
+
+  return (
+    <form action={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="billing-email">Billing email</Label>
@@ -71,86 +186,33 @@ export function BillingDetailsForm({ details }: { details: BillingDetails }) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="billing-line1">Address line 1</Label>
-        <Input
-          id="billing-line1"
-          name="address.line1"
-          type="text"
-          defaultValue={details.address.line1 ?? ''}
-          maxLength={200}
-          autoComplete="address-line1"
-          placeholder="123 Main St"
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="billing-line2">Address line 2</Label>
-        <Input
-          id="billing-line2"
-          name="address.line2"
-          type="text"
-          defaultValue={details.address.line2 ?? ''}
-          maxLength={200}
-          autoComplete="address-line2"
-          placeholder="Suite 400"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="billing-city">City</Label>
-          <Input
-            id="billing-city"
-            name="address.city"
-            type="text"
-            defaultValue={details.address.city ?? ''}
-            maxLength={200}
-            autoComplete="address-level2"
-            placeholder="Cupertino"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="billing-state">State / Region</Label>
-          <Input
-            id="billing-state"
-            name="address.state"
-            type="text"
-            defaultValue={details.address.state ?? ''}
-            maxLength={200}
-            autoComplete="address-level1"
-            placeholder="CA"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="billing-postal">Postal code</Label>
-          <Input
-            id="billing-postal"
-            name="address.postal_code"
-            type="text"
-            defaultValue={details.address.postal_code ?? ''}
-            maxLength={200}
-            autoComplete="postal-code"
-            placeholder="95014"
-          />
+        <Label>Billing address</Label>
+        <p className="text-xs text-muted leading-relaxed">
+          Pick your country first — the rest of the address fields adjust
+          automatically (UK postcode, Japanese 〒, Indian PIN, etc.).
+        </p>
+        <div className="rounded-md border border-border-default bg-surface p-3">
+          <Elements
+            stripe={stripePromise}
+            options={{
+              mode: 'setup',
+              currency: 'usd',
+              appearance: { theme: 'stripe', variables: { fontFamily: 'inherit' } },
+            }}
+          >
+            <AddressElement
+              options={{
+                mode: 'billing',
+                defaultValues,
+                fields: { phone: 'never' },
+              }}
+              onChange={handleChange}
+            />
+          </Elements>
         </div>
       </div>
 
-      <div className="space-y-1.5 sm:max-w-[8rem]">
-        <Label htmlFor="billing-country">Country</Label>
-        <Input
-          id="billing-country"
-          name="address.country"
-          type="text"
-          defaultValue={details.address.country ?? 'US'}
-          maxLength={2}
-          autoComplete="country"
-          placeholder="US"
-        />
-      </div>
-
-      {state.error ? (
-        <p className="text-sm text-danger-fg">{state.error}</p>
-      ) : null}
+      {error ? <p className="text-sm text-danger-fg">{error}</p> : null}
 
       <div className="flex gap-2">
         <Button type="submit" disabled={pending}>
@@ -160,7 +222,7 @@ export function BillingDetailsForm({ details }: { details: BillingDetails }) {
           type="button"
           variant="secondary"
           disabled={pending}
-          onClick={() => setEditing(false)}
+          onClick={onCancel}
         >
           Cancel
         </Button>

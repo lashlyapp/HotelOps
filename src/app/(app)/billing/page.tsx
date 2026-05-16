@@ -34,7 +34,6 @@ import type {
 import { AddonToggle } from './_components/addon-toggle'
 import { StripeRedirectButton } from './_components/billing-actions'
 import { BillingDetailsForm } from './_components/billing-details-form'
-import { OpenBillingPortalButton } from './_components/open-billing-portal-button'
 import { PropertyCardManager } from './_components/property-card-manager'
 import { ResubscribeButton } from './_components/resubscribe-button'
 
@@ -137,16 +136,8 @@ export default async function BillingPage() {
                 sent, and the address printed on every invoice. Per-property
                 card selection is managed in the table above.
               </p>
-              <p className="text-xs text-subtle leading-relaxed pt-1">
-                For tax IDs (VAT / GST / ABN), country-aware address
-                formatting (UK postcode, JP 〒, etc.), or to download
-                invoices, open the Stripe portal below.
-              </p>
             </div>
             <BillingDetailsForm details={billingDetails} />
-            <div className="border-t border-border-subtle pt-4">
-              <OpenBillingPortalButton />
-            </div>
           </div>
         </Card>
       ) : null}

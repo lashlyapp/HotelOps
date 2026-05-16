@@ -520,56 +520,6 @@ export async function updateBillingDetailsAction(
   return { success: 'Billing details updated.' }
 }
 
-/**
- * Open Stripe's hosted Customer Portal so the owner can edit their
- * billing address (with full country-aware formatting — UK
- * postcode + county, JP 〒 + 都道府県, etc.), manage tax IDs, swap
- * payment methods, and download invoices. Stripe handles every
- * country's address conventions; our in-app form falls back to a
- * flat US-style layout for the quick-edit path.
- *
- * Returns the portal URL for the client to navigate to. The Portal
- * requires the account-level Customer Portal configuration to be
- * saved at https://dashboard.stripe.com/settings/billing/portal
- * once per environment; without that the API call returns a clear
- * error which we surface.
- */
-export async function openBillingPortalAction(): Promise<
-  ActionResult & { url?: string }
-> {
-  const session = await requireOrgOwner()
-  const customerId = await getStripeCustomerForOrg(session.organization.id)
-  if (!customerId) {
-    return {
-      error:
-        'No Stripe customer for this org yet. Start a property subscription first.',
-    }
-  }
-
-  try {
-    const portal = await stripe().billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${getRequestSiteUrl()}/billing`,
-    })
-    return { success: 'Opening Stripe…', url: portal.url }
-  } catch (err) {
-    console.error('[stripe] portal session create failed', err)
-    return {
-      error:
-        err instanceof Error
-          ? err.message
-          : 'Stripe Customer Portal is not configured. Ask the operator to enable it in Stripe Dashboard → Settings → Billing → Customer Portal.',
-    }
-  }
-}
-
-/** Read the request origin so portal returns land on the same
- *  deployment the user came from (prod / preview), not whatever
- *  NEXT_PUBLIC_SITE_URL was baked in at build time. */
-function getRequestSiteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.myhotelops.com'
-}
-
 
 // ----------------------------------------------------------------------------
 // Add-on subscription items
