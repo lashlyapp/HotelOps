@@ -23,6 +23,7 @@ export type TopicKey =
   | 'sustainability'
   | 'guest_moment'
   | 'catering_feature'
+  | 'nearby_landmarks'
 
 export type Topic = {
   key: TopicKey
@@ -84,6 +85,13 @@ export const TOPICS: Record<TopicKey, Topic> = {
     hint: 'Lead with the food. Works for breakfast, lunch service, a tasting menu, or banquet prep.',
     preferredTags: ['food', 'plate', 'dining', 'menu', 'chef'],
   },
+  nearby_landmarks: {
+    key: 'nearby_landmarks',
+    label: 'Nearby landmarks',
+    hint: 'A travel-style nod to what guests can walk to. Image is sourced from Unsplash so you can post about places you don\'t have photos of.',
+    // Unused — this topic always pulls from Unsplash, not the catalog.
+    preferredTags: [],
+  },
 }
 
 const ORDER: TopicKey[] = [
@@ -95,6 +103,9 @@ const ORDER: TopicKey[] = [
   'local_moment',
   'sustainability',
   'guest_moment',
+  // Lands roughly once per rotation — pairs with a destination photo
+  // from Unsplash when the property has a city set. See generator.ts.
+  'nearby_landmarks',
 ]
 
 export type PickInputs = {
@@ -166,6 +177,76 @@ export function pickMediaForTopic(
 
   // No tag match — pick any image deterministically.
   return images[hash(seed) % images.length]
+}
+
+/**
+ * Build an Unsplash search query for a given topic + property. Returns
+ * null when we don't have a sensible query to make (e.g. landmarks
+ * topic but no city on the property). The cron skips Unsplash and
+ * falls back to the catalog in that case.
+ *
+ * Query design: most topics get a generic travel/hotel-vibe query so
+ * the photo widens the GM's catalog (airports, terraces, destinations,
+ * etc). The two exceptions are 'local_moment' and 'nearby_landmarks',
+ * which inject the property's city — those posts are the ones that
+ * benefit most from real local photography the hotel doesn't own.
+ */
+export function buildUnsplashQuery(
+  topic: Topic,
+  property: { city: string | null; country: string },
+  weather: { condition: string | null },
+): string | null {
+  const city = property.city?.trim() ?? ''
+
+  switch (topic.key) {
+    case 'nearby_landmarks':
+      // Pure location query. Falls through to country if the property
+      // has no city set — still gives us a destination photo, just
+      // less specific. Skip entirely if we have neither.
+      if (city) return `${city} landmark`
+      if (property.country) return `${property.country} landmark`
+      return null
+
+    case 'local_moment':
+      if (city) return `${city} travel`
+      return 'travel destination'
+
+    case 'weather_mood':
+      switch (weather.condition) {
+        case 'sunny':
+          return 'sunny hotel terrace'
+        case 'rainy':
+          return 'rainy hotel window'
+        case 'snowy':
+          return 'snowy hotel exterior'
+        case 'foggy':
+          return 'foggy morning hotel'
+        case 'cloudy':
+          return 'overcast hotel lobby'
+        default:
+          return 'hotel lobby morning'
+      }
+
+    case 'catering_feature':
+      return 'hotel restaurant plating'
+
+    case 'behind_the_scenes':
+      return 'hotel kitchen craft'
+
+    case 'staff_spotlight':
+      return 'hotel hospitality team'
+
+    case 'sustainability':
+      return 'sustainable hotel garden'
+
+    case 'guest_moment':
+      return 'travel airport sunrise'
+
+    case 'event_today':
+      // Don't substitute for the GM's own event photos — return null
+      // so the cron stays on the catalog for this topic.
+      return null
+  }
 }
 
 // FNV-1a, 32-bit — small, dependency-free, fine for "spread a string

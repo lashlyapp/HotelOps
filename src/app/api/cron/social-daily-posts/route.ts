@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { generatePost } from '@/app/(app)/social/_lib/generator'
+import { trackUnsplashDownload } from '@/app/(app)/social/_lib/unsplash'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Organization, Property } from '@/lib/supabase/types'
 
@@ -97,6 +98,25 @@ export async function GET(request: NextRequest) {
           orgName: org.name,
           today,
         })
+
+        // Split the chosen media into its three persistence fields.
+        // media_key + external_media_url are mutually exclusive (DB
+        // comment makes that explicit); external_media_credit is set
+        // exactly when external_media_url is.
+        const mediaKey =
+          post.media?.source === 'catalog' ? post.media.file.key : null
+        const externalUrl =
+          post.media?.source === 'unsplash' ? post.media.photo.url : null
+        const externalCredit =
+          post.media?.source === 'unsplash'
+            ? {
+                source: 'unsplash' as const,
+                photographer_name: post.media.photo.photographerName,
+                photographer_url: post.media.photo.photographerUrl,
+                source_url: post.media.photo.unsplashPageUrl,
+              }
+            : null
+
         const { error: insertErr } = await admin
           .from('social_post_log')
           .upsert(
@@ -107,7 +127,9 @@ export async function GET(request: NextRequest) {
               topic: post.topic.key,
               captions: post.captions,
               hashtag_sets: post.hashtagSets,
-              media_key: post.media?.key ?? null,
+              media_key: mediaKey,
+              external_media_url: externalUrl,
+              external_media_credit: externalCredit,
             },
             { onConflict: 'property_id,post_date' },
           )
@@ -116,6 +138,13 @@ export async function GET(request: NextRequest) {
           continue
         }
         generated += 1
+
+        // Per Unsplash API guidelines: ping the download tracker when
+        // a photo is "used" in our app. Fire-and-forget; never blocks
+        // generation of the next property.
+        if (post.media?.source === 'unsplash') {
+          await trackUnsplashDownload(post.media.photo.trackDownloadUrl)
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : 'unknown error'
         failures.push(`${property.id}: ${message}`)

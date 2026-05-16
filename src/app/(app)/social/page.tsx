@@ -125,15 +125,7 @@ export default async function SocialPage({
           topicHint={TOPICS[todayPost.topic as TopicKey]?.hint ?? ''}
           captions={todayPost.captions}
           hashtagSets={todayPost.hashtag_sets ?? []}
-          media={
-            todayPost.media_key
-              ? {
-                  key: todayPost.media_key,
-                  url: r2PublicUrl(todayPost.media_key),
-                  displayName: deriveDisplayName(todayPost.media_key),
-                }
-              : null
-          }
+          media={resolvePostMedia(todayPost)}
           markedUsed={Boolean(todayPost.marked_used_at)}
           signatureHashtags={typedSettings?.signature_hashtags ?? null}
           socialHandle={typedSettings?.social_handles ?? null}
@@ -206,6 +198,28 @@ function deriveDisplayName(key: string): string {
     .replace(/\.[^.]+$/, '')
     .replace(/[-_]+/g, ' ')
     .trim()
+}
+
+// Translate the persisted row into the shape PostCard wants. The two
+// kinds of media are mutually exclusive at the DB level; this helper
+// makes the discriminated union the UI consumes.
+function resolvePostMedia(row: SocialPostLog): import('./_components/post-card').PostCardProps['media'] {
+  if (row.external_media_url && row.external_media_credit) {
+    return {
+      source: 'unsplash',
+      url: row.external_media_url,
+      credit: row.external_media_credit,
+    }
+  }
+  if (row.media_key) {
+    return {
+      source: 'catalog',
+      key: row.media_key,
+      url: r2PublicUrl(row.media_key),
+      displayName: deriveDisplayName(row.media_key),
+    }
+  }
+  return null
 }
 
 function PropertyTabsBar({

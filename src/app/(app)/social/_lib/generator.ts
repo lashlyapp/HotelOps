@@ -12,13 +12,22 @@ import type {
 import { listMediaWithTags } from '@/lib/r2/list'
 import { generateCaptions, type ChatMessage } from './openai'
 import {
+  buildUnsplashQuery,
   pickMediaForTopic,
   pickTopic,
   type Topic,
   type TopicKey,
   TOPICS,
 } from './topics'
+import {
+  pickUnsplashPhoto,
+  type UnsplashPhoto,
+} from './unsplash'
 import { getWeatherForProperty, type WeatherSummary } from './weather'
+
+export type GeneratedMedia =
+  | { source: 'catalog'; file: MediaFile }
+  | { source: 'unsplash'; photo: UnsplashPhoto }
 
 export type GeneratedPost = {
   topic: Topic
@@ -27,7 +36,8 @@ export type GeneratedPost = {
   // GM-configured signature hashtags are NOT included here (they're
   // appended at copy/email time by the UI / actions).
   hashtagSets: string[][]
-  media: MediaFile | null
+  // null when nothing matched — the GM gets a caption-only suggestion.
+  media: GeneratedMedia | null
   weather: WeatherSummary
   // True when the captions came from OpenAI; false when we fell back to
   // templates (no key, bad key, network error). The UI surfaces this
@@ -71,12 +81,15 @@ export async function generatePost(input: GenerateInput): Promise<GeneratedPost>
       .select('*')
       .eq('property_id', input.property.id)
       .maybeSingle(),
+    // Pull the last few posts for two reasons:
+    //   1. topic rotation (avoid repeating yesterday's angle)
+    //   2. "every fifth post uses Unsplash" — see decideMediaSource
     admin
       .from('social_post_log')
-      .select('topic')
+      .select('topic, external_media_url, created_at')
       .eq('property_id', input.property.id)
       .order('created_at', { ascending: false })
-      .limit(3),
+      .limit(5),
     admin
       .from('events')
       .select('*')
@@ -109,11 +122,18 @@ export async function generatePost(input: GenerateInput): Promise<GeneratedPost>
     recentTopics,
   })
 
-  const photo = pickMediaForTopic(
+  const seed = `${input.today}#${input.property.id}`
+  const recentRows = (recentLog ?? []) as Array<
+    Pick<SocialPostLog, 'topic' | 'external_media_url' | 'created_at'>
+  >
+  const photo = await pickPhoto({
     topic,
-    media,
-    `${input.today}#${input.property.id}`,
-  )
+    property: input.property,
+    weather,
+    catalog: media,
+    seed,
+    recent: recentRows,
+  })
 
   const voice = (typedSettings?.brand_voice ?? 'warm') as BrandVoice
   const hashtags = typedSettings?.signature_hashtags?.trim() ?? ''
@@ -189,6 +209,80 @@ function padHashtagSets(sets: string[][], length: number): string[][] {
 }
 
 // ---------------------------------------------------------------------------
+// Photo source decision
+// ---------------------------------------------------------------------------
+
+/**
+ * Pick the photo for today's post. Three paths in priority order:
+ *
+ *   1. nearby_landmarks topic → always try Unsplash with a location
+ *      query. The whole point of this topic is to talk about places
+ *      the GM doesn't have photos of.
+ *
+ *   2. every Nth post (currently every 5th, counted from the property's
+ *      recent log) → try Unsplash with a topic-appropriate travel /
+ *      hotel-vibe query. Widens the feed beyond whatever's in the
+ *      catalog so a small media library doesn't recycle the same
+ *      ten images.
+ *
+ *   3. otherwise → media catalog pick, by tag matching the topic.
+ *
+ * Any failure in 1 or 2 (no Unsplash key, query had no results, network
+ * blip) cleanly falls through to 3. If the catalog is also empty, we
+ * return null and the GM gets a caption-only suggestion they can pair
+ * with their own image manually.
+ */
+async function pickPhoto(args: {
+  topic: Topic
+  property: Property
+  weather: WeatherSummary
+  catalog: MediaFile[]
+  seed: string
+  recent: Array<Pick<SocialPostLog, 'topic' | 'external_media_url' | 'created_at'>>
+}): Promise<GeneratedMedia | null> {
+  const tryUnsplash = async (): Promise<GeneratedMedia | null> => {
+    const query = buildUnsplashQuery(args.topic, args.property, args.weather)
+    if (!query) return null
+    const photo = await pickUnsplashPhoto({ query, seed: args.seed })
+    if (!photo) return null
+    return { source: 'unsplash', photo }
+  }
+  const pickCatalog = (): GeneratedMedia | null => {
+    const file = pickMediaForTopic(args.topic, args.catalog, args.seed)
+    return file ? { source: 'catalog', file } : null
+  }
+
+  // 1. Landmarks topic — Unsplash is the whole point.
+  if (args.topic.key === 'nearby_landmarks') {
+    return (await tryUnsplash()) ?? pickCatalog()
+  }
+
+  // 2. Cadence: every Nth post uses Unsplash regardless of topic. We
+  //    count posts where external_media_url is non-null in the
+  //    property's recent history; if four catalog-sourced posts have
+  //    landed in a row, the fifth goes external.
+  if (shouldUseUnsplashByCadence(args.recent)) {
+    return (await tryUnsplash()) ?? pickCatalog()
+  }
+
+  return pickCatalog()
+}
+
+const UNSPLASH_CADENCE = 5
+
+function shouldUseUnsplashByCadence(
+  recent: Array<Pick<SocialPostLog, 'external_media_url'>>,
+): boolean {
+  // Count how many of the last (CADENCE - 1) posts came from the
+  // catalog. If they all did, this one goes Unsplash. Less arithmetic
+  // than tracking an integer counter and naturally resyncs if a row
+  // ever gets deleted.
+  const window = recent.slice(0, UNSPLASH_CADENCE - 1)
+  if (window.length < UNSPLASH_CADENCE - 1) return false
+  return window.every((r) => !r.external_media_url)
+}
+
+// ---------------------------------------------------------------------------
 // Prompt construction
 // ---------------------------------------------------------------------------
 
@@ -200,7 +294,7 @@ type PromptInput = {
   today: string
   weather: WeatherSummary
   event: Event | null
-  photo: MediaFile | null
+  photo: GeneratedMedia | null
   hashtags: string
   handles: string
   // Recent thumbs votes — fed into the prompt as positive / negative
@@ -258,11 +352,19 @@ function buildPrompt(p: PromptInput): ChatMessage[] {
   }
 
   if (p.photo) {
-    const desc = p.photo.description?.trim()
-    const tags = p.photo.tags.join(', ')
-    lines.push(
-      `The post will pair with a photo: ${p.photo.displayName}${desc ? ` — ${desc}` : ''}${tags ? ` (tags: ${tags})` : ''}. Write captions that complement what's likely in the frame.`,
-    )
+    if (p.photo.source === 'catalog') {
+      const f = p.photo.file
+      const desc = f.description?.trim()
+      const tags = f.tags.join(', ')
+      lines.push(
+        `The post will pair with a photo from the hotel's own catalog: ${f.displayName}${desc ? ` — ${desc}` : ''}${tags ? ` (tags: ${tags})` : ''}. Write captions that complement what's likely in the frame.`,
+      )
+    } else {
+      const alt = p.photo.photo.altDescription?.trim()
+      lines.push(
+        `The post will pair with a stock photo${alt ? ` showing ${alt}` : ''} sourced from Unsplash. The captions should evoke the destination / travel feeling, not claim it as a photo of the hotel itself.`,
+      )
+    }
   }
 
   if (p.hashtags) {
@@ -375,6 +477,8 @@ function fallbackCaptions(p: {
         return ['#thankyou', '#guestlove', '#hospitality']
       case 'catering_feature':
         return ['#hotelrestaurant', '#chefspecial', '#foodie']
+      case 'nearby_landmarks':
+        return ['#travel', '#explorelocal', '#destination']
     }
   })()
 
@@ -441,6 +545,14 @@ function fallbackCaptions(p: {
           `On the plate today: [add the dish].`,
           `Today's kitchen, today's plate — [add a one-line description].`,
           `Made for ${name} by [add the chef's first name]: [add the dish or course]. Stop in.`,
+        ]
+      case 'nearby_landmarks':
+        return [
+          city ? `${city}, on your doorstep.` : `Local landmarks, within walking distance.`,
+          city
+            ? `Steps from ${name}: [add a landmark guests can walk to]. The kind of detail that makes a trip.`
+            : `Step outside and you're already there. [Add a landmark or two within walking distance].`,
+          `Stay at ${name} and see [add a landmark] without ever booking a cab. The neighborhood is the amenity.`,
         ]
     }
   })()

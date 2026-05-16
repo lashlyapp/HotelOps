@@ -747,6 +747,13 @@ export type PropertySocialSettings = {
   updated_at: string
 }
 
+export type SocialMediaCredit = {
+  source: 'unsplash'
+  photographer_name: string
+  photographer_url: string
+  source_url: string
+}
+
 export type SocialPostLog = {
   id: string
   property_id: string
@@ -760,7 +767,14 @@ export type SocialPostLog = {
   // GM-configured signature hashtags live on property_social_settings
   // and are appended on top at copy/email time.
   hashtag_sets: string[][]
+  // R2 key when the photo came from the property's own media catalog.
+  // Mutually exclusive with external_media_url.
   media_key: string | null
+  // Full https URL when the photo came from outside (Unsplash today).
+  // Mutually exclusive with media_key.
+  external_media_url: string | null
+  // Required attribution when external_media_url is set; null otherwise.
+  external_media_credit: SocialMediaCredit | null
   marked_used_at: string | null
   created_at: string
 }

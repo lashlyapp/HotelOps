@@ -14,11 +14,23 @@ import { PlatformPreview } from './platform-preview'
 
 const initialResult: ActionResult = {}
 
-type Media = {
-  key: string
-  url: string
-  displayName: string
-}
+// Two photo sources: the property's own catalog (an R2 key + URL) or
+// an externally hosted image with attribution (Unsplash today, but the
+// shape is source-agnostic). The union keeps the catalog-only path
+// type-safe — the credit fields are only present on the external
+// variant.
+export type Media =
+  | { source: 'catalog'; key: string; url: string; displayName: string }
+  | {
+      source: 'unsplash'
+      url: string
+      credit: {
+        source: 'unsplash'
+        photographer_name: string
+        photographer_url: string
+        source_url: string
+      }
+    }
 
 export type PostCardProps = {
   propertyId: string
@@ -105,19 +117,50 @@ export function PostCard(props: PostCardProps) {
 }
 
 function MediaPreview({ media }: { media: Media }) {
+  const alt =
+    media.source === 'catalog'
+      ? media.displayName
+      : media.credit.photographer_name
+        ? `Photo by ${media.credit.photographer_name}`
+        : 'Suggested photo'
   return (
     <div className="overflow-hidden rounded-md border border-border-subtle">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={media.url}
-        alt={media.displayName}
+        alt={alt}
         className="w-full max-h-80 object-cover"
       />
-      <div className="flex items-center justify-between gap-2 border-t border-border-subtle bg-surface-muted px-3 py-2">
-        <span className="truncate text-xs text-muted">{media.displayName}</span>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle bg-surface-muted px-3 py-2">
+        {media.source === 'catalog' ? (
+          <span className="truncate text-xs text-muted">{media.displayName}</span>
+        ) : (
+          <span className="truncate text-xs text-muted">
+            Photo by{' '}
+            <a
+              href={media.credit.photographer_url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-fg underline-offset-2 hover:underline"
+            >
+              {media.credit.photographer_name}
+            </a>{' '}
+            on{' '}
+            <a
+              href={media.credit.source_url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-fg underline-offset-2 hover:underline"
+            >
+              Unsplash
+            </a>
+          </span>
+        )}
         <a
           href={media.url}
           download
+          target={media.source === 'unsplash' ? '_blank' : undefined}
+          rel={media.source === 'unsplash' ? 'noreferrer noopener' : undefined}
           className="focus-ring text-xs font-medium text-fg underline-offset-2 hover:underline"
         >
           Download
