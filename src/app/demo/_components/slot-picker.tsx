@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,20 +19,19 @@ const TEXTAREA_CLASSES =
   'disabled:cursor-not-allowed disabled:opacity-50'
 
 /**
- * Two-step interactive picker for /demo:
+ * Three-step interactive picker for /demo:
  *
- *   1. Grid view — vertical list of days, each with horizontal slot
- *      pills. Available slots are buttons; taken slots are
- *      visibly disabled. Tapping an available slot transitions to
- *      step 2.
- *   2. Booking form — name / email / hotel / properties / notes
- *      inputs prefixed with the chosen slot label and a "change
- *      time" link back to step 1. Submit hits bookDemoSlot.
+ *   1. Date tabs across the top + slots for the active date
+ *      below. Showing all 5 days × 7 slots at once overwhelmed
+ *      the page — a Calendly-style date-then-slots flow keeps
+ *      the visible surface to ~7 items, never 35.
+ *   2. Booking form once a slot is picked.
+ *   3. Success confirmation.
  *
- * Success state replaces the form with a confirmation block. Server
- * action fires the founder notification + visitor confirmation
- * emails; UX intentionally never claims the slot is "reserved" —
- * the founder still has to send the calendar invite.
+ * On mount, auto-selects the first day that has at least one
+ * available slot so the user lands on something actionable
+ * without an extra tap. Each date tab also shows how many slots
+ * are available so the choice carries context.
  */
 export function SlotPicker({
   days,
@@ -45,6 +44,14 @@ export function SlotPicker({
   taken: string
   selectInstruction: string
 }) {
+  const firstAvailableDate = useMemo(
+    () =>
+      days.find((d) => d.slots.some((s) => s.status === 'available'))?.date ??
+      days[0]?.date ??
+      '',
+    [days],
+  )
+  const [activeDate, setActiveDate] = useState(firstAvailableDate)
   const [selected, setSelected] = useState<{
     id: string
     label: string
@@ -161,51 +168,114 @@ export function SlotPicker({
     )
   }
 
-  // Step 1 — slot grid.
+  // Step 1 — date tabs + slots for the active day.
+  const activeDay = days.find((d) => d.date === activeDate)
+  const availableCountFor = (d: SlotDay) =>
+    d.slots.filter((s) => s.status === 'available').length
+
   return (
     <div className="space-y-5">
+      {/* Horizontal date tabs. Overflow-x-auto so 5+ days still
+          scroll on narrow phones. snap-x keeps tap targets aligned
+          to whole cards as the user swipes. */}
+      <div
+        role="tablist"
+        aria-label="Select a date"
+        className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory"
+      >
+        {days.map((day) => {
+          const count = availableCountFor(day)
+          const isActive = day.date === activeDate
+          const isFull = count === 0
+          const [weekday, dayNumber] = splitDayLabel(day.label)
+          return (
+            <button
+              key={day.date}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              aria-disabled={isFull}
+              onClick={() => !isFull && setActiveDate(day.date)}
+              disabled={isFull}
+              className={[
+                'focus-ring snap-start shrink-0 flex flex-col items-center justify-center',
+                'w-16 sm:w-20 py-2.5 rounded-lg border transition-colors',
+                isActive
+                  ? 'border-fg bg-fg text-bg'
+                  : isFull
+                    ? 'border-border-subtle bg-surface-muted text-subtle cursor-not-allowed'
+                    : 'border-border-default bg-surface text-fg hover:bg-surface-muted',
+              ].join(' ')}
+            >
+              <span className="text-[10px] font-semibold uppercase tracking-wider opacity-80">
+                {weekday}
+              </span>
+              <span className="text-base font-semibold leading-tight mt-0.5">
+                {dayNumber}
+              </span>
+              <span
+                className={[
+                  'mt-1 text-[10px]',
+                  isActive
+                    ? 'opacity-80'
+                    : isFull
+                      ? 'text-subtle'
+                      : 'text-muted',
+                ].join(' ')}
+              >
+                {isFull ? '—' : `${count}`}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
       <p className="text-xs text-subtle">{selectInstruction}</p>
-      <ul className="space-y-3">
-        {days.map((day) => (
-          <li key={day.date} className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
-              {day.label}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {day.slots.map((slot) => {
-                if (slot.status === 'taken') {
-                  return (
-                    <span
-                      key={slot.id}
-                      aria-disabled
-                      className="inline-flex items-center rounded-md border border-border-subtle bg-surface-muted px-3 py-1.5 text-xs text-subtle line-through cursor-not-allowed"
-                      title={taken}
-                    >
-                      {slot.label}
-                    </span>
-                  )
+
+      {/* Slots for the active day. */}
+      {activeDay ? (
+        <div className="flex flex-wrap gap-2">
+          {activeDay.slots.map((slot) => {
+            if (slot.status === 'taken') {
+              return (
+                <span
+                  key={slot.id}
+                  aria-disabled
+                  className="inline-flex items-center rounded-md border border-border-subtle bg-surface-muted px-3 py-1.5 text-xs text-subtle line-through cursor-not-allowed"
+                  title={taken}
+                >
+                  {slot.label}
+                </span>
+              )
+            }
+            return (
+              <button
+                key={slot.id}
+                type="button"
+                onClick={() =>
+                  setSelected({
+                    id: slot.id,
+                    label: slot.label,
+                    day: activeDay.label,
+                  })
                 }
-                return (
-                  <button
-                    key={slot.id}
-                    type="button"
-                    onClick={() =>
-                      setSelected({
-                        id: slot.id,
-                        label: slot.label,
-                        day: day.label,
-                      })
-                    }
-                    className="focus-ring inline-flex items-center rounded-md border border-border-default bg-surface px-3 py-1.5 text-xs font-medium text-fg hover:bg-surface-muted transition-colors"
-                  >
-                    {slot.label}
-                  </button>
-                )
-              })}
-            </div>
-          </li>
-        ))}
-      </ul>
+                className="focus-ring inline-flex items-center rounded-md border border-border-default bg-surface px-3 py-1.5 text-xs font-medium text-fg hover:bg-surface-muted transition-colors"
+              >
+                {slot.label}
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
     </div>
   )
+}
+
+/** Day labels from demo-slots come in as e.g. "Mon, May 18". Split
+ *  into ["Mon", "18"] for the two-line tab layout. Falls back to
+ *  the full label if the format ever changes so we don't crash. */
+function splitDayLabel(label: string): [string, string] {
+  const match = /^([A-Za-z]+),\s+\w+\s+(\d+)$/.exec(label)
+  if (!match) return [label, '']
+  return [match[1], match[2]]
 }
