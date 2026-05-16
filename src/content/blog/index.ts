@@ -1,6 +1,11 @@
+import * as eventPipeline from './posts/boutique-hotel-event-pipeline'
+import * as guestConciergeCost from './posts/guest-concierge-app-cost'
 import * as guestExpectations from './posts/guest-expectations'
 import * as hotelSignageCost from './posts/hotel-digital-signage-cost-2026'
+import * as wifiSetup from './posts/hotel-guest-wifi-setup'
+import * as maintenanceTicket from './posts/maintenance-ticket-that-closes'
 import * as modernizeChecklist from './posts/modernize-your-boutique-hotel'
+import * as multiPropertyGroup from './posts/multi-property-boutique-group'
 import * as operationsBudget from './posts/operations-budget'
 import * as pmsVsOperations from './posts/pms-vs-operations-system'
 import * as techModernization from './posts/tech-modernization'
@@ -23,6 +28,14 @@ import type { BlogPostMeta, BlogPostModule } from './types'
  */
 
 const MODULES: BlogPostModule[] = [
+  // Drip-publish queue — newest scheduled date first. Posts whose
+  // publishedAt is in the future are gated by filter() below; the
+  // daily cron emails when each one crosses its date.
+  eventPipeline,
+  multiPropertyGroup,
+  guestConciergeCost,
+  wifiSetup,
+  maintenanceTicket,
   modernizeChecklist,
   underservedIndustry,
   pmsVsOperations,
