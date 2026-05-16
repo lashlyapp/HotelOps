@@ -353,7 +353,7 @@
   "useCases": {
     "eyebrow": "고객의 사용 방식",
     "title": "세 부티크, 세 가지 다른 일상의 성과.",
-    "sub": "현재 MyHotelOps를 사용하는 실제 고객입니다.",
+    "sub": "MyHotelOps가 처리하도록 만들어진 업무 흐름.",
     "items": [
       {
         "headline": "유지보수 지연을 며칠에서 시간으로 단축",
