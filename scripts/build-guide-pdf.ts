@@ -263,19 +263,37 @@ function build(): void {
     }
 
     if (section.callout) {
-      if (doc.y > 720) doc.addPage()
+      // Small breathing room above the callout so it visibly separates
+      // from the last paragraph of the section.
+      doc.moveDown(0.5)
+
+      // Measure how tall the callout will actually render at our
+      // font + width. We need this so the side rule extends to the
+      // bottom of the text (not a fixed 36px), and so a near-bottom
+      // page break fires before we start the callout rather than
+      // mid-stroke.
+      const calloutWidth = 595 - 76 - 64
+      doc.font('Helvetica-Oblique').fontSize(10.5)
+      const calloutHeight = doc.heightOfString(section.callout, {
+        width: calloutWidth,
+        lineGap: 2,
+      })
+
+      // Page bottom (842) minus bottom margin (80) is the usable y
+      // limit. Add a small cushion so the footer never touches the
+      // callout's last line.
+      if (doc.y + calloutHeight > 842 - 80 - 8) doc.addPage()
+
+      const startY = doc.y
       doc
-        .moveDown(0.3)
         .strokeColor('#e7e5e4')
         .lineWidth(2)
-        .moveTo(64, doc.y)
-        .lineTo(64, doc.y + 36)
+        .moveTo(64, startY)
+        .lineTo(64, startY + calloutHeight)
         .stroke()
-        .font('Helvetica-Oblique')
-        .fontSize(10.5)
         .fillColor('#444')
-        .text(section.callout, 76, doc.y - 36, {
-          width: 595 - 76 - 64,
+        .text(section.callout, 76, startY, {
+          width: calloutWidth,
           lineGap: 2,
         })
         .moveDown(0.8)
