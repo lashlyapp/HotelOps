@@ -165,6 +165,115 @@
     "title": "Pour les hôtels boutique, là où ils se concentrent vraiment.",
     "sub": "Lisbonne, Barcelone, Paris, Mexico — les quartiers où les hôtels indépendants et des petits groupes opèrent réellement. Facturation en devise locale, inscription dans votre langue, la même base opérationnelle partout."
   },
+  "pricing": {
+    "eyebrow": "Tarifs",
+    "headline": "Par propriété. Pas par utilisateur. Pas par écran. Pas par chambre.",
+    "sub": "Une base de $100/propriété/mois. Deux options. C'est toute la grille tarifaire — et le maximum qu'une seule propriété peut vous coûter est $188/mois, quel que soit le nombre d'écrans, de chambres ou de personnel.",
+    "midCycleNote": "Les changements d'options en cours de cycle sont calculés au prorata et facturés immédiatement pour que la chronologie de facturation de chaque propriété reste propre.",
+    "cadence": "propriété / mois",
+    "tagRequired": "Obligatoire",
+    "tagOptional": "Optionnel",
+    "plans": {
+      "base": {
+        "label": "Base",
+        "body": "Tout ce dont chaque propriété a besoin dès le premier jour — bons de travail de maintenance, propositions d'événements, registres IT, bibliothèque média et 3 écrans d'affichage.",
+        "features": [
+          "Bons de travail (Kanban avec preuve photo/vidéo)",
+          "Événements & banquets (demande → proposition → facture)",
+          "IT Hub (Wi-Fi, accès fournisseurs, équipement)",
+          "Catalogue média avec CDN global",
+          "3 écrans d'affichage inclus",
+          "Membres d'équipe illimités"
+        ]
+      },
+      "signage": {
+        "label": "Affichage Illimité",
+        "body": "Supprime la limite de 3 écrans. Téléviseurs illimités dans chaque propriété — réception, salle du personnel, salles de réunion, bord de piscine. Même planificateur, même alerte d'urgence.",
+        "features": [
+          "Écrans illimités par propriété",
+          "Alerte d'urgence pour toute la propriété",
+          "Programmation par date et plage horaire",
+          "Appairez n'importe quel TV avec navigateur",
+          "Image, vidéo, web ou carte texte avec marque",
+          "Activé pour toute l'organisation en un clic"
+        ]
+      },
+      "guest": {
+        "label": "Expérience Client",
+        "body": "Page d'accueil avec marque, carte QR imprimable pour chaque chambre, et collecte de demandes clients. Remplace les outils de conciergerie à $3–$6 par chambre occupée par un tarif fixe.",
+        "features": [
+          "Constructeur de page d'accueil avec couleur de marque",
+          "Wi-Fi importé automatiquement depuis IT Hub",
+          "Menus de restaurant et de room service",
+          "Carte QR imprimable Letter / A4",
+          "Pas de compte client, pas d'application",
+          "Activé pour toute l'organisation en un clic"
+        ]
+      }
+    },
+    "compare": {
+      "eyebrow": "Le calcul",
+      "headline": "Pour un boutique de 40 chambres qui achète ces outils aujourd'hui.",
+      "intro": "Les hôtels utilisent généralement un outil de tickets de maintenance, un abonnement d'affichage numérique et une plateforme de conciergerie / accueil — chacun sur un axe de facturation différent : par écran, par chambre ou par propriété. Voici ce qu'une propriété paie pour les trois à la carte versus via MyHotelOps.",
+      "headers": {
+        "need": "Besoin",
+        "tool": "Outil indépendant",
+        "standaloneCost": "Coût indépendant",
+        "withUs": "Avec MyHotelOps"
+      },
+      "monthlyTotal": "Total mensuel",
+      "alaCarte": "à la carte",
+      "savings": "Économies vs. outils indépendants",
+      "footnote": "Les prix indépendants sont les paliers d'entrée publiquement listés en mai 2026 ; certains fournisseurs ne donnent un devis que sur demande et peuvent être plus élevés en pratique. Les fournisseurs d'accueil facturent par chambre occupée, donc le chiffre ci-dessus suppose une propriété de 40 chambres avec un taux d'occupation moyen typique."
+    },
+    "scale": {
+      "headline": "Ce que paient réellement les groupes multi-propriétés.",
+      "sub": "Les options s'activent pour toute l'organisation et sont facturées sur chaque facture de propriété. Un groupe de quatre propriétés avec les deux options actives paie 4 × $188 = $752/mois — tout compris.",
+      "headers": {
+        "properties": "Propriétés",
+        "baseOnly": "Base uniquement",
+        "baseSignage": "Base + Affichage",
+        "everything": "Tout activé"
+      },
+      "propertyOne": "1 propriété",
+      "propertyMany": "{n} propriétés",
+      "perMonth": "/mois"
+    },
+    "faq": {
+      "heading": "Questions fréquentes",
+      "items": [
+        {
+          "q": "Y a-t-il des frais de configuration ou d'installation ?",
+          "a": "Une fois par locataire à votre arrivée — nous l'appliquons sur la première facture de la première propriété et ne le refacturons jamais si vous ajoutez des propriétés ou vous réabonnez. Nous vous accompagnons personnellement ; pas d'assistant DIY."
+        },
+        {
+          "q": "Que se passe-t-il avec mes données si j'annule ?",
+          "a": "Vous gardez l'accès à votre bibliothèque média et vos registres IT Hub pendant 30 jours, avec une option d'exportation dès le premier jour. Après 30 jours, votre compte est fermé et le stockage est récupéré."
+        },
+        {
+          "q": "Facturez-vous par utilisateur ou par siège ?",
+          "a": "Non. Chaque membre du personnel dans chaque propriété est inclus — réception, ménage, maintenance, propriétaires. Le tarif par propriété est le seul axe."
+        },
+        {
+          "q": "Et si je ne veux que la maintenance, ou seulement l'affichage ?",
+          "a": "Vous pouvez. L'abonnement de base inclut les bons de travail de maintenance, les événements & banquets, IT Hub, les médias et trois écrans d'affichage à $100/propriété. Ajoutez Affichage Illimité ou Expérience Client uniquement si vous le souhaitez — bascule sur /billing, facturé au prorata."
+        },
+        {
+          "q": "En quoi l'option d'affichage diffère-t-elle de Yodeck ou OptiSigns ?",
+          "a": "Tarif fixe par propriété — écrans illimités dans une propriété pour $49 contre $8–$30 par écran par mois ailleurs. Même concept de player (n'importe quel TV avec navigateur), même planification. Seuil de rentabilité versus Yodeck à environ 6 écrans ; moins cher au-dessus."
+        },
+        {
+          "q": "Vous intégrez-vous à notre PMS (Mews, Cloudbeds, Opera) ?",
+          "a": "Non, et c'est délibéré. Nous ne remplacerons jamais votre PMS et ne nous synchroniserons jamais avec lui — nous nous plaçons à côté et gérons chaque surface opérationnelle qu'il laisse aux tableurs et aux groupes de discussion. Les données de réservation restent dans votre PMS où elles doivent être ; tout le reste (bons de travail, événements, fournisseurs, affichage, accueil client) vit ici."
+        }
+      ]
+    },
+    "cta": {
+      "headline": "Commencez avec la base. Ajoutez le reste seulement si vous en avez besoin.",
+      "sub": "L'inscription prend une minute. Accès complet pendant 7 jours, sans carte bancaire.",
+      "button": "Démarrer l'essai gratuit"
+    }
+  },
   "email": {
     "signoff": "— MyHotelOps",
     "otp": {

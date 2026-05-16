@@ -165,6 +165,115 @@
     "title": "Para hoteles boutique donde realmente se agrupan.",
     "sub": "Lisboa, Barcelona, París, Ciudad de México — los barrios donde los hoteles independientes y de pequeños grupos realmente operan. Facturación en moneda local, registro en tu idioma, la misma base operativa en cada destino."
   },
+  "pricing": {
+    "eyebrow": "Precios",
+    "headline": "Por propiedad. No por usuario. No por pantalla. No por habitación.",
+    "sub": "Una base de $100/propiedad/mes. Dos complementos opcionales. Esa es toda la lista de precios — y el máximo que una sola propiedad puede costarte es $188/mes, sin importar cuántas pantallas, habitaciones o personal tengas.",
+    "midCycleNote": "Los cambios de complementos a mitad de ciclo se prorratean y facturan inmediatamente para que la línea de tiempo de facturación de cada propiedad se mantenga limpia.",
+    "cadence": "propiedad / mes",
+    "tagRequired": "Obligatorio",
+    "tagOptional": "Opcional",
+    "plans": {
+      "base": {
+        "label": "Base",
+        "body": "Todo lo que cada propiedad necesita desde el primer día — órdenes de trabajo de mantenimiento, propuestas de eventos, registros de IT, biblioteca multimedia y 3 pantallas de señalización.",
+        "features": [
+          "Órdenes de trabajo (Kanban con evidencia foto/vídeo)",
+          "Eventos y banquetes (consulta → propuesta → factura)",
+          "IT Hub (Wi-Fi, accesos de proveedores, equipamiento)",
+          "Catálogo multimedia con CDN global",
+          "3 pantallas de señalización incluidas",
+          "Miembros de equipo ilimitados"
+        ]
+      },
+      "signage": {
+        "label": "Señalización Ilimitada",
+        "body": "Elimina el límite de 3 pantallas. Televisores ilimitados en cada propiedad — recepción, sala de descanso, salas de reuniones, zona de piscina. Mismo programador, mismo aviso de emergencia.",
+        "features": [
+          "Pantallas ilimitadas por propiedad",
+          "Aviso de emergencia para toda la propiedad",
+          "Programación por fecha y franja horaria",
+          "Empareja cualquier TV con navegador",
+          "Imagen, vídeo, web o tarjeta de texto con marca",
+          "Activado para toda la organización con un clic"
+        ]
+      },
+      "guest": {
+        "label": "Experiencia del Huésped",
+        "body": "Página de bienvenida con marca, tarjeta QR imprimible para cada habitación, e intake de incidencias del huésped. Reemplaza herramientas de conserjería de $3–$6 por habitación ocupada con tarifa plana.",
+        "features": [
+          "Constructor de página de bienvenida con color de marca",
+          "Wi-Fi importado automáticamente desde IT Hub",
+          "Menús de restaurante y servicio de habitaciones",
+          "Tarjeta QR imprimible Letter / A4",
+          "Sin cuenta de huésped, sin app",
+          "Activado para toda la organización con un clic"
+        ]
+      }
+    },
+    "compare": {
+      "eyebrow": "Las cuentas",
+      "headline": "Para un boutique de 40 habitaciones que compra estas herramientas hoy.",
+      "intro": "Los hoteles suelen usar una herramienta de tickets de mantenimiento, una suscripción de señalización digital y una plataforma de conserjería / bienvenida del huésped — cada una con un eje de facturación diferente: por pantalla, por habitación o por propiedad. Esto es lo que paga una propiedad por las tres por separado frente a a través de MyHotelOps.",
+      "headers": {
+        "need": "Necesidad",
+        "tool": "Herramienta independiente",
+        "standaloneCost": "Coste independiente",
+        "withUs": "Con MyHotelOps"
+      },
+      "monthlyTotal": "Total mensual",
+      "alaCarte": "à la carte",
+      "savings": "Ahorro frente a herramientas independientes",
+      "footnote": "Los precios independientes son los niveles de entrada listados públicamente a mayo de 2026; algunos proveedores solo cotizan a petición y pueden ser más altos en la práctica. Los proveedores de bienvenida cobran por habitación ocupada, así que la cifra anterior asume una propiedad de 40 habitaciones con ocupación media-alta típica."
+    },
+    "scale": {
+      "headline": "Lo que pagan realmente los grupos multi-propiedad.",
+      "sub": "Los complementos se activan en toda la organización y se facturan en cada factura de propiedad. Un grupo de cuatro propiedades con ambos complementos paga 4 × $188 = $752/mes — todo incluido.",
+      "headers": {
+        "properties": "Propiedades",
+        "baseOnly": "Solo base",
+        "baseSignage": "Base + Señalización",
+        "everything": "Todo activado"
+      },
+      "propertyOne": "1 propiedad",
+      "propertyMany": "{n} propiedades",
+      "perMonth": "/mes"
+    },
+    "faq": {
+      "heading": "Preguntas frecuentes",
+      "items": [
+        {
+          "q": "¿Hay una tarifa de configuración o incorporación?",
+          "a": "Una sola vez por inquilino cuando empiezas con nosotros — la aplicamos en la primera factura de la primera propiedad y nunca volvemos a cobrarla si añades más propiedades o vuelves a suscribirte. Te ayudamos personalmente con la incorporación; sin asistente DIY."
+        },
+        {
+          "q": "¿Qué pasa con mis datos si cancelo?",
+          "a": "Mantienes acceso a tu biblioteca multimedia y registros de IT Hub durante 30 días, con opción de exportación desde el primer día. Tras 30 días tu cuenta se cierra y se libera el almacenamiento."
+        },
+        {
+          "q": "¿Cobráis por usuario o por puesto?",
+          "a": "No. Cada miembro del personal en cada propiedad está incluido — recepción, limpieza, mantenimiento, propietarios. El precio por propiedad es el único eje."
+        },
+        {
+          "q": "¿Y si solo quiero mantenimiento, o solo señalización?",
+          "a": "Puedes. La suscripción base incluye órdenes de trabajo de mantenimiento, eventos y banquetes, IT Hub, multimedia y tres pantallas de señalización por $100/propiedad. Añade Señalización Ilimitada o Experiencia del Huésped solo si las quieres — actívalas en /billing, facturadas prorrateadas."
+        },
+        {
+          "q": "¿En qué se diferencia el complemento de señalización de Yodeck u OptiSigns?",
+          "a": "Precio plano por propiedad — pantallas ilimitadas en una propiedad por $49 frente a $8–$30 por pantalla al mes en otros sitios. Mismo concepto de player (cualquier TV con navegador), misma programación. Punto de equilibrio frente a Yodeck en torno a 6 pantallas; más barato por encima."
+        },
+        {
+          "q": "¿Os integráis con nuestro PMS (Mews, Cloudbeds, Opera)?",
+          "a": "No, y es deliberado. Nunca reemplazaremos ni sincronizaremos con tu PMS — nos colocamos junto a él y gestionamos cada superficie operativa que deja en hojas de cálculo y chats de grupo. Los datos de reservas se quedan en tu PMS donde corresponden; todo lo demás (órdenes de trabajo, eventos, proveedores, señalización, bienvenida del huésped) vive aquí."
+        }
+      ]
+    },
+    "cta": {
+      "headline": "Empieza con el plan base. Añade el resto solo si lo necesitas.",
+      "sub": "Registrarse toma un minuto. Acceso completo durante 7 días, sin tarjeta de crédito.",
+      "button": "Empezar prueba gratuita"
+    }
+  },
   "email": {
     "signoff": "— MyHotelOps",
     "otp": {

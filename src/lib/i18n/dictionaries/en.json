@@ -165,6 +165,115 @@
     "title": "Made for boutique hotels everywhere they cluster.",
     "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Local-currency billing, signup in your language, the same back-office stack everywhere."
   },
+  "pricing": {
+    "eyebrow": "Pricing",
+    "headline": "Per property. Not per seat. Not per screen. Not per room.",
+    "sub": "One $100/property/month base. Two optional add-ons. That’s the whole price list — and the maximum a single property can possibly cost you is $188/month, regardless of how many screens, rooms, or staff you have.",
+    "midCycleNote": "Mid-cycle add-on changes are prorated and invoiced immediately so each property’s billing timeline stays clean.",
+    "cadence": "property / month",
+    "tagRequired": "Required",
+    "tagOptional": "Optional",
+    "plans": {
+      "base": {
+        "label": "Base",
+        "body": "Everything every property needs on day one — maintenance work orders, event proposals, IT records, media library, and 3 signage screens.",
+        "features": [
+          "Work Orders (Kanban with photo/video evidence)",
+          "Events & Catering (inquiry → proposal → invoice)",
+          "IT Hub (Wi-Fi, vendor logins, equipment)",
+          "Media catalog with global CDN",
+          "3 signage screens included",
+          "Unlimited team members"
+        ]
+      },
+      "signage": {
+        "label": "Signage Unlimited",
+        "body": "Lifts the 3-screen cap. Unlimited TVs at every property — lobby, breakroom, meeting rooms, pool deck. Same scheduler, same emergency broadcast.",
+        "features": [
+          "Unlimited screens per property",
+          "Per-property emergency takeover",
+          "Date + time-of-day scheduling",
+          "Pair any browser-capable TV",
+          "Image, video, web, or branded text card",
+          "Activated org-wide with one click"
+        ]
+      },
+      "guest": {
+        "label": "Guest Experience",
+        "body": "Branded arrival page, printable QR card for each room, and guest issue intake. Replaces $3–$6 per occupied room concierge tools at flat-rate.",
+        "features": [
+          "Arrival page builder with brand color",
+          "Wi-Fi auto-imported from IT Hub",
+          "Restaurant + room service menus",
+          "Letter / A4 printable QR card",
+          "No guest account, no app",
+          "Activated org-wide with one click"
+        ]
+      }
+    },
+    "compare": {
+      "eyebrow": "The math",
+      "headline": "For a 40-room boutique buying these tools today.",
+      "intro": "Hotels typically run a maintenance ticketing tool, a digital signage subscription, and a guest concierge / arrival platform — each on a different per-screen, per-room, or per-property billing axis. Here’s what one property pays for all three à la carte versus through MyHotelOps.",
+      "headers": {
+        "need": "Need",
+        "tool": "Standalone tool",
+        "standaloneCost": "Standalone cost",
+        "withUs": "With MyHotelOps"
+      },
+      "monthlyTotal": "Monthly total",
+      "alaCarte": "à la carte",
+      "savings": "Savings vs. standalone à la carte",
+      "footnote": "Standalone prices are publicly listed entry tiers as of May 2026; some vendors only quote on request and may be higher in practice. Guest-arrival vendors charge per occupied room, so the figure above assumes a 40-room property at typical mid-tier occupancy."
+    },
+    "scale": {
+      "headline": "What multi-property groups actually pay.",
+      "sub": "Add-ons activate org-wide and bill on every property’s invoice. A four-property group with both add-ons on pays 4 × $188 = $752/month — all in.",
+      "headers": {
+        "properties": "Properties",
+        "baseOnly": "Base only",
+        "baseSignage": "Base + Signage",
+        "everything": "Everything on"
+      },
+      "propertyOne": "1 property",
+      "propertyMany": "{n} properties",
+      "perMonth": "/mo"
+    },
+    "faq": {
+      "heading": "Common questions",
+      "items": [
+        {
+          "q": "Is there a setup or onboarding fee?",
+          "a": "One-time per tenant when you start with us — we apply it on the first property’s first invoice and never re-charge if you add more properties or resubscribe. We onboard your team personally; no DIY wizard."
+        },
+        {
+          "q": "What happens to my data if I cancel?",
+          "a": "You keep access to your media library and IT Hub records for 30 days, with an export option on day one. After 30 days your account is closed and storage is reclaimed."
+        },
+        {
+          "q": "Do you charge per user or per seat?",
+          "a": "No. Every staff member at every property is included — front desk, housekeeping, engineering, ownership. Per-property pricing is the only axis."
+        },
+        {
+          "q": "What if I only want maintenance, or only signage?",
+          "a": "You can. The base subscription includes maintenance work orders, events & catering, IT Hub, media, and three signage screens at $100/property. Add Signage Unlimited or Guest Experience only if you want them — toggle on /billing, billed prorated."
+        },
+        {
+          "q": "How is the signage add-on different from Yodeck or OptiSigns?",
+          "a": "Flat per-property pricing — unlimited screens at a property for $49 versus $8–$30 per screen per month elsewhere. Same player concept (any browser-capable TV), same scheduling. Break-even versus Yodeck at about 6 screens; cheaper above that."
+        },
+        {
+          "q": "Do you integrate with our PMS (Mews, Cloudbeds, Opera)?",
+          "a": "No, and that’s deliberate. We will never replace or sync with your PMS — we sit alongside it and handle every operational surface it leaves to spreadsheets and group chats. Reservation data stays in your PMS where it belongs; everything else (work orders, events, vendors, signage, guest arrival) lives here."
+        }
+      ]
+    },
+    "cta": {
+      "headline": "Start with the base. Add the rest only if you need it.",
+      "sub": "Sign up takes a minute. Full access for 7 days, no credit card.",
+      "button": "Start free trial"
+    }
+  },
   "email": {
     "signoff": "— MyHotelOps",
     "otp": {
