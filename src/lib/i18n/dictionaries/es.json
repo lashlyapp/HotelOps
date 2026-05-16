@@ -165,6 +165,32 @@
     "title": "Para hoteles boutique donde realmente se agrupan.",
     "sub": "Lisboa, Barcelona, París, Ciudad de México — los barrios donde los hoteles independientes y de pequeños grupos realmente operan. Facturación en moneda local, registro en tu idioma, la misma base operativa en cada destino."
   },
+  "demo": {
+    "navLabel": "Habla con nosotros",
+    "eyebrow": "Para grupos multi-propiedad",
+    "headline": "¿Quieres un tour antes de registrarte?",
+    "sub": "Si gestionas más de una propiedad — o prefieres que te enseñemos el producto en lugar de explorarlo en la prueba — reserva 30 minutos con nosotros. Te enseñaremos las partes que importan para tu operación, responderemos las preguntas incómodas de facturación y saltaremos lo que no aplique.",
+    "personaList": {
+      "heading": "Especialmente útil si eres",
+      "items": [
+        "Propietario / Director evaluando para 3+ propiedades",
+        "Cambiando desde Quore, Tripleseat o un stack multi-herramienta",
+        "Operas fuera de EE. UU. y quieres precios en tu moneda",
+        "Tienes preguntas que nuestro flujo PLG no responde"
+      ]
+    },
+    "alternative": {
+      "heading": "¿No necesitas una llamada?",
+      "body": "La prueba gratuita de 7 días te da el mismo acceso. Sin tarjeta de crédito, conjunto completo de funciones, tus datos se conservan si no conviertes.",
+      "cta": "Empieza la prueba gratuita"
+    },
+    "calendly": {
+      "heading": "Elige una hora",
+      "body": "Elige una franja de 30 minutos que te funcione. Nos vemos en Google Meet — el enlace llega en la invitación del calendario.",
+      "openExternal": "Abrir el calendario",
+      "fallback": "O escribe a {email} y lo organizamos manualmente."
+    }
+  },
   "pricing": {
     "eyebrow": "Precios",
     "headline": "Por propiedad. No por usuario. No por pantalla. No por habitación.",

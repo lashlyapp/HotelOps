@@ -165,6 +165,32 @@
     "title": "Pour les hôtels boutique, là où ils se concentrent vraiment.",
     "sub": "Lisbonne, Barcelone, Paris, Mexico — les quartiers où les hôtels indépendants et des petits groupes opèrent réellement. Facturation en devise locale, inscription dans votre langue, la même base opérationnelle partout."
   },
+  "demo": {
+    "navLabel": "Parlons-en",
+    "eyebrow": "Pour les groupes multi-propriétés",
+    "headline": "Vous voulez une visite avant de vous inscrire ?",
+    "sub": "Si vous gérez plus d'une propriété — ou si vous préférez qu'on vous présente le produit plutôt que d'explorer l'essai — réservez 30 minutes avec nous. Nous vous montrerons les parties qui comptent pour votre exploitation, répondrons aux questions de facturation gênantes et passerons sur ce qui ne s'applique pas.",
+    "personaList": {
+      "heading": "Particulièrement utile si vous êtes",
+      "items": [
+        "Propriétaire / Directeur évaluant pour 3+ propriétés",
+        "En transition depuis Quore, Tripleseat ou un stack multi-outils",
+        "Opérez hors des États-Unis et voulez des tarifs dans votre devise",
+        "Avec des questions auxquelles notre flux PLG ne répond pas"
+      ]
+    },
+    "alternative": {
+      "heading": "Pas besoin d'un appel ?",
+      "body": "L'essai gratuit de 7 jours vous donne le même accès. Sans carte bancaire, toutes les fonctionnalités, vos données restent si vous ne convertissez pas.",
+      "cta": "Démarrer l'essai gratuit à la place"
+    },
+    "calendly": {
+      "heading": "Choisissez un horaire",
+      "body": "Choisissez un créneau de 30 minutes qui vous convient. Rendez-vous sur Google Meet — le lien arrive dans l'invitation calendrier.",
+      "openExternal": "Ouvrir le calendrier",
+      "fallback": "Ou écrivez à {email} et nous organiserons quelque chose à la main."
+    }
+  },
   "pricing": {
     "eyebrow": "Tarifs",
     "headline": "Par propriété. Pas par utilisateur. Pas par écran. Pas par chambre.",

@@ -299,6 +299,12 @@ function PublicHeader({ t }: { t: Dictionary }) {
           >
             {t.nav.pricing}
           </Link>
+          <Link
+            href="/demo"
+            className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
+          >
+            {t.demo.navLabel}
+          </Link>
         </nav>
         <div className="flex items-center gap-2">
           <Link

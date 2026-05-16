@@ -165,6 +165,32 @@
     "title": "Made for boutique hotels everywhere they cluster.",
     "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Local-currency billing, signup in your language, the same back-office stack everywhere."
   },
+  "demo": {
+    "navLabel": "Talk to us",
+    "eyebrow": "For multi-property groups",
+    "headline": "Want a tour before you sign up?",
+    "sub": "If you run more than one property — or you'd rather see the product walked through than poke around the trial — book 30 minutes with us. We'll show you the parts that matter for your operation, answer the awkward billing questions, and skip the parts that don't apply.",
+    "personaList": {
+      "heading": "Especially useful if you're",
+      "items": [
+        "An owner / GM evaluating for 3+ properties",
+        "Switching from Quore, Tripleseat, or a multi-tool stack",
+        "Operating outside the US and want pricing in your currency",
+        "Asking the questions our PLG flow doesn't answer"
+      ]
+    },
+    "alternative": {
+      "heading": "Don't need a call?",
+      "body": "The 7-day free trial gives you the same access. No credit card, full feature set, your data stays if you don't convert.",
+      "cta": "Start the free trial instead"
+    },
+    "calendly": {
+      "heading": "Pick a time",
+      "body": "Choose a 30-minute slot that works. We'll meet on Google Meet — link arrives in your calendar invite.",
+      "openExternal": "Open the calendar",
+      "fallback": "Or email {email} and we'll set something up by hand."
+    }
+  },
   "pricing": {
     "eyebrow": "Pricing",
     "headline": "Per property. Not per seat. Not per screen. Not per room.",
