@@ -36,11 +36,18 @@ type Destination = {
   sub: string
 }
 
+// Image paths point at the existing licensed Adobe Stock hospitality
+// imagery already in /public. They're not city-specific (a hotel
+// exterior is a hotel exterior) but they're polished, licensed for
+// commercial use, and guarantee no broken-image placeholders go to
+// production. Swap each entry for the corresponding city-landmark
+// photo when the new licensed photos land — see
+// /public/landmarks/README.md for the full spec + intended mapping.
 const DESTINATIONS: Destination[] = [
   {
     slug: 'lisbon',
-    imageSrc: '/landmarks/lisbon.jpg',
-    imageAlt: 'Lisbon — Alfama rooftops at dusk',
+    imageSrc: '/AdobeStock_1951250090.jpeg',
+    imageAlt: 'Boutique hotel in Lisbon — placeholder imagery',
     lang: 'pt',
     city: 'Lisboa',
     neighborhoods: 'Alfama · Chiado · Bairro Alto',
@@ -49,8 +56,8 @@ const DESTINATIONS: Destination[] = [
   },
   {
     slug: 'barcelona',
-    imageSrc: '/landmarks/barcelona.jpg',
-    imageAlt: 'Barcelona — Gòtic quarter facade',
+    imageSrc: '/AdobeStock_1896833868.jpeg',
+    imageAlt: 'Boutique hotel in Barcelona — placeholder imagery',
     lang: 'es',
     city: 'Barcelona',
     neighborhoods: 'El Born · Gòtic · Eixample',
@@ -59,8 +66,8 @@ const DESTINATIONS: Destination[] = [
   },
   {
     slug: 'paris',
-    imageSrc: '/landmarks/paris.jpg',
-    imageAlt: 'Paris — Le Marais courtyard',
+    imageSrc: '/AdobeStock_327436679.jpeg',
+    imageAlt: 'Boutique hotel in Paris — placeholder imagery',
     lang: 'fr',
     city: 'Paris',
     neighborhoods: 'Le Marais · Saint-Germain · Montmartre',
@@ -69,8 +76,8 @@ const DESTINATIONS: Destination[] = [
   },
   {
     slug: 'mexico-city',
-    imageSrc: '/landmarks/mexico-city.jpg',
-    imageAlt: 'Mexico City — Roma neighborhood at street level',
+    imageSrc: '/AdobeStock_131189921.jpeg',
+    imageAlt: 'Boutique hotel in Mexico City — placeholder imagery',
     lang: 'es',
     city: 'Ciudad de México',
     neighborhoods: 'Roma · Condesa · Polanco',
