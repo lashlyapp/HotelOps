@@ -722,3 +722,52 @@ export type ArrivalSection = {
   created_at: string
   updated_at: string
 }
+
+// ----------------------------------------------------------------------------
+// Social post assistant — see 20260520010000_social_post_assistant.sql
+// ----------------------------------------------------------------------------
+export type BrandVoice =
+  | 'warm'
+  | 'luxury'
+  | 'boutique'
+  | 'family'
+  | 'casual'
+  | 'playful'
+
+export type PropertySocialSettings = {
+  property_id: string
+  org_id: string
+  brand_voice: BrandVoice
+  openai_api_key_enc: string | null
+  signature_hashtags: string | null
+  social_handles: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type SocialPostLog = {
+  id: string
+  property_id: string
+  org_id: string
+  topic: string
+  captions: string[]
+  // Parallel array to `captions`: AI-suggested hashtags per variant.
+  // GM-configured signature hashtags live on property_social_settings
+  // and are appended on top at copy/email time.
+  hashtag_sets: string[][]
+  media_key: string | null
+  marked_used_at: string | null
+  created_at: string
+}
+
+export type SocialCaptionFeedback = {
+  id: string
+  property_id: string
+  org_id: string
+  caption: string
+  topic: string
+  liked: boolean
+  voter_id: string | null
+  created_at: string
+  updated_at: string
+}
