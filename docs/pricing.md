@@ -8,6 +8,28 @@ at runtime from the lookup keys listed below — pricing changes happen in
 the Stripe Dashboard (create a new Price, transfer the lookup key), not
 in this file.
 
+## Positioning
+
+**We are not your PMS.** We sit alongside Cloudbeds, Mews, Opera, Little
+Hotelier, and every other reservation system, and we handle the
+operational surfaces those tools leave to spreadsheets and group chats:
+maintenance work orders, event proposals, vendor logins, signage on
+every TV, the printable arrival card in every room.
+
+**Buyer:** owners, GMs, and operations managers of boutique hotels
+(roughly 10–100 rooms, independent or small group). Not line staff
+fighting the reservation system — the people who live *outside* the
+PMS, in the operational chaos around it.
+
+**Why this positioning matters for pricing:**
+- We don't compete head-on with PMS-led suites that bundle reservation
+  + everything else. That comparison always loses.
+- We compete with the *stack of 4–5 separate tools* a boutique uses
+  on top of their PMS today. That comparison wins on price and
+  cognitive load.
+- The flat per-property number lands cleanly because owners think in
+  properties, not in seats / rooms / screens.
+
 ## Plan
 
 One base subscription plus two optional add-ons. All three line items
@@ -101,6 +123,54 @@ Listed so we stop talking ourselves into adding fees:
 - **API usage** — no API exposed yet; when it ships, it's per-property,
   not per-call
 
+## Free trial (self-serve)
+
+Anyone with a work email can sign up at `/signup` and get a 7-day, no-
+credit-card, 10 GB trial. Length, storage cap, and seat limit live in
+`src/lib/billing/trial.ts` and `ownerAddPropertyAction` — change them
+without a migration. The trial is an acquisition surface, not a
+pricing tier: there is no public "free plan".
+
+What the trial includes:
+
+- **7 days** of full access — same feature set as paid base plan.
+- **1 property** — adding a second is blocked by
+  `ownerAddPropertyAction` until a payment method is on file.
+- **10 GB** of media on that property — same storage plumbing as paid
+  (`properties.storage_quota_bytes`); on conversion the quota is
+  lifted to 25 GB by `startSubscriptionForProperty`.
+- **All the base-plan features** — Media catalog, Events, Work
+  orders, IT Hub, Signage starter, Arrival. Add-ons are toggled off
+  by default; turning them on requires a paid subscription.
+
+Bot protection:
+
+- Honeypot field on the form.
+- Per-IP / per-email rate limit (5 / 3 per 15 minutes).
+- Mandatory **6-digit email OTP** before the auth user / org are
+  created — a bot that can't read email cannot finish signup.
+- Account-takeover guard: refuses signups for emails that already
+  have an auth user.
+- Password held AES-256-GCM-encrypted in `signup_pending` between OTP
+  request and verification (key from `SIGNUP_ENCRYPTION_KEY`). The
+  row is deleted the moment the auth user is created.
+
+Lifecycle emails (sent by `/api/cron/trial-expiry`, hourly):
+
+- **Welcome** — the instant verification succeeds. Dashboard CTA + an
+  unauthenticated link back in case the user closes the tab.
+- **T-3 days** — soft nudge. Stamps `trial_reminder_t3_sent_at`.
+- **T+0 expiry** — "your data is safe, add a card to keep editing".
+  Stamps `trial_expired_email_sent_at`. The org flips to read-only at
+  the same moment via the billing gate.
+
+Conversion is the same flow as any other "Start subscription" — there
+is no separate trial→paid endpoint. When `startSubscriptionForProperty`
+creates the org's first subscription it also stamps
+`organizations.trial_converted_at` (which the admin dashboard reads
+to compute conversion rate) and bumps the property's storage quota
+from 10 GB to the 25 GB base.
+
 ## Volume discounts
 
 Not yet. The clean per-property unit price is the marketing weapon —
@@ -125,6 +195,92 @@ HotelOps replaces:
 | **Savings** | | **$392 / mo (68%)** |
 
 Customer who only wants the base: ~$360 of competing tools for $100.
+
+### European comparison (EUR)
+
+The US comparison table doesn't ring true for European boutique
+operators — different vendor names, different baseline pricing, and
+in some cases categories where the standalone tools are *more*
+expensive than the US equivalents (digital signage in particular
+trends pricier in Europe). For the EU launch markets, lead with
+this table instead:
+
+| Need | Standalone (EU) | MyHotelOps |
+| --- | --- | --- |
+| Maintenance + ticketing | €110 / mo (Hotelkit / Flexkeeping) | included |
+| Event / banquet management | €150 / mo (Event Temple / Tripleseat EU) | included |
+| Media DAM | €45 / mo (Cloudinary / Bynder) | included |
+| IT inventory + password vault | €25 / mo (1Password Business) | included |
+| Digital signage (6 screens) | €80 / mo (ScreenCloud / Yodeck EU) | €49 / mo |
+| Guest arrival / concierge | €140 / mo (Hotelchamp / Duve EU) | €39 / mo |
+| **Monthly total** | **€550** | **€188** |
+| **Savings** | | **€362 / mo (66%)** |
+
+Vendor names + EU pricing as of May 2026 from publicly listed entry
+tiers. Some EU vendors only quote on request; the figures above are
+the lower bound of what a boutique would typically pay. Update the
+table whenever launch-market pricing shifts; the localized /pricing
+page (`src/app/pricing/page.tsx`) currently reuses the US comparison
+rows verbatim — swap them out in a follow-up content PR once the EU
+prices firm up.
+
+## Multi-currency
+
+`organizations.currency` is set at signup from the visitor's locale
+(en → USD, es/fr → EUR, with more locales mapping into the table as
+we localize the marketing site). The column is immutable once set —
+switching currency mid-stream on a Stripe Customer is awkward enough
+that we treat it as a manual-ops escape hatch, not a customer-facing
+control.
+
+**Per-currency Stripe Prices.** USD keeps the bare lookup keys
+(`hotelops_per_property_monthly`, etc.) so existing US customers are
+not migrated. Each new currency gets a parallel set of Prices in the
+same Stripe account, with lookup keys suffixed by the lowercase ISO
+code:
+
+| Currency | Base lookup key                                |
+| -------- | ---------------------------------------------- |
+| USD      | `hotelops_per_property_monthly`                |
+| EUR      | `hotelops_per_property_monthly_eur`            |
+| GBP      | `hotelops_per_property_monthly_gbp`            |
+| MXN      | `hotelops_per_property_monthly_mxn`            |
+| AUD      | `hotelops_per_property_monthly_aud`            |
+
+The same `_<code>` suffix applies to every Price in the family:
+`hotelops_setup_fee_eur`, `hotelops_signage_unlimited_monthly_eur`,
+`hotelops_guest_experience_monthly_eur`,
+`hotelops_signage_overage_per_screen_monthly_eur`,
+`hotelops_storage_block_25gb_monthly_eur`. Resolution is handled by
+`currencyAwareLookupKey()` in `src/lib/billing/currency.ts` — the
+codebase reads the org's currency once on the way into Stripe and
+every downstream Price lookup picks the right one automatically.
+
+**Stripe Tax.** Every subscription is created with `automatic_tax:
+{ enabled: true }`, so VAT (EU/UK), GST (AU), IVA (MX), and US
+state sales tax are all calculated and added to the invoice
+automatically. Requires Stripe Tax to be enabled in the Dashboard
+(Settings → Tax → Activate) and a tax-usable address on the Stripe
+Customer. Without an address the subscription still creates; Stripe
+flags the missing address on the invoice and the operator can add
+it from `/billing → Billing details` before the customer's first
+real charge. Stripe Tax pricing applies (currently 0.5%).
+
+**Operator workflow to launch a new market** (e.g. add GBP):
+1. In Stripe Dashboard, create one Price per family in the new
+   currency with the suffixed lookup key. Use realistic local
+   pricing (£89 not £100; €99 not €100) — the goal is "reads as
+   cheap" not "fx-converted exactly".
+2. Add the currency code to `SUPPORTED_CURRENCIES` in
+   `src/lib/billing/currency.ts` AND the CHECK constraint in
+   `supabase/migrations/<next>_org_currency_<code>.sql`. Both in
+   the same PR.
+3. Update the `LOCALE_TO_CURRENCY` map if a marketing locale should
+   default to the new currency.
+
+No existing customer is affected. New signups with the
+matching locale land on the new currency; everyone else continues
+on whatever currency they signed up under.
 
 ## Operational
 

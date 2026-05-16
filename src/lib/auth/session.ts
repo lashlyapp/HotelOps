@@ -2,6 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { isInternalEmail } from '@/lib/admin/policy'
+import { needsMfaChallenge } from '@/lib/auth/mfa'
 import {
   computeOrgGate,
   computePropertyGate,
@@ -57,6 +58,14 @@ export const requireUser = cache(async (): Promise<UserSession> => {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  // MFA gate: if the user has a verified factor but their session is
+  // still at aal1, send them through /login/mfa before any protected
+  // page renders. The challenge page itself does NOT call this
+  // helper (it'd loop), so this is safe to redirect from.
+  if (await needsMfaChallenge()) {
+    redirect('/login/mfa')
+  }
 
   const { data: profile, error } = await supabase
     .from('profiles')
@@ -118,21 +127,27 @@ const loadOrgSession = cache(async (): Promise<OrgSession> => {
 
   const propertyList = (properties ?? []) as Property[]
   const subs = (subscriptions as BillingSubscription[] | null) ?? []
-  const gate = computeOrgGate(subs, propertyList.length > 0)
+  const org = organization as Organization
+  const trialEndsAt = org.trial_ends_at
+  const gate = computeOrgGate(subs, propertyList.length > 0, trialEndsAt)
 
   // Build the per-property gate map. A property with no matching
   // subscription gets computePropertyGate(null), which restricts that
   // property only — the org keeps operating on its other properties.
+  // Trial state is the same across all of the org's properties.
   const subByProperty = new Map<string, BillingSubscription>()
   for (const s of subs) subByProperty.set(s.property_id, s)
   const propertyGates: Record<string, BillingGate> = {}
   for (const p of propertyList) {
-    propertyGates[p.id] = computePropertyGate(subByProperty.get(p.id) ?? null)
+    propertyGates[p.id] = computePropertyGate(
+      subByProperty.get(p.id) ?? null,
+      trialEndsAt,
+    )
   }
 
   return {
     ...base,
-    organization: organization as Organization,
+    organization: org,
     properties: propertyList,
     gate,
     propertyGates,

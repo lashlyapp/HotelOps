@@ -42,6 +42,13 @@ function contentSecurityPolicy(): string {
       'blob:',
       ...(cdnHost ? [cdnHost] : []),
       ...(supabaseHost ? [supabaseHost] : []),
+      // Unsplash CDN — sourced city-destination photos on the
+      // marketing landing page. Free for commercial use, no
+      // attribution required; we hotlink rather than re-host so we
+      // don't fan out a /public/ blob library for placeholder
+      // imagery. Swap to /-relative paths once licensed Adobe Stock
+      // photos land per docs/marketing-imagery.md.
+      'https://images.unsplash.com',
     ],
     'font-src': ["'self'", 'data:'],
     'connect-src': [
@@ -87,15 +94,26 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   images: {
-    remotePatterns: cdn
-      ? [
-          {
-            protocol: cdn.protocol.replace(/:$/, '') as 'http' | 'https',
-            hostname: cdn.hostname,
-            pathname: '/**',
-          },
-        ]
-      : [],
+    remotePatterns: [
+      ...(cdn
+        ? [
+            {
+              protocol: cdn.protocol.replace(/:$/, '') as 'http' | 'https',
+              hostname: cdn.hostname,
+              pathname: '/**',
+            },
+          ]
+        : []),
+      // Unsplash CDN for marketing placeholder imagery (destinations
+      // band on /). Replace with self-hosted /landmarks/*.jpg once
+      // licensed Adobe Stock photos land — see
+      // /public/landmarks/README.md.
+      {
+        protocol: 'https' as const,
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
+    ],
   },
   async headers() {
     return [

@@ -1,0 +1,564 @@
+{
+  "common": {
+    "signIn": "Se connecter",
+    "signUp": "S'inscrire",
+    "startFree": "Commencer gratuitement",
+    "seePricing": "Voir les tarifs",
+    "openDashboard": "Ouvrir le tableau de bord",
+    "backToHome": "Retour à l'accueil",
+    "logIn": "Connexion",
+    "language": "Langue"
+  },
+  "login": {
+    "title": "Connectez-vous à votre compte",
+    "email": "Email",
+    "password": "Mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "cta": "Se connecter",
+    "noAccount": "Vous n'avez pas encore de compte ?",
+    "signUpLink": "S'inscrire",
+    "errors": {
+      "missing": "Email et mot de passe sont obligatoires.",
+      "invalid": "Email ou mot de passe incorrect.",
+      "no_org": "Votre compte n'est pas lié à une organisation. Contactez votre administrateur.",
+      "unauthorized": "Votre compte n'est pas autorisé pour le portail d'administration.",
+      "session_expired": "Vous avez été déconnecté pour cause d'inactivité. Reconnectez-vous.",
+      "rate_limited": "Trop de tentatives échouées. Patientez quelques minutes et réessayez."
+    }
+  },
+  "forgotPassword": {
+    "title": "Réinitialisez votre mot de passe",
+    "backToLogin": "Retour à la connexion",
+    "email": "Email",
+    "hint": "Nous vous enverrons un lien à usage unique pour définir un nouveau mot de passe. Le lien expire dans environ une heure.",
+    "cta": "Envoyer le lien",
+    "remembered": "Vous vous en souvenez ?",
+    "loginLink": "Se connecter",
+    "errors": {
+      "invalid": "Veuillez entrer une adresse email valide."
+    },
+    "sent": {
+      "headline": "Vérifiez votre boîte de réception.",
+      "body": "Si un compte existe pour l'adresse saisie, nous avons envoyé un lien à usage unique pour réinitialiser votre mot de passe. Le lien expire dans environ une heure.",
+      "tryAgain": "Vous n'avez rien vu ?",
+      "tryAgainLink": "Réessayez",
+      "orEmail": "ou écrivez à"
+    }
+  },
+  "setPassword": {
+    "title": "Définissez un mot de passe pour finir l'inscription",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "cta": "Enregistrer le mot de passe",
+    "errors": {
+      "too_short": "Le mot de passe est trop court.",
+      "weak": "Le mot de passe ne remplit pas les critères.",
+      "mismatch": "Les mots de passe ne correspondent pas.",
+      "failed": "Impossible d'enregistrer ce mot de passe. Vérifiez qu'il remplit les critères ci-dessous et réessayez."
+    }
+  },
+  "loginMfa": {
+    "eyebrow": "Authentification à deux facteurs",
+    "headline": "Entrez votre code à 6 chiffres",
+    "sub": "Ouvrez votre application d'authentification et entrez le code actuel pour votre compte {email}.",
+    "lostAccess": "Accès perdu ?",
+    "signInAgain": "Reconnectez-vous",
+    "lostAccessSuffix": "ou contactez votre administrateur pour désactiver la 2FA sur votre compte.",
+    "codeLabel": "Code",
+    "ctaVerifying": "Vérification…",
+    "ctaVerify": "Vérifier et continuer",
+    "errors": {
+      "wrong_code": "Ce code ne correspond pas. Essayez le suivant que votre app affiche.",
+      "invalid": "Entrez le code à 6 chiffres de votre application d'authentification.",
+      "unknown": "Quelque chose s'est mal passé. Réessayez ou reconnectez-vous depuis le début."
+    }
+  },
+  "nav": {
+    "workOrders": "Bons de travail",
+    "events": "Événements & banquets",
+    "signage": "Affichage",
+    "arrival": "Accueil",
+    "pricing": "Tarifs"
+  },
+  "marketing": {
+    "hero": {
+      "eyebrow": "Logiciel back-office pour hôtels · compatible avec tout PMS",
+      "headline": "Tout ce que votre PMS ne fait pas.",
+      "sub": "MyHotelOps est la couche d'exploitation qui fonctionne aux côtés de votre système de réservation. Maintenance, événements, fournisseurs, affichage, accueil des clients — tout ce qui fait tourner un hôtel boutique en dehors du PMS, au même endroit.",
+      "personaLine": "Conçu pour les propriétaires, directeurs et managers — pas pour le personnel qui se bat avec votre système de réservation.",
+      "trialLine": "Essai gratuit de 7 jours. Sans carte bancaire. 10 Go inclus.",
+      "ctaPrimary": "Démarrer l'essai gratuit",
+      "ctaSecondary": "Voir les tarifs"
+    },
+    "positioning": {
+      "title": "La catégorie où nous ne sommes pas : votre PMS.",
+      "body": "Nous ne remplacerons jamais Cloudbeds, Mews, Opera ou Little Hotelier. Nous nous plaçons à côté d'eux et gérons chaque surface opérationnelle qu'ils laissent aux tableurs et aux groupes WhatsApp — bons de travail, propositions d'événements, accès fournisseurs, affichage sur chaque téléviseur, la carte d'accueil imprimée de chaque chambre."
+    },
+    "footer": {
+      "tagline": "La couche d'exploitation pour hôtels boutique.",
+      "rights": "Tous droits réservés."
+    }
+  },
+  "signup": {
+    "eyebrow": "Commencer gratuitement",
+    "headline": "Essayez MyHotelOps gratuitement pendant 7 jours",
+    "sub": "Accès complet. Sans carte bancaire. 10 Go de médias inclus. Nous vous enverrons un code de vérification par email pour confirmer votre adresse — moins d'une minute du début à la fin.",
+    "form": {
+      "yourName": "Votre nom",
+      "hotelName": "Nom de l'hôtel",
+      "hotelNamePlaceholder": "p. ex. Hôtel Boutique Paris",
+      "workEmail": "Email professionnel",
+      "password": "Mot de passe",
+      "passwordHint": "Au moins 8 caractères, avec au moins une lettre minuscule, une lettre majuscule, un chiffre et un symbole.",
+      "consentPrefix": "J'accepte les ",
+      "consentTerms": "Conditions d'utilisation",
+      "consentAnd": " et la ",
+      "consentPrivacy": "Politique de confidentialité",
+      "consentSuffix": ".",
+      "ctaSending": "Envoi du code de vérification…",
+      "ctaSend": "Envoyer le code de vérification",
+      "noCardLine": "Sans carte bancaire. 10 Go de médias inclus."
+    },
+    "verify": {
+      "eyebrow": "Vérifiez votre email",
+      "headline": "Entrez votre code à {n} chiffres",
+      "sub": "Nous avons envoyé un code à {email}. Il expire dans {minutes} minutes.",
+      "startOver": "Recommencer",
+      "wrongEmail": "Mauvais email ?",
+      "needHelp": "Besoin d'aide ?",
+      "codeLabel": "Code de vérification",
+      "codeHint": "{n} chiffres, depuis l'email que nous venons d'envoyer.",
+      "ctaVerifying": "Vérification…",
+      "ctaVerify": "Vérifier et démarrer l'essai",
+      "noEmail": "Vous n'avez pas reçu l'email ?",
+      "resending": "Envoi…",
+      "resend": "Renvoyer le code",
+      "resentRecently": "Un nouveau code est en route."
+    },
+    "errors": {
+      "missingFields": "Email, mot de passe, votre nom et le nom de l'hôtel sont obligatoires.",
+      "invalidEmail": "Veuillez entrer une adresse email valide.",
+      "tooLong": "C'est trop long — gardez les noms sous 200 caractères.",
+      "consentRequired": "Veuillez accepter les Conditions d'utilisation et la Politique de confidentialité pour continuer.",
+      "rateLimitIp": "Trop de tentatives d'inscription depuis ce réseau. Réessayez dans quelques minutes ou écrivez à {email}.",
+      "rateLimitEmail": "Nous avons déjà envoyé un code à {email} récemment. Vérifiez votre boîte de réception ou attendez quelques minutes avant de réessayer.",
+      "emailExists": "{email} a déjà un compte MyHotelOps. Connectez-vous ou réinitialisez votre mot de passe.",
+      "internalError": "Quelque chose s'est mal passé. Veuillez réessayer.",
+      "tempUnavailable": "L'inscription est temporairement indisponible. Veuillez réessayer plus tard.",
+      "createAccountFailed": "Quelque chose s'est mal passé lors de la création de votre compte. Veuillez réessayer.",
+      "profileFailed": "Quelque chose s'est mal passé lors de la configuration de votre profil. Veuillez réessayer.",
+      "codeRequired": "Entrez le code de votre email.",
+      "codeLength": "Le code fait {n} chiffres.",
+      "codeExpired": "Ce code a expiré. Recommencez depuis /signup.",
+      "codeTooManyAttempts": "Trop de codes incorrects. Recommencez depuis /signup.",
+      "codeMismatchOne": "Ce code ne correspond pas. Il reste 1 tentative.",
+      "codeMismatchMany": "Ce code ne correspond pas. Il reste {n} tentatives.",
+      "codeMismatchFinal": "Ce code ne correspond pas. Recommencez depuis /signup.",
+      "noPendingSignup": "Nous n'avons pas d'inscription en attente pour cet email. Recommencez depuis /signup.",
+      "tooManyResends": "Trop de renvois. Recommencez depuis /signup.",
+      "resendCooldown": "Patientez un instant avant de demander un autre code.",
+      "resendNeedsEmail": "Nous avons besoin d'un email valide pour renvoyer le code."
+    }
+  },
+  "about": {
+    "navLabel": "À propos",
+    "eyebrow": "Pourquoi nous l'avons construit",
+    "headline": "Les hôtels boutique méritent un logiciel fait pour eux.",
+    "missionHeading": "Notre mission",
+    "missionBody": "Les grandes suites PMS et les outils des grandes chaînes n'ont jamais été conçus pour le boutique de 20, 40 ou 60 chambres. Ils empaquettent des modules dont personne n'a besoin à des prix qui ne collent pas, et laissent l'opération quotidienne aux tableurs, aux groupes WhatsApp et au papier. Nous pensons que c'est à l'envers. Le marché boutique est mal servi par le logiciel, et les gens qui gèrent ces propriétés — les directeurs, les propriétaires, les managers qui vivent le chaos chaque jour — méritent des outils à la hauteur de leur réalité.",
+    "sectionTwoHeading": "Ce que nous faisons",
+    "sectionTwoBody": "MyHotelOps est la couche d'exploitation qui fonctionne aux côtés du PMS que vous utilisez déjà. Nous gérons ce que votre système de réservation ne fait pas — bons de travail de maintenance, propositions d'événements, accès fournisseurs, affichage sur chaque téléviseur, la carte d'accueil imprimable dans chaque chambre. Un abonnement par propriété, sans jeu par siège, sans taxe par écran. Le type de prix sur lequel une petite entreprise peut planifier.",
+    "sectionThreeHeading": "Pour qui nous travaillons",
+    "sectionThreeBody": "Hôtels boutique indépendants et petits groupes, partout dans le monde — États-Unis, Mexique, Europe, Asie. Des gens qui considèrent l'hospitalité comme un métier et veulent que leur logiciel en fasse autant. Si c'est vous, nous l'avons construit pour vous.",
+    "addressHeading": "Adresse postale",
+    "supportHeading": "Contactez-nous",
+    "ctaHeading": "Essayez-le gratuitement pendant 7 jours.",
+    "ctaSub": "Sans carte bancaire. 10 Go inclus.",
+    "ctaButton": "Démarrer l'essai gratuit"
+  },
+  "features": {
+    "navLabel": "Fonctionnalités",
+    "eyebrow": "Tout est inclus",
+    "title": "Conçu comme un back-office boutique fonctionne réellement.",
+    "sub": "Toute la surface, en un seul endroit. Pas de tarification par module — chaque fonctionnalité ci-dessous est dans la base à 100$/propriété ou dans l'une des deux options à tarif forfaitaire. Rien ici ne coûte plus par siège, par écran ou par chambre.",
+    "categories": [
+      {
+        "title": "Exploitation",
+        "items": [
+          {
+            "name": "Bons de Travail",
+            "description": "Tickets de maintenance avec photo d'abord sur un tableau Kanban. Chaque changement de statut horodaté, chaque réparation a une preuve visuelle dans le journal d'audit."
+          },
+          {
+            "name": "Événements et Restauration",
+            "description": "Demande → proposition → facture en un seul endroit. Envoyez un PDF à votre marque en minutes ; suivez les paiements sans outil de facturation séparé."
+          },
+          {
+            "name": "Hub IT",
+            "description": "Identifiants Wi-Fi, logins fournisseurs, numéros de série d'équipements, dates de garantie — consultables, avec permissions par rôle, une seule source de vérité."
+          },
+          {
+            "name": "Annuaire Fournisseurs",
+            "description": "Plombiers, électriciens, linge, alimentation — noms, contacts, contrats, dernières dates d'appel dans un seul Rolodex."
+          }
+        ]
+      },
+      {
+        "title": "Côté client",
+        "items": [
+          {
+            "name": "Page d'Accueil de Marque",
+            "description": "Carte QR par chambre qui s'ouvre sur votre marque, votre Wi-Fi, vos menus de service. Pas de compte client, pas d'app à télécharger."
+          },
+          {
+            "name": "Affichage Numérique",
+            "description": "Tout TV compatible avec navigateur devient un écran. Planifiez par jour, heure ou zone. Trois écrans inclus ; illimités avec l'option."
+          },
+          {
+            "name": "Diffusion d'Urgence",
+            "description": "Prenez le contrôle de chaque écran d'une propriété en un clic. Modèles préconçus pour incendie, météo, évacuation ; messages personnalisés à tout moment."
+          },
+          {
+            "name": "Réception des Problèmes Clients",
+            "description": "Les clients scannent un QR et signalent les problèmes dans leur langue. Les tickets arrivent dans le même tableau Kanban que les bons du personnel."
+          }
+        ]
+      },
+      {
+        "title": "Médias et contenu",
+        "items": [
+          {
+            "name": "CDN Médias Global",
+            "description": "Photos et vidéos servies depuis l'edge mondialement. Même chargement rapide à Tokyo, Lisbonne ou Toronto. 25 Go inclus dans chaque forfait."
+          },
+          {
+            "name": "Plans et Documents",
+            "description": "Un endroit canonique pour les plans, manuels d'équipement, garanties fournisseurs, guides de marque. Versionnés, téléchargeables, jamais perdus dans le chat."
+          },
+          {
+            "name": "Cartes Texte de Marque",
+            "description": "Créez du contenu d'affichage dans l'app avec votre couleur et typographie. Pas de Canva, pas d'aller-retour PowerPoint."
+          },
+          {
+            "name": "Menus Restaurant et Room Service",
+            "description": "Menus modifiables qui se publient automatiquement sur la page d'accueil et l'affichage. Mettez à jour une fois, chaque surface se rafraîchit."
+          }
+        ]
+      },
+      {
+        "title": "Équipe et multi-propriétés",
+        "items": [
+          {
+            "name": "Membres d'Équipe Illimités",
+            "description": "Réception, ménage, ingénierie, propriété — chaque employé de chaque propriété inclus, sans frais par siège, jamais."
+          },
+          {
+            "name": "Accès par Rôle",
+            "description": "Propriétaires, GMs, managers, personnel — chaque rôle ne voit que ce dont il a besoin. Permissions granulaires par propriété, par module."
+          },
+          {
+            "name": "Console Multi-propriétés",
+            "description": "Passez d'une propriété à l'autre en un clic. Même login, mêmes flux. Tableaux de bord au niveau du groupe automatiques."
+          },
+          {
+            "name": "Authentification à Deux Facteurs",
+            "description": "2FA optionnelle par utilisateur via toute app d'authentification. Les propriétaires peuvent l'exiger pour toute l'organisation ; flux de récupération géré via le support admin."
+          }
+        ]
+      },
+      {
+        "title": "Facturation et confiance",
+        "items": [
+          {
+            "name": "Tarification par Propriété",
+            "description": "Pas de calcul par siège, par écran ou par chambre. Un nombre forfaitaire par propriété, prévisible pour toujours."
+          },
+          {
+            "name": "Facturation en Devise Locale",
+            "description": "Inscrivez-vous dans votre langue ; facturé en USD, EUR, GBP, MXN, AUD, JPY, KRW, VND ou SGD. Aucune surprise de change."
+          },
+          {
+            "name": "Sans Contrat",
+            "description": "Annulez depuis votre compte à tout moment. Sans engagement annuel, sans préavis, sans entretien de sortie."
+          },
+          {
+            "name": "Essai Gratuit 7 Jours",
+            "description": "Accès complet aux fonctionnalités pendant 7 jours. Sans carte pour commencer ; vos données persistent si vous convertissez et s'exportent sinon."
+          }
+        ]
+      }
+    ]
+  },
+  "destinations": {
+    "eyebrow": "Les marchés pour lesquels nous sommes faits",
+    "title": "Pour les hôtels boutique, partout.",
+    "sub": "Lisbonne, Barcelone, Paris, Mexico — les quartiers où les hôtels indépendants et des petits groupes opèrent réellement. Facturation en devise locale, inscription dans votre langue, la même base opérationnelle partout."
+  },
+  "asianDestinations": {
+    "eyebrow": "Maintenant en APAC",
+    "title": "Conçu aussi pour la scène boutique en Asie.",
+    "sub": "Tokyo, Séoul, Hanoï, Singapour — hôtels de design, ryokans, propriétés lifestyle et petits groupes de luxe. Inscrivez-vous dans votre langue, facturez dans votre devise, exploitez la même base que nos boutiques en Europe et aux Amériques.",
+    "items": [
+      {
+        "city": "Tokyo",
+        "country": "Japon",
+        "blurb": "Hôtels de design à Shibuya, ryokans à Asakusa, propriétés lifestyle à Ginza — facturation en JPY, inscription en 日本語, la même base maintenance, événements et affichage."
+      },
+      {
+        "city": "Séoul",
+        "country": "Corée du Sud",
+        "blurb": "Boutiques à Gangnam, hostels à Itaewon, succursales de resort à Jeju — facturation en KRW, inscription en 한국어, un abonnement par propriété."
+      },
+      {
+        "city": "Hanoï",
+        "country": "Vietnam",
+        "blurb": "Boutiques du Old Quarter, hôtels patrimoniaux à Hội An, propriétés balnéaires à Da Nang — facturation en VND, inscription en Tiếng Việt, tarif forfaitaire par propriété qui s'adapte."
+      },
+      {
+        "city": "Singapour",
+        "country": "Singapour",
+        "blurb": "Hôtels shophouse à Chinatown, propriétés lifestyle à Tanjong Pagar, groupes de design sur toute l'île — facturation en SGD, inscription en anglais, sans surprise par écran."
+      }
+    ]
+  },
+  "useCases": {
+    "eyebrow": "Comment les clients l'utilisent",
+    "title": "Trois boutiques, trois victoires quotidiennes différentes.",
+    "sub": "Ce sont des clients réels qui utilisent MyHotelOps aujourd'hui. Noms réservés à leur demande — les exploitants boutique tiennent à leur vie privée et nous la respectons. Les cas d'usage sont les leurs.",
+    "items": [
+      {
+        "headline": "Délai de maintenance réduit de jours à heures",
+        "type": "Boutique de 32 chambres · Côte Est États-Unis",
+        "body": "La réception envoyait des emails à la maintenance ; les tickets s'accumulaient. Avec les bons de travail basés sur photo, le cycle entre signalement client et réparation est passé d'une médiane de 2-3 jours à moins de 4 heures. Le propriétaire a enfin une vue Kanban de chaque incident ouvert au même endroit."
+      },
+      {
+        "headline": "Quatre abonnements SaaS distincts remplacés",
+        "type": "Groupe hôtelier design de deux propriétés · Côte Ouest États-Unis",
+        "body": "Ils ont résilié leur outil de tickets de maintenance, leur plateforme événements et banquets, leur abonnement d'affichage numérique et leur app de conciergerie. La dépense nette a baissé d'environ $400/propriété/mois avec les mêmes workflows — tout consolidé en une seule ligne à $188."
+      },
+      {
+        "headline": "Nouveau directeur opérationnel en une après-midi, pas une semaine",
+        "type": "Petit groupe hôtelier · Pacifique Nord-Ouest",
+        "body": "Le nouveau directeur a commencé un mardi. En fin de journée il avait les bons de travail, les contacts fournisseurs, les identifiants Wi-Fi, les cartes d'accueil imprimables et le pipeline d'événements dans un seul onglet. Le propriétaire prévoyait deux semaines pour la montée en charge ; il alloue maintenant une après-midi."
+      }
+    ],
+    "footnote": "Vous voulez partager votre histoire ? Écrivez à {email} — nous la rédigeons pour qu'elle se lise authentique, pas comme un argumentaire."
+  },
+  "demo": {
+    "navLabel": "Parlons-en",
+    "eyebrow": "Pour les groupes multi-propriétés",
+    "headline": "Vous voulez une visite avant de vous inscrire ?",
+    "sub": "Si vous gérez plus d'une propriété — ou si vous préférez qu'on vous présente le produit plutôt que d'explorer l'essai — réservez 30 minutes avec nous. Nous vous montrerons les parties qui comptent pour votre exploitation, répondrons aux questions de facturation gênantes et passerons sur ce qui ne s'applique pas.",
+    "alternative": {
+      "heading": "Pas besoin d'un appel ?",
+      "body": "L'essai gratuit de 7 jours vous donne le même accès. Sans carte bancaire, toutes les fonctionnalités, vos données restent si vous ne convertissez pas.",
+      "cta": "Démarrer l'essai gratuit à la place"
+    },
+    "calendar": {
+      "heading": "Choisissez un horaire",
+      "intro": "Appels de 30 minutes sur Google Meet. Toutes les heures en heure du Pacifique des États-Unis (PT).",
+      "takenLabel": "Pris",
+      "selectInstruction": "Touchez un créneau disponible pour le réserver.",
+      "fallback": "Aucun ne convient ? Écrivez à {email} et nous trouverons un horaire."
+    },
+    "booking": {
+      "heading": "Réserver {slot}",
+      "subtitle": "Nous vous enverrons un code à 6 chiffres pour confirmer votre adresse, puis une invitation Google Meet.",
+      "changeSlot": "Changer d'horaire",
+      "yourName": "Votre nom",
+      "workEmail": "Email professionnel",
+      "hotelName": "Nom de l'hôtel",
+      "propertyCount": "Combien de propriétés ?",
+      "propertyCountPlaceholder": "p. ex. 1, 3, 12",
+      "preferredLanguage": "Langue préférée pour l'appel",
+      "preferredLanguageHint": "Nous ferons de notre mieux — la langue de repli est l'anglais.",
+      "languageEn": "English",
+      "languageEs": "Español",
+      "languageKo": "한국어 (coréen)",
+      "languageVi": "Tiếng Việt (vietnamien)",
+      "notes": "Quelque chose à savoir ? (optionnel)",
+      "notesPlaceholder": "Ce que vous espérez résoudre, votre stack actuel, contraintes de fuseau horaire…",
+      "cta": "Envoyer le code de vérification",
+      "ctaSending": "Envoi…",
+      "successHeading": "C'est réservé.",
+      "successBody": "Nous enverrons une invitation Google Meet à {email} sous peu. Répondez à l'invitation si quelque chose change.",
+      "errorMissing": "Nom, email, nom de l'hôtel, langue et créneau sont obligatoires.",
+      "errorEmail": "Veuillez entrer une adresse email valide.",
+      "errorSlot": "Ce créneau n'est plus disponible — choisissez-en un autre.",
+      "errorLanguage": "Choisissez une langue pour l'appel.",
+      "errorGeneric": "Impossible d'envoyer la demande. Écrivez à {email} directement."
+    },
+    "otp": {
+      "heading": "Vérifiez votre email",
+      "subtitle": "Nous avons envoyé un code à {n} chiffres à {email}. Entrez-le pour confirmer votre réservation. Le code expire dans {minutes} minutes.",
+      "codeLabel": "Code de vérification",
+      "codeHint": "{n} chiffres, depuis l'email que nous venons d'envoyer.",
+      "cta": "Vérifier et réserver",
+      "ctaVerifying": "Vérification…",
+      "wrongEmail": "Mauvais email ?",
+      "startOver": "Recommencer",
+      "noEmail": "Pas reçu l'email ?",
+      "resend": "Renvoyer le code",
+      "resending": "Envoi…",
+      "resentRecently": "Un nouveau code est en route.",
+      "errors": {
+        "codeRequired": "Entrez le code de votre email.",
+        "codeLength": "Le code fait {n} chiffres.",
+        "codeExpired": "Ce code a expiré. Recommencez depuis /demo.",
+        "codeTooManyAttempts": "Trop de codes incorrects. Recommencez depuis /demo.",
+        "codeMismatchOne": "Le code ne correspond pas. 1 tentative restante.",
+        "codeMismatchMany": "Le code ne correspond pas. {n} tentatives restantes.",
+        "codeMismatchFinal": "Le code ne correspond pas. Recommencez depuis /demo.",
+        "noPending": "Pas de réservation en attente pour cet email. Recommencez depuis /demo.",
+        "tooManyResends": "Trop de renvois. Recommencez depuis /demo.",
+        "resendCooldown": "Attendez un instant avant de redemander un code."
+      }
+    }
+  },
+  "pricing": {
+    "eyebrow": "Tarifs",
+    "headline": "Par propriété. Pas par utilisateur. Pas par écran. Pas par chambre.",
+    "sub": "Une base de $100/propriété/mois. Deux options. C'est toute la grille tarifaire — et le maximum qu'une seule propriété peut vous coûter est $188/mois, quel que soit le nombre d'écrans, de chambres ou de personnel.",
+    "midCycleNote": "Sans contrat. Sans engagement annuel. Ajoutez ou retirez des options quand vous voulez — annulez à tout moment depuis votre compte.",
+    "cadence": "propriété / mois",
+    "tagRequired": "Obligatoire",
+    "tagOptional": "Optionnel",
+    "plans": {
+      "base": {
+        "label": "Base",
+        "body": "Tout ce dont chaque propriété a besoin dès le premier jour — bons de travail de maintenance, propositions d'événements, registres IT, bibliothèque média et 3 écrans d'affichage.",
+        "features": [
+          "Bons de travail (Kanban avec preuve photo/vidéo)",
+          "Événements & banquets (demande → proposition → facture)",
+          "IT Hub (Wi-Fi, accès fournisseurs, équipement)",
+          "Catalogue média avec CDN global",
+          "3 écrans d'affichage inclus",
+          "Membres d'équipe illimités"
+        ]
+      },
+      "signage": {
+        "label": "Affichage Illimité",
+        "body": "Supprime la limite de 3 écrans. Téléviseurs illimités dans chaque propriété — réception, salle du personnel, salles de réunion, bord de piscine. Même planificateur, même alerte d'urgence.",
+        "features": [
+          "Écrans illimités par propriété",
+          "Alerte d'urgence pour toute la propriété",
+          "Programmation par date et plage horaire",
+          "Appairez n'importe quel TV avec navigateur",
+          "Image, vidéo, web ou carte texte avec marque",
+          "Activé pour toute l'organisation en un clic"
+        ]
+      },
+      "guest": {
+        "label": "Expérience Client",
+        "body": "Page d'accueil avec marque, carte QR imprimable pour chaque chambre, et collecte de demandes clients. Remplace les outils de conciergerie à $3–$6 par chambre occupée par un tarif fixe.",
+        "features": [
+          "Constructeur de page d'accueil avec couleur de marque",
+          "Wi-Fi importé automatiquement depuis IT Hub",
+          "Menus de restaurant et de room service",
+          "Carte QR imprimable Letter / A4",
+          "Pas de compte client, pas d'application",
+          "Activé pour toute l'organisation en un clic"
+        ]
+      }
+    },
+    "compare": {
+      "eyebrow": "Le calcul",
+      "headline": "Pour un boutique de 40 chambres qui achète ces outils aujourd'hui.",
+      "intro": "Les hôtels utilisent généralement un outil de tickets de maintenance, un abonnement d'affichage numérique et une plateforme de conciergerie / accueil — chacun sur un axe de facturation différent : par écran, par chambre ou par propriété. Voici ce qu'une propriété paie pour les trois à la carte versus via MyHotelOps.",
+      "headers": {
+        "need": "Besoin",
+        "tool": "Outil indépendant",
+        "standaloneCost": "Coût indépendant",
+        "withUs": "Avec MyHotelOps"
+      },
+      "monthlyTotal": "Total mensuel",
+      "alaCarte": "à la carte",
+      "savings": "Économies vs. outils indépendants",
+      "footnote": "Les prix indépendants sont les paliers d'entrée publiquement listés en mai 2026 ; certains fournisseurs ne donnent un devis que sur demande et peuvent être plus élevés en pratique. Les fournisseurs d'accueil facturent par chambre occupée, donc le chiffre ci-dessus suppose une propriété de 40 chambres avec un taux d'occupation moyen typique."
+    },
+    "scale": {
+      "headline": "Ce que paient réellement les groupes multi-propriétés.",
+      "sub": "Les options s'activent pour toute l'organisation et sont facturées sur chaque facture de propriété. Un groupe de quatre propriétés avec les deux options actives paie 4 × $188 = $752/mois — tout compris.",
+      "headers": {
+        "properties": "Propriétés",
+        "baseOnly": "Base uniquement",
+        "baseSignage": "Base + Affichage",
+        "everything": "Tout activé"
+      },
+      "propertyOne": "1 propriété",
+      "propertyMany": "{n} propriétés",
+      "perMonth": "/mois"
+    },
+    "faq": {
+      "heading": "Questions fréquentes",
+      "items": [
+        {
+          "q": "Y a-t-il des frais de configuration ou d'installation ?",
+          "a": "Une fois par locataire à votre arrivée — nous l'appliquons sur la première facture de la première propriété et ne le refacturons jamais si vous ajoutez des propriétés ou vous réabonnez. Nous vous accompagnons personnellement ; pas d'assistant DIY."
+        },
+        {
+          "q": "Que se passe-t-il avec mes données si j'annule ?",
+          "a": "Vous gardez l'accès à votre bibliothèque média et vos registres IT Hub pendant 30 jours, avec une option d'exportation dès le premier jour. Après 30 jours, votre compte est fermé et le stockage est récupéré."
+        },
+        {
+          "q": "Facturez-vous par utilisateur ou par siège ?",
+          "a": "Non. Chaque membre du personnel dans chaque propriété est inclus — réception, ménage, maintenance, propriétaires. Le tarif par propriété est le seul axe."
+        },
+        {
+          "q": "Et si je ne veux que la maintenance, ou seulement l'affichage ?",
+          "a": "Vous pouvez. L'abonnement de base inclut les bons de travail de maintenance, les événements & banquets, IT Hub, les médias et trois écrans d'affichage à $100/propriété. Ajoutez Affichage Illimité ou Expérience Client uniquement si vous le souhaitez — bascule sur /billing, facturé au prorata."
+        },
+        {
+          "q": "En quoi l'option d'affichage diffère-t-elle de Yodeck ou OptiSigns ?",
+          "a": "Tarif fixe par propriété — écrans illimités dans une propriété pour $49 contre $8–$30 par écran par mois ailleurs. Même concept de player (n'importe quel TV avec navigateur), même planification. Seuil de rentabilité versus Yodeck à environ 6 écrans ; moins cher au-dessus."
+        },
+        {
+          "q": "Vous intégrez-vous à notre PMS (Mews, Cloudbeds, Opera) ?",
+          "a": "Non, et c'est délibéré. Nous ne remplacerons jamais votre PMS et ne nous synchroniserons jamais avec lui — nous nous plaçons à côté et gérons chaque surface opérationnelle qu'il laisse aux tableurs et aux groupes de discussion. Les données de réservation restent dans votre PMS où elles doivent être ; tout le reste (bons de travail, événements, fournisseurs, affichage, accueil client) vit ici."
+        }
+      ]
+    },
+    "cta": {
+      "headline": "Commencez avec la base. Ajoutez le reste seulement si vous en avez besoin.",
+      "sub": "L'inscription prend une minute. Accès complet pendant 7 jours, sans carte bancaire.",
+      "button": "Démarrer l'essai gratuit"
+    }
+  },
+  "email": {
+    "signoff": "— MyHotelOps",
+    "otp": {
+      "subject": "Votre code de vérification MyHotelOps : {code}",
+      "greeting": "Bonjour {name},",
+      "intro": "Votre code de vérification MyHotelOps est :",
+      "instructions": "Entrez-le sur la page d'inscription pour finir de créer {hotel}.",
+      "ttl": "Le code expire dans {minutes} minutes. Si vous n'avez pas demandé cela, vous pouvez ignorer cet email en toute sécurité."
+    },
+    "welcome": {
+      "subject": "Bienvenue chez MyHotelOps — votre essai de {days} jours est actif",
+      "greeting": "Bonjour {name},",
+      "intro": "{hotel} est configuré sur MyHotelOps. Votre essai gratuit vous donne un accès complet pendant {days} jours — sans carte bancaire, avec {gb} Go de médias inclus.",
+      "ctaOpen": "Ouvrir votre tableau de bord",
+      "tryFirstHeading": "Par où commencer",
+      "tryFirstTeam": "Ajoutez votre équipe depuis la page Équipe",
+      "tryFirstMedia": "Téléchargez vos premiers plans / photos dans Médias",
+      "tryFirstWO": "Créez un bon de travail pour voir le tableau Kanban en action",
+      "convertPrefix": "Prêt à passer au payant ? ",
+      "convertLink": "Ajoutez un moyen de paiement",
+      "convertSuffix": " quand vous voulez."
+    },
+    "reminder": {
+      "subjectOne": "Votre essai MyHotelOps se termine dans 1 jour",
+      "subjectMany": "Votre essai MyHotelOps se termine dans {days} jours",
+      "greeting": "Bonjour {name},",
+      "bodyOne": "Votre essai MyHotelOps pour {hotel} se termine dans 1 jour. Ajoutez un moyen de paiement pour continuer à éditer — vos données restent en place dans tous les cas.",
+      "bodyMany": "Votre essai MyHotelOps pour {hotel} se termine dans {days} jours. Ajoutez un moyen de paiement pour continuer à éditer — vos données restent en place dans tous les cas.",
+      "cta": "Ouvrir la facturation"
+    },
+    "expired": {
+      "subject": "Votre essai MyHotelOps est terminé — vos données sont en sécurité",
+      "greeting": "Bonjour {name},",
+      "body": "Votre essai MyHotelOps pour {hotel} s'est terminé aujourd'hui. Nous avons basculé votre compte en lecture seule et nous conservons toutes vos données — ajoutez un moyen de paiement quand vous voulez pour continuer à éditer.",
+      "cta": "Ouvrir la facturation"
+    }
+  }
+}

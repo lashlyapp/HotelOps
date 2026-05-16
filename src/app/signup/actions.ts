@@ -4,67 +4,102 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { PRIVACY_POLICY_LAST_UPDATED } from '@/app/privacy/page'
 import { TERMS_OF_SERVICE_LAST_UPDATED } from '@/app/terms/page'
-import { BRAND } from '@/lib/brand'
 import {
-  sendSignupNotification,
-  sendSignupVerificationEmail,
+  OTP_LENGTH,
+  OTP_MAX_ATTEMPTS,
+  OTP_MAX_RESENDS,
+  OTP_TTL_MINUTES,
+  generateOtp,
+  hashOtp,
+} from '@/lib/auth/otp'
+import { validatePassword } from '@/lib/auth/password'
+import { currencyForLocale } from '@/lib/billing/currency'
+import { TRIAL_DAYS, TRIAL_STORAGE_BYTES } from '@/lib/billing/trial'
+import { BRAND } from '@/lib/brand'
+import { decryptString, encryptString } from '@/lib/crypto/aes'
+import {
+  sendSignupOtpEmail,
+  sendTrialWelcomeEmail,
 } from '@/lib/email/send'
+import { getDictionary } from '@/lib/i18n/dictionaries'
+import { getLocale } from '@/lib/i18n/get-locale'
+import { interpolate } from '@/lib/i18n/interpolate'
+import { asLocale, type Locale } from '@/lib/i18n/locales'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
+import { slugify, uniqueSlug } from '@/lib/utils/slugify'
 
 export type SignupActionResult = { error?: string }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-// Rate limits. The window is short and the cap is generous enough not to
-// trip a legitimate group of hotels signing up from the same office, but
-// strict enough that an attacker can't flood the table or spam a victim's
-// inbox with verification emails.
+// Per-IP / per-email throttle on the initial OTP-request step. Self-serve
+// is gated by the OTP, but rate-limiting the *send* side stops a bot from
+// using us to spam arbitrary inboxes.
 const RATE_WINDOW_MINUTES = 15
 const RATE_LIMIT_PER_IP = 5
-const RATE_LIMIT_PER_EMAIL = 2
+const RATE_LIMIT_PER_EMAIL = 3
 
+// ---------------------------------------------------------------------------
+// Step 1: form submission → store pending row + send OTP
+// ---------------------------------------------------------------------------
+
+/**
+ * Validates the signup form, stores an encrypted-password pending
+ * record, and emails a 6-digit code. Redirects to /signup/verify so
+ * the user enters the code. The auth user, org, and property are NOT
+ * created until {@link verifySignupOtp} confirms the code.
+ *
+ * Two layers of bot protection: a honeypot ("website" field) and
+ * IP/email rate limits backed by tenant_signup_requests.created_at.
+ * The OTP itself is the strongest layer — a bot that doesn't read
+ * email cannot finish the signup.
+ *
+ * All user-facing errors are pulled from the visitor's locale
+ * dictionary (en/es/fr) so a French signup that hits the rate
+ * limit reads its error in French. The locale itself is captured
+ * onto signup_pending so the OTP email + any resend goes out in
+ * the same language even if the user closes the tab and reopens
+ * /signup/verify from a fresh session.
+ */
 export async function submitSignupRequest(
   _prev: SignupActionResult,
   formData: FormData,
 ): Promise<SignupActionResult> {
-  // Honeypot: bots fill every field, real users don't see this one
-  // (it's hidden in the form). Silently 200 if it's set so the bot
-  // thinks it succeeded and stops retrying.
   const honeypot = String(formData.get('website') ?? '')
   if (honeypot.trim()) {
-    redirect('/signup/thanks')
+    redirect('/login')
   }
+
+  const locale = await getLocale()
+  const e = getDictionary(locale).signup.errors
 
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
+  const password = String(formData.get('password') ?? '')
   const fullName = String(formData.get('full_name') ?? '').trim()
   const hotelName = String(formData.get('hotel_name') ?? '').trim()
-  const phone = String(formData.get('phone') ?? '').trim() || null
-  const message = String(formData.get('message') ?? '').trim() || null
   const consent = formData.get('consent') === 'yes'
 
-  if (!email || !fullName || !hotelName) {
-    return { error: 'Email, your name, and hotel name are required.' }
+  if (!email || !fullName || !hotelName || !password) {
+    return { error: e.missingFields }
   }
   if (!EMAIL_RE.test(email)) {
-    return { error: 'Please enter a valid email address.' }
+    return { error: e.invalidEmail }
   }
   if (fullName.length > 200 || hotelName.length > 200) {
-    return { error: 'That looks too long — keep names under 200 characters.' }
+    return { error: e.tooLong }
   }
-  if (message && message.length > 2000) {
-    return { error: 'Please keep your message under 2,000 characters.' }
-  }
+  const pwCheck = validatePassword(password)
+  // Password-policy strings live in @/lib/auth/password (English-only).
+  // Translating those is a separate effort because the same validator is
+  // shared with /set-password and the admin invite flow; left untranslated
+  // here on purpose. Form-level hint is in the dictionary.
+  if (!pwCheck.ok) return { error: pwCheck.error }
   if (!consent) {
-    return {
-      error: 'Please agree to the Terms of Service and Privacy Policy to continue.',
-    }
+    return { error: e.consentRequired }
   }
 
   const ipAddress = await getClientIp()
-
-  // Rate limits. We use the service-role client because the public
-  // anon client can't see rows it didn't insert (RLS), and the count
-  // here needs to span all submissions.
   const admin = createAdminClient()
   const since = new Date(
     Date.now() - RATE_WINDOW_MINUTES * 60 * 1000,
@@ -78,7 +113,7 @@ export async function submitSignupRequest(
       .gte('created_at', since)
     if ((ipCount ?? 0) >= RATE_LIMIT_PER_IP) {
       return {
-        error: `Too many signup attempts from this network. Try again in a few minutes, or email ${BRAND.supportEmail}.`,
+        error: interpolate(e.rateLimitIp, { email: BRAND.supportEmail }),
       }
     }
   }
@@ -88,157 +123,390 @@ export async function submitSignupRequest(
     .ilike('email', email)
     .gte('created_at', since)
   if ((emailCount ?? 0) >= RATE_LIMIT_PER_EMAIL) {
-    return {
-      error: `We’ve already received recent signups for ${email}. Check your inbox for a verification email, or try again later.`,
-    }
+    return { error: interpolate(e.rateLimitEmail, { email }) }
   }
 
-  // Generate a high-entropy verification token. The row stays invisible
-  // to admins until the prospect clicks the link in the email we send.
-  const token = generateUrlSafeToken(32)
-  const verifyUrl = `${getSiteUrl()}/signup/verify?token=${encodeURIComponent(token)}`
+  if (await emailHasAuthUser(email)) {
+    return { error: interpolate(e.emailExists, { email }) }
+  }
 
-  // Anon client respects the RLS policy (status='pending' on insert).
-  // We can't write ip_address / email_verification_token via the anon
-  // client because they're not in the policy's WITH CHECK — so use
-  // the service-role admin client to do the insert.
-  const { error } = await admin.from('tenant_signup_requests').insert({
+  const code = generateOtp()
+  const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000)
+  let password_enc: string
+  try {
+    password_enc = encryptString(password)
+  } catch (err) {
+    console.error('[signup] password encryption failed', err)
+    return { error: e.tempUnavailable }
+  }
+
+  // Capture attribution from hidden form inputs populated by /signup
+  // page (URL query params win, then the UTM_COOKIE set on landing).
+  // Each value is capped at 255 chars defensively even though the
+  // form-side reader already truncates.
+  const cap = (v: FormDataEntryValue | null): string | null => {
+    const s = typeof v === 'string' ? v.trim().slice(0, 255) : ''
+    return s.length > 0 ? s : null
+  }
+  const utm = {
+    utm_source: cap(formData.get('utm_source')),
+    utm_medium: cap(formData.get('utm_medium')),
+    utm_campaign: cap(formData.get('utm_campaign')),
+    utm_content: cap(formData.get('utm_content')),
+    utm_term: cap(formData.get('utm_term')),
+    referrer: cap(formData.get('referrer')),
+  }
+
+  const { error: upsertErr } = await admin
+    .from('signup_pending')
+    .upsert(
+      {
+        email,
+        full_name: fullName,
+        hotel_name: hotelName,
+        password_enc,
+        otp_hash: hashOtp(code),
+        attempts: 0,
+        expires_at: expiresAt.toISOString(),
+        ip_address: ipAddress,
+        resends: 0,
+        resent_at: null,
+        locale,
+        ...utm,
+      },
+      { onConflict: 'email' },
+    )
+  if (upsertErr) {
+    console.error('[signup] signup_pending upsert failed', upsertErr)
+    return { error: e.internalError }
+  }
+
+  await admin.from('tenant_signup_requests').insert({
     email,
     full_name: fullName,
     hotel_name: hotelName,
-    phone,
-    message,
     ip_address: ipAddress,
-    email_verification_token: token,
-    email_verification_sent_at: new Date().toISOString(),
+    status: 'pending',
     agreed_at: new Date().toISOString(),
     agreed_terms_version: TERMS_OF_SERVICE_LAST_UPDATED,
     agreed_privacy_version: PRIVACY_POLICY_LAST_UPDATED,
   })
-  if (error) {
-    console.error('[signup] insert failed', error)
-    return {
-      error:
-        'Something went wrong saving your request. Please email ' +
-        BRAND.supportEmail +
-        ' and we’ll follow up directly.',
-    }
-  }
 
-  // Send the verification email. If email isn't configured we still
-  // succeed — the row is auto-marked verified during dev so the admin
-  // notification still goes out, but in production this branch should
-  // never hit.
-  const verifSent = await sendSignupVerificationEmail({
+  await sendSignupOtpEmail({
     to: email,
     recipientName: fullName,
     hotelName,
-    verifyUrl,
+    code,
+    ttlMinutes: OTP_TTL_MINUTES,
+    locale,
   }).catch((err) => {
-    console.warn('[signup] verification email failed', err)
-    return false
+    console.warn('[signup] OTP email dispatch failed', err)
   })
-  if (!verifSent) {
-    // Dev fallback: no email configured → auto-verify and notify admin
-    // immediately so the local /admin flow still works end-to-end.
+
+  redirect(`/signup/verify?email=${encodeURIComponent(email)}`)
+}
+
+// ---------------------------------------------------------------------------
+// Step 2: OTP entry → provision + sign in
+// ---------------------------------------------------------------------------
+
+/**
+ * Validates the OTP and, on success, provisions the tenant
+ * atomically: org → property → auth user → profile → sign-in cookie.
+ * On wrong-code submission the attempts counter increments; after
+ * {@link OTP_MAX_ATTEMPTS} the pending row is invalidated and the
+ * user has to resend.
+ *
+ * Errors and welcome email are localized using the locale captured
+ * at submitSignupRequest time (stored on the signup_pending row).
+ * The org row inherits that locale so future cron emails (T-3
+ * reminder, T+0 expired) speak the same language.
+ */
+export async function verifySignupOtp(
+  _prev: SignupActionResult,
+  formData: FormData,
+): Promise<SignupActionResult> {
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
+  const code = String(formData.get('code') ?? '').trim()
+
+  const admin = createAdminClient()
+  const { data: pending, error: pendErr } = await admin
+    .from('signup_pending')
+    .select('*')
+    .ilike('email', email)
+    .maybeSingle()
+
+  // Pull the locale from the pending row when we have one; this is
+  // the authoritative source for the rest of the flow. Fall back to
+  // request locale only when there's no pending row (user landed
+  // straight on /signup/verify without going through /signup, or
+  // their pending row expired and was GC'd).
+  const locale: Locale = pending
+    ? asLocale(pending.locale)
+    : await getLocale()
+  const e = getDictionary(locale).signup.errors
+
+  if (!email || !code) return { error: e.codeRequired }
+  if (!/^\d+$/.test(code) || code.length !== OTP_LENGTH) {
+    return { error: interpolate(e.codeLength, { n: OTP_LENGTH }) }
+  }
+  if (pendErr) {
+    console.error('[signup] verify lookup failed', pendErr)
+    return { error: e.internalError }
+  }
+  if (!pending) {
+    return { error: e.noPendingSignup }
+  }
+  if (new Date(pending.expires_at).getTime() < Date.now()) {
+    await admin.from('signup_pending').delete().eq('id', pending.id)
+    return { error: e.codeExpired }
+  }
+  if (pending.attempts >= OTP_MAX_ATTEMPTS) {
+    await admin.from('signup_pending').delete().eq('id', pending.id)
+    return { error: e.codeTooManyAttempts }
+  }
+  if (hashOtp(code) !== pending.otp_hash) {
     await admin
-      .from('tenant_signup_requests')
-      .update({
-        email_verified_at: new Date().toISOString(),
-        email_verification_token: null,
-      })
-      .eq('email_verification_token', token)
-    try {
-      await sendSignupNotification({
-        email,
-        fullName,
-        hotelName,
-        phone,
-        message,
-      })
-    } catch (err) {
-      console.warn('[signup] admin notification failed', err)
+      .from('signup_pending')
+      .update({ attempts: pending.attempts + 1 })
+      .eq('id', pending.id)
+    const left = Math.max(0, OTP_MAX_ATTEMPTS - (pending.attempts + 1))
+    return {
+      error:
+        left === 0
+          ? e.codeMismatchFinal
+          : left === 1
+            ? e.codeMismatchOne
+            : interpolate(e.codeMismatchMany, { n: left }),
     }
   }
 
-  redirect('/signup/thanks')
-}
+  let password: string
+  try {
+    password = decryptString(pending.password_enc)
+  } catch (err) {
+    console.error('[signup] password decryption failed', err)
+    return { error: e.tempUnavailable }
+  }
 
-/**
- * Mark a signup row's email as verified and dispatch the admin
- * notification. Called by the GET /signup/verify route handler when
- * the user clicks the link in their email.
- *
- * Returns true on first successful verification, false if the token
- * is unknown / already used / expired.
- */
-export async function verifySignupEmail(token: string): Promise<boolean> {
-  if (!token || token.length < 16) return false
-  const admin = createAdminClient()
+  if (await emailHasAuthUser(email)) {
+    await admin.from('signup_pending').delete().eq('id', pending.id)
+    return { error: interpolate(e.emailExists, { email }) }
+  }
 
-  const { data: row } = await admin
-    .from('tenant_signup_requests')
-    .select('*')
-    .eq('email_verification_token', token)
-    .maybeSingle()
-  if (!row) return false
-  if (row.email_verified_at) return true // already verified; idempotent
+  const { data: existingOrgs } = await admin
+    .from('organizations')
+    .select('slug')
+  const takenSlugs = new Set((existingOrgs ?? []).map((o) => o.slug))
+  const orgSlug = uniqueSlug(
+    slugify(pending.hotel_name) || 'hotel',
+    (s) => takenSlugs.has(s),
+  )
 
-  // 24 hour expiry on the verification link.
-  const sentAt = row.email_verification_sent_at
-    ? new Date(row.email_verification_sent_at).getTime()
-    : 0
-  if (Date.now() - sentAt > 24 * 60 * 60 * 1000) return false
+  const trialStart = new Date()
+  const trialEnd = new Date(
+    trialStart.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000,
+  )
+
+  // Currency derived from locale (en→usd, es/fr→eur, etc.).
+  const currency = currencyForLocale(locale)
+
+  const { data: org, error: orgErr } = await admin
+    .from('organizations')
+    .insert({
+      slug: orgSlug,
+      name: pending.hotel_name,
+      trial_started_at: trialStart.toISOString(),
+      trial_ends_at: trialEnd.toISOString(),
+      currency,
+      locale,
+      // Carry attribution forward to the org row so the admin
+      // dashboard's per-campaign view can report "this org came
+      // from utm_campaign='may-eu'" forever, not just during the
+      // signup_pending window.
+      utm_source: pending.utm_source ?? null,
+      utm_medium: pending.utm_medium ?? null,
+      utm_campaign: pending.utm_campaign ?? null,
+      utm_content: pending.utm_content ?? null,
+      utm_term: pending.utm_term ?? null,
+      referrer: pending.referrer ?? null,
+    })
+    .select('id')
+    .single()
+  if (orgErr || !org) {
+    console.error('[signup] org insert failed', orgErr)
+    return { error: e.createAccountFailed }
+  }
+
+  const propertySlug = uniqueSlug(
+    slugify(pending.hotel_name) || 'main',
+    () => false,
+  )
+  const { error: propErr } = await admin.from('properties').insert({
+    org_id: org.id,
+    slug: propertySlug,
+    name: pending.hotel_name,
+    r2_prefix: `${orgSlug}/${propertySlug}/`,
+    storage_quota_bytes: TRIAL_STORAGE_BYTES,
+  })
+  if (propErr) {
+    console.error('[signup] property insert failed', propErr)
+    await admin.from('organizations').delete().eq('id', org.id)
+    return { error: e.createAccountFailed }
+  }
+
+  const { data: created, error: userErr } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: pending.full_name },
+  })
+  if (userErr || !created.user) {
+    console.error('[signup] auth user create failed', userErr)
+    await admin.from('organizations').delete().eq('id', org.id)
+    // Surface the Supabase error verbatim when present — typically
+    // "User already registered" which is actionable; translating
+    // those server messages is out of scope.
+    return { error: userErr?.message ?? e.createAccountFailed }
+  }
+  const userId = created.user.id
+
+  const { error: profileErr } = await admin.from('profiles').upsert({
+    id: userId,
+    org_id: org.id,
+    role: 'org_owner',
+    full_name: pending.full_name,
+  })
+  if (profileErr) {
+    console.error('[signup] profile upsert failed', profileErr)
+    await admin.auth.admin.deleteUser(userId)
+    await admin.from('organizations').delete().eq('id', org.id)
+    return { error: e.profileFailed }
+  }
 
   await admin
     .from('tenant_signup_requests')
     .update({
+      status: 'approved',
+      approved_org_id: org.id,
+      approved_at: new Date().toISOString(),
       email_verified_at: new Date().toISOString(),
-      email_verification_token: null,
     })
-    .eq('id', row.id)
+    .ilike('email', email)
+    .eq('status', 'pending')
+  await admin.from('signup_pending').delete().eq('id', pending.id)
 
-  // Now that the email is confirmed, ping the platform admin so they
-  // can review on /admin.
-  try {
-    await sendSignupNotification({
-      email: row.email,
-      fullName: row.full_name,
-      hotelName: row.hotel_name,
-      phone: row.phone,
-      message: row.message,
-    })
-  } catch (err) {
-    console.warn('[signup] admin notification (post-verify) failed', err)
+  void sendTrialWelcomeEmail({
+    to: email,
+    recipientName: pending.full_name,
+    hotelName: pending.hotel_name,
+    trialDays: TRIAL_DAYS,
+    storageGb: Math.round(TRIAL_STORAGE_BYTES / 1024 ** 3),
+    locale,
+  }).catch((err) => {
+    console.warn('[signup] trial-welcome email failed', err)
+  })
+
+  const supabase = await createClient()
+  const { error: signInErr } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+  if (signInErr) {
+    console.warn('[signup] auto sign-in failed', signInErr)
+    redirect('/login?signed_up=1')
+  }
+  redirect('/dashboard?welcome=trial')
+}
+
+// ---------------------------------------------------------------------------
+// Step 1b: resend the OTP (rate-limited per-row, not just per-IP)
+// ---------------------------------------------------------------------------
+
+/**
+ * Send a fresh OTP for an in-flight signup. Caps resends per pending
+ * row so we can't be turned into an email-amplifier toward a victim's
+ * inbox even if rate limits are circumvented from a botnet. Email +
+ * errors honor the locale stored on the pending row.
+ */
+export async function resendSignupOtp(
+  _prev: SignupActionResult,
+  formData: FormData,
+): Promise<SignupActionResult> {
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
+
+  const admin = createAdminClient()
+  const { data: pending } = await admin
+    .from('signup_pending')
+    .select('*')
+    .ilike('email', email)
+    .maybeSingle()
+
+  const locale: Locale = pending
+    ? asLocale(pending.locale)
+    : await getLocale()
+  const e = getDictionary(locale).signup.errors
+
+  if (!email || !EMAIL_RE.test(email)) {
+    return { error: e.resendNeedsEmail }
+  }
+  if (!pending) {
+    return { error: e.noPendingSignup }
+  }
+  if (pending.resends >= OTP_MAX_RESENDS) {
+    return { error: e.tooManyResends }
+  }
+  if (pending.resent_at) {
+    const since = Date.now() - new Date(pending.resent_at).getTime()
+    if (since < 30_000) {
+      return { error: e.resendCooldown }
+    }
   }
 
-  return true
+  const code = generateOtp()
+  const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000)
+  await admin
+    .from('signup_pending')
+    .update({
+      otp_hash: hashOtp(code),
+      attempts: 0,
+      expires_at: expiresAt.toISOString(),
+      resends: pending.resends + 1,
+      resent_at: new Date().toISOString(),
+    })
+    .eq('id', pending.id)
+
+  await sendSignupOtpEmail({
+    to: email,
+    recipientName: pending.full_name,
+    hotelName: pending.hotel_name,
+    code,
+    ttlMinutes: OTP_TTL_MINUTES,
+    locale,
+  }).catch((err) => {
+    console.warn('[signup] OTP resend dispatch failed', err)
+  })
+
+  return {}
+}
+
+// ---------------------------------------------------------------------------
+// helpers
+// ---------------------------------------------------------------------------
+async function emailHasAuthUser(email: string): Promise<boolean> {
+  const admin = createAdminClient()
+  const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 })
+  return (data?.users ?? []).some(
+    (u) => u.email?.toLowerCase() === email.toLowerCase(),
+  )
 }
 
 async function getClientIp(): Promise<string | null> {
-  // Vercel / Cloudflare both set x-forwarded-for with the client IP
-  // as the first comma-separated entry. Trust the first hop only.
   const h = await headers()
   const forwarded = h.get('x-forwarded-for')
   if (forwarded) {
     const first = forwarded.split(',')[0]?.trim()
     if (first) return first
   }
-  const real = h.get('x-real-ip')
-  return real ?? null
-}
-
-function getSiteUrl(): string {
-  // For verification-email links we want the canonical site URL (the
-  // recipient may open the email on a different device/browser from the
-  // one they used to submit the form, so request origin isn't reliable).
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
-  ).replace(/\/+$/, '')
-}
-
-function generateUrlSafeToken(byteLength = 32): string {
-  const bytes = new Uint8Array(byteLength)
-  crypto.getRandomValues(bytes)
-  return Buffer.from(bytes).toString('base64url')
+  return h.get('x-real-ip')
 }

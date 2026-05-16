@@ -603,6 +603,25 @@ export async function ownerAddPropertyAction(
   const blocked = denyIfRestricted(session)
   if (blocked) return blocked
 
+  // Trial orgs (signed up via the self-serve flow, no paid subscription
+  // yet) are capped at one property. Combined with the per-property 10 GB
+  // quota that's also set at signup time, this is what makes "10 GB
+  // included on trial" hold without org-wide storage plumbing. Converting
+  // (adding a payment method on Billing) lifts both gates at once.
+  const hasPaidSub = Object.values(session.propertyGates).some(
+    (g) => g.status === 'active' || g.status === 'past_due',
+  )
+  if (
+    session.organization.trial_ends_at &&
+    !hasPaidSub &&
+    session.properties.length > 0
+  ) {
+    return {
+      error:
+        'Trial accounts include one property. Add a payment method on Billing to unlock more.',
+    }
+  }
+
   const name = String(formData.get('name') ?? '').trim()
   if (!name) return { error: 'Name is required.' }
 
@@ -995,168 +1014,3 @@ export async function deleteTenantAction(formData: FormData) {
   redirect('/admin')
 }
 
-// ----------------------------------------------------------------------------
-// Public-signup review (platform admin only)
-// ----------------------------------------------------------------------------
-
-/**
- * Approve a public signup request and provision the tenant in one click:
- * create the org (slug auto-generated from hotel name), one initial property
- * with the same name, the owner auth user, profile, and email them a setup
- * link. The signup row is marked approved + linked to the new org so the
- * audit trail survives.
- *
- * Account-takeover guard: refuses to approve if the signup email already
- * belongs to an existing auth user. The /signup form is publicly writable,
- * so without this check an attacker could submit a victim's email; the
- * approve flow would rewrite the victim's password and re-parent their
- * profile into the attacker's org. The admin must resolve the collision
- * manually (verify ownership of the email, then reject + create the tenant
- * via /admin → "New tenant" with a clean email).
- *
- * Idempotency: if `approved_org_id` is already set, returns success without
- * re-provisioning. If the signup was rejected, refuses.
- */
-export async function approveSignupAction(
-  _prev: ActionResult,
-  formData: FormData,
-): Promise<ActionResult> {
-  const inviter = await requirePlatformAdmin()
-  const signupId = String(formData.get('signup_id') ?? '')
-  if (!signupId) return { error: 'Missing signup id.' }
-
-  const admin = createAdminClient()
-
-  const { data: signup, error: signupErr } = await admin
-    .from('tenant_signup_requests')
-    .select('*')
-    .eq('id', signupId)
-    .maybeSingle()
-  if (signupErr) return { error: signupErr.message }
-  if (!signup) return { error: 'Signup not found.' }
-  if (signup.status === 'approved') {
-    revalidatePath('/admin')
-    return { success: 'Already approved.' }
-  }
-  if (signup.status === 'rejected') {
-    return { error: 'This request was already rejected.' }
-  }
-
-  // Account-takeover guard. The /signup form accepts any email; without
-  // this we'd silently re-password an existing user and re-parent their
-  // profile when the admin approves.
-  const existingUserId = await findUserId(signup.email)
-  if (existingUserId) {
-    return {
-      error:
-        `${signup.email} already has an account on ${BRAND.name}. ` +
-        `Reject this request and contact the prospect to verify ownership ` +
-        `of the email — then onboard manually from "New tenant" if appropriate.`,
-    }
-  }
-
-  // 1. Org with auto-slug.
-  const { data: existingOrgs } = await admin
-    .from('organizations')
-    .select('slug')
-  const taken = new Set((existingOrgs ?? []).map((o) => o.slug))
-  const baseSlug = slugify(signup.hotel_name) || 'hotel'
-  const orgSlug = uniqueSlug(baseSlug, (s) => taken.has(s))
-
-  const { data: org, error: orgErr } = await admin
-    .from('organizations')
-    .insert({ slug: orgSlug, name: signup.hotel_name })
-    .select('id')
-    .single()
-  if (orgErr) return { error: orgErr.message }
-  const orgId = org.id
-
-  // 2. Owner auth user + profile. Email collision is impossible here —
-  //    we returned above if findUserId(signup.email) was non-null.
-  //
-  //    We deliberately do NOT pre-create a property or auto-start the
-  //    Stripe subscription. Pricing is per-property, so the owner
-  //    triggers billing when they add their first property — see the
-  //    self-serve flow on /billing → "Start subscription". The gate
-  //    restricts writes until then, so the owner can sign in and
-  //    explore the empty workspace but can't accumulate billable
-  //    activity for free.
-  const placeholderPassword = generatePassword()
-  const { data: createdUser, error: createErr } = await admin.auth.admin.createUser({
-    email: signup.email,
-    password: placeholderPassword,
-    email_confirm: true,
-  })
-  if (createErr) return { error: createErr.message }
-  const ownerId = createdUser.user!.id
-
-  await admin
-    .from('profiles')
-    .upsert({
-      id: ownerId,
-      org_id: orgId,
-      role: 'org_owner',
-      full_name: signup.full_name,
-    })
-
-  // 3. Welcome email with one-time setup link. Best-effort.
-  if (isEmailConfigured()) {
-    const setupLink = (await generateSetupLink(signup.email)) ?? undefined
-    await sendWelcomeEmail({
-      to: signup.email,
-      recipientName: signup.full_name,
-      orgName: signup.hotel_name,
-      roleLabel: roleLabel('org_owner'),
-      inviterName: inviter.email,
-      setupLink,
-    })
-  } else {
-    console.warn(
-      '[signup] approved without sending welcome email — RESEND_API_KEY not set',
-    )
-  }
-
-  // 4. Mark signup approved + link to the org.
-  await admin
-    .from('tenant_signup_requests')
-    .update({
-      status: 'approved',
-      approved_org_id: orgId,
-      approved_at: new Date().toISOString(),
-      approved_by: inviter.userId,
-    })
-    .eq('id', signupId)
-
-  revalidatePath('/admin')
-  revalidatePath(`/admin/tenants/${orgId}`)
-  return {
-    success:
-      `Approved — provisioned ${signup.hotel_name}. ` +
-      `The owner will be billed when they add their first property.`,
-  }
-}
-
-export async function rejectSignupAction(
-  _prev: ActionResult,
-  formData: FormData,
-): Promise<ActionResult> {
-  const inviter = await requirePlatformAdmin()
-  const signupId = String(formData.get('signup_id') ?? '')
-  const reason = String(formData.get('reason') ?? '').trim() || null
-  if (!signupId) return { error: 'Missing signup id.' }
-
-  const admin = createAdminClient()
-  await admin
-    .from('tenant_signup_requests')
-    .update({
-      status: 'rejected',
-      rejection_reason: reason,
-      rejected_at: new Date().toISOString(),
-      rejected_by: inviter.userId,
-    })
-    .eq('id', signupId)
-    .eq('status', 'pending')
-
-  revalidatePath('/admin')
-  return { success: 'Rejected.' }
-}

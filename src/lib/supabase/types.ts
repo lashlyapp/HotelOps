@@ -11,6 +11,39 @@ export type Organization = {
   // 20260514070000_org_addon_flags.sql for the data model.
   signage_unlimited_addon_active: boolean
   guest_experience_addon_active: boolean
+  // Self-serve trial window — see 20260515000000_self_service_trial.sql
+  // and src/lib/billing/trial.ts. Null on tenants created via the
+  // admin path (no trial).
+  trial_started_at: string | null
+  trial_ends_at: string | null
+  // Trial lifecycle bookkeeping — see 20260515010000_signup_otp_and_admin.sql.
+  // *_email_sent_at columns dedupe the /api/cron/trial-expiry sender.
+  // trial_converted_at is stamped by startSubscriptionForProperty on
+  // the first paid sub and powers the admin dashboard's conversion
+  // metrics.
+  trial_reminder_t3_sent_at: string | null
+  trial_expired_email_sent_at: string | null
+  trial_converted_at: string | null
+  // ISO 4217 lowercase code. Set at signup based on the visitor's
+  // locale; immutable thereafter. See 20260515020000_org_currency.sql
+  // and src/lib/billing/currency.ts.
+  currency: string
+  // BCP-47 short code (en / es / fr). Captured at signup and used by
+  // cron-driven transactional emails (trial reminders) that have no
+  // live request context to read getLocale() from. See
+  // 20260515030000_org_locale.sql.
+  locale: string
+  // UTM attribution captured at signup-form-submission time. See
+  // 20260515040000_utm_capture.sql + src/lib/marketing/utm.ts.
+  // Persisted forever so the admin dashboard's per-campaign CAC view
+  // works historically even after a 90-day attribution window
+  // closes. All nullable: organic / direct visitors have no UTMs.
+  utm_source: string | null
+  utm_medium: string | null
+  utm_campaign: string | null
+  utm_content: string | null
+  utm_term: string | null
+  referrer: string | null
 }
 
 export type Profile = {
@@ -382,7 +415,38 @@ export type EventActivity = {
 }
 
 // ----------------------------------------------------------------------------
-// Public signup requests (the /signup form)
+// Self-serve signup: in-flight OTP verification rows
+// ----------------------------------------------------------------------------
+export type SignupPending = {
+  id: string
+  email: string
+  full_name: string
+  hotel_name: string
+  password_enc: string
+  otp_hash: string
+  attempts: number
+  expires_at: string
+  ip_address: string | null
+  resends: number
+  resent_at: string | null
+  // Visitor locale captured at OTP-request time so the OTP email +
+  // any resend speak the same language even if the user starts /signup
+  // in one tab and finishes /signup/verify in another.
+  locale: string
+  // UTM attribution captured from the signup-form hidden inputs.
+  // Copied to organizations on OTP verify; nullable for organic
+  // signups.
+  utm_source: string | null
+  utm_medium: string | null
+  utm_campaign: string | null
+  utm_content: string | null
+  utm_term: string | null
+  referrer: string | null
+  created_at: string
+}
+
+// ----------------------------------------------------------------------------
+// Public signup requests (the /signup form audit log)
 // ----------------------------------------------------------------------------
 export type TenantSignupStatus = 'pending' | 'approved' | 'rejected'
 

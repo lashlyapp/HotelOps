@@ -159,3 +159,51 @@ describe('computeOrgGate', () => {
     assert.equal(gate.restrictWrites, false)
   })
 })
+
+const daysFromNow = (n: number) =>
+  new Date(Date.now() + n * 24 * 60 * 60 * 1000).toISOString()
+
+describe('trial state', () => {
+  it('an active trial unblocks an org with properties but no subscription', () => {
+    // Same input that previously locked the org (properties exist, no sub),
+    // but with a trial window open — the gate should now allow writes and
+    // show a countdown banner instead.
+    const gate = computeOrgGate([], true, daysFromNow(5))
+    assert.equal(gate.banner, true)
+    assert.equal(gate.restrictWrites, false)
+    assert.equal(gate.restrictMedia, false)
+    assert.equal(gate.status, 'trialing')
+    assert.match(gate.message ?? '', /trial/i)
+  })
+
+  it('an expired trial locks the org', () => {
+    const gate = computeOrgGate([], true, daysFromNow(-1))
+    assert.equal(gate.restrictWrites, true)
+    assert.equal(gate.restrictMedia, true)
+    assert.match(gate.message ?? '', /trial has ended/i)
+  })
+
+  it('trial does not override an existing subscription', () => {
+    // Once an org has a paid sub, trial timestamps are ignored — the
+    // billing_subscriptions row is the source of truth.
+    const gate = computeOrgGate(
+      [makeSub({ status: 'past_due', past_due_since: daysAgo(3) })],
+      true,
+      daysFromNow(3),
+    )
+    assert.notEqual(gate.status, 'trialing')
+  })
+
+  it('property gate: active trial keeps a property usable without a sub', () => {
+    const gate = computePropertyGate(null, daysFromNow(5))
+    assert.equal(gate.restrictWrites, false)
+    assert.equal(gate.restrictMedia, false)
+    assert.equal(gate.status, 'trialing')
+  })
+
+  it('property gate: expired trial locks a property without a sub', () => {
+    const gate = computePropertyGate(null, daysFromNow(-1))
+    assert.equal(gate.restrictWrites, true)
+    assert.equal(gate.restrictMedia, true)
+  })
+})

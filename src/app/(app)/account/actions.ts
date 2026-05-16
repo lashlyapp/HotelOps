@@ -2,7 +2,14 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import {
+  VerifyCodeError,
+  confirmTotpEnrollment,
+  startTotpEnrollment,
+  unenrollFactor,
+} from '@/lib/auth/mfa'
 import { validatePassword } from '@/lib/auth/password'
+import { verifyPasswordForEmail } from '@/lib/auth/reauth'
 import { requireOrgUser, requireUser } from '@/lib/auth/session'
 import { stripe } from '@/lib/stripe/client'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -242,4 +249,124 @@ export async function deleteMyAccountAction(formData: FormData) {
 export async function requestDataExport(): Promise<void> {
   await requireUser()
   // Intentional no-op; see comment above.
+}
+
+// ---------------------------------------------------------------------------
+// Multi-factor authentication (optional TOTP)
+// ---------------------------------------------------------------------------
+
+export type StartMfaEnrollmentResult = {
+  error?: string
+  factorId?: string
+  qrPngDataUri?: string
+  secret?: string
+  otpAuthUri?: string
+}
+
+/**
+ * Begin a TOTP enrollment for the signed-in user. Returns the QR /
+ * secret the user pairs with their authenticator app. The factor is
+ * created in `unverified` state — it doesn't gate login until
+ * confirmed via {@link confirmMfaEnrollmentAction} below.
+ */
+export async function startMfaEnrollmentAction(
+  _prev: StartMfaEnrollmentResult,
+  _formData: FormData,
+): Promise<StartMfaEnrollmentResult> {
+  const session = await requireUser()
+  try {
+    const result = await startTotpEnrollment(
+      session.profile.full_name?.trim() || session.email,
+    )
+    return result
+  } catch (err) {
+    console.error('[mfa] start enrollment failed', err)
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : 'Could not start two-factor setup.',
+    }
+  }
+}
+
+/**
+ * Confirm an in-flight TOTP enrollment by submitting a code from the
+ * authenticator. Marks the factor verified — future sign-ins require
+ * a TOTP challenge.
+ */
+export async function confirmMfaEnrollmentAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireUser()
+  const factorId = String(formData.get('factor_id') ?? '').trim()
+  const code = String(formData.get('code') ?? '').trim()
+  if (!factorId) return { error: 'Missing factor — start over.' }
+  if (!/^\d{6}$/.test(code)) {
+    return { error: 'Enter the 6-digit code from your authenticator app.' }
+  }
+  try {
+    await confirmTotpEnrollment(factorId, code)
+  } catch (err) {
+    if (err instanceof VerifyCodeError) {
+      return { error: 'That code didn’t match. Try the next one your app shows.' }
+    }
+    console.error('[mfa] confirm enrollment failed', err)
+    return {
+      error: err instanceof Error ? err.message : 'Could not verify the code.',
+    }
+  }
+  revalidatePath('/account')
+  return { success: 'Two-factor authentication is now active on your account.' }
+}
+
+/**
+ * Remove a TOTP factor. Requires the user to re-enter their current
+ * password — disabling MFA is a security-sensitive action and we
+ * don't want a brief unattended-laptop window to be enough to strip
+ * the second factor off the account.
+ *
+ * Re-auth uses {@link verifyPasswordForEmail} (a throwaway Supabase
+ * client) so the user's existing aal2 session is preserved through
+ * the check; only after the password matches do we call
+ * {@link unenrollFactor}. When the unenrolled factor is the only
+ * one the account has, MFA is fully off and future sign-ins skip
+ * the challenge step.
+ */
+export async function unenrollMfaAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await requireUser()
+  const factorId = String(formData.get('factor_id') ?? '').trim()
+  const password = String(formData.get('password') ?? '')
+  if (!factorId) return { error: 'Missing factor id.' }
+  if (!password) {
+    return { error: 'Enter your current password to disable two-factor authentication.' }
+  }
+
+  const ok = await verifyPasswordForEmail(session.email, password).catch(
+    (err) => {
+      console.error('[mfa] reauth check threw', err)
+      return false
+    },
+  )
+  if (!ok) {
+    return { error: 'That password is not correct.' }
+  }
+
+  try {
+    await unenrollFactor(factorId)
+  } catch (err) {
+    console.error('[mfa] unenroll failed', err)
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : 'Could not remove two-factor authentication.',
+    }
+  }
+  revalidatePath('/account')
+  return { success: 'Two-factor authentication has been turned off.' }
 }

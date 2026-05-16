@@ -4,6 +4,7 @@ import type {
   BillingSubscription,
   BillingSubscriptionStatus,
 } from '@/lib/supabase/types'
+import { computeTrialState, trialBannerMessage } from './trial'
 
 /**
  * Number of days a property's subscription can sit in past_due before
@@ -57,8 +58,33 @@ const OK_STATUSES: BillingSubscriptionStatus[] = [
  */
 export function computePropertyGate(
   subscription: BillingSubscription | null,
+  trialEndsAt: string | null = null,
 ): BillingGate {
   if (!subscription) {
+    // Self-serve trial path: org has no Stripe subscription but its
+    // trial window is open → unrestricted, with a countdown banner.
+    // After the window closes the gate flips to read-only.
+    const trial = computeTrialState(trialEndsAt)
+    if (trial.kind === 'active') {
+      return {
+        banner: true,
+        restrictWrites: false,
+        restrictMedia: false,
+        message: trialBannerMessage(trial),
+        status: 'trialing',
+        daysPastDue: null,
+      }
+    }
+    if (trial.kind === 'expired') {
+      return {
+        banner: true,
+        restrictWrites: true,
+        restrictMedia: true,
+        message: trialBannerMessage(trial),
+        status: 'no_subscription',
+        daysPastDue: null,
+      }
+    }
     return {
       banner: true,
       restrictWrites: true,
@@ -162,6 +188,7 @@ export const computeGate = computePropertyGate
 export function computeOrgGate(
   subscriptions: BillingSubscription[],
   hasProperties = true,
+  trialEndsAt: string | null = null,
 ): BillingGate {
   if (!hasProperties) {
     // Brand-new org, no properties yet. Onboarding nudge but no
@@ -182,6 +209,30 @@ export function computeOrgGate(
     (s) => s.stripe_subscription_id != null,
   )
   if (!anySubscription) {
+    // Self-serve trial: org has properties but no paid sub yet. If the
+    // trial window is open the org operates normally with a countdown
+    // banner; once it closes we lock writes and prompt for a card.
+    const trial = computeTrialState(trialEndsAt)
+    if (trial.kind === 'active') {
+      return {
+        banner: true,
+        restrictWrites: false,
+        restrictMedia: false,
+        message: trialBannerMessage(trial),
+        status: 'trialing',
+        daysPastDue: null,
+      }
+    }
+    if (trial.kind === 'expired') {
+      return {
+        banner: true,
+        restrictWrites: true,
+        restrictMedia: true,
+        message: trialBannerMessage(trial),
+        status: 'no_subscription',
+        daysPastDue: null,
+      }
+    }
     return {
       banner: true,
       restrictWrites: true,
@@ -236,13 +287,34 @@ export async function getGateForProperty(
   propertyId: string,
 ): Promise<BillingGate> {
   const admin = createAdminClient()
-  const { data, error } = await admin
+  const { data: sub, error } = await admin
     .from('billing_subscriptions')
     .select('*')
     .eq('property_id', propertyId)
     .maybeSingle()
   if (error) throw error
-  return computePropertyGate((data as BillingSubscription | null) ?? null)
+  // Trial state only matters when there's no subscription yet, but the
+  // org row is small and the join is one round-trip either way.
+  let trialEndsAt: string | null = null
+  if (!sub) {
+    const { data: property } = await admin
+      .from('properties')
+      .select('org_id')
+      .eq('id', propertyId)
+      .maybeSingle()
+    if (property?.org_id) {
+      const { data: org } = await admin
+        .from('organizations')
+        .select('trial_ends_at')
+        .eq('id', property.org_id)
+        .maybeSingle()
+      trialEndsAt = org?.trial_ends_at ?? null
+    }
+  }
+  return computePropertyGate(
+    (sub as BillingSubscription | null) ?? null,
+    trialEndsAt,
+  )
 }
 
 /**
@@ -253,16 +325,21 @@ export async function getGateForProperty(
  */
 export async function getGateForOrg(orgId: string): Promise<BillingGate> {
   const admin = createAdminClient()
-  const [subsRes, propsRes] = await Promise.all([
+  const [subsRes, propsRes, orgRes] = await Promise.all([
     admin.from('billing_subscriptions').select('*').eq('org_id', orgId),
     admin
       .from('properties')
       .select('id', { count: 'exact', head: true })
       .eq('org_id', orgId),
+    admin
+      .from('organizations')
+      .select('trial_ends_at')
+      .eq('id', orgId)
+      .maybeSingle(),
   ])
   if (subsRes.error) throw subsRes.error
   if (propsRes.error) throw propsRes.error
   const subs = (subsRes.data as BillingSubscription[] | null) ?? []
   const hasProperties = (propsRes.count ?? 0) > 0
-  return computeOrgGate(subs, hasProperties)
+  return computeOrgGate(subs, hasProperties, orgRes.data?.trial_ends_at ?? null)
 }

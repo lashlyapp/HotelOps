@@ -4,20 +4,29 @@ import { useActionState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils/cn'
+import type { Dictionary } from '@/lib/i18n/dictionaries'
+import type { UtmAttribution } from '@/lib/marketing/utm'
 import { submitSignupRequest, type SignupActionResult } from '../actions'
 
 const initial: SignupActionResult = {}
 
-const TEXTAREA_CLASSES = cn(
-  'w-full rounded-md border border-border-default bg-surface px-3 py-2 text-sm text-fg shadow-xs',
-  'placeholder:text-subtle',
-  'transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)]',
-  'focus-ring focus:border-border-strong',
-  'disabled:cursor-not-allowed disabled:opacity-50',
-)
-
-export function SignupForm() {
+/**
+ * Localized signup form. Parent passes the visitor-locale dictionary
+ * so every label / placeholder / hint / CTA renders in the right
+ * language; server action also resolves the locale and returns
+ * localized error strings.
+ *
+ * `attribution` carries UTM params + referrer resolved server-side
+ * (URL > cookie). Rendered as hidden inputs so the action persists
+ * them on signup_pending → organizations for ad-campaign attribution.
+ */
+export function SignupForm({
+  t,
+  attribution,
+}: {
+  t: Dictionary['signup']
+  attribution: UtmAttribution
+}) {
   const [state, action, pending] = useActionState(
     submitSignupRequest,
     initial,
@@ -25,16 +34,31 @@ export function SignupForm() {
 
   return (
     <form action={action} className="space-y-4" noValidate>
-      {/* Honeypot: hidden from real users, bots fill every field. If this
-          arrives non-empty the action redirects to /thanks silently. */}
+      {/* Honeypot: hidden from real users, bots fill every field. */}
       <div className="hidden" aria-hidden>
         <Label htmlFor="website">Website</Label>
         <Input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
 
+      {/* UTM attribution. Server-rendered from the URL or the
+          UTM_COOKIE; flows through formData into signup_pending and
+          eventually onto the org row. Empty values are skipped so
+          we don't store empty strings. */}
+      {(['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'referrer'] as const).map(
+        (k) =>
+          attribution[k as keyof UtmAttribution] ? (
+            <input
+              key={k}
+              type="hidden"
+              name={k}
+              value={attribution[k as keyof UtmAttribution]}
+            />
+          ) : null,
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="full_name">Your name</Label>
+          <Label htmlFor="full_name">{t.form.yourName}</Label>
           <Input
             id="full_name"
             name="full_name"
@@ -46,55 +70,44 @@ export function SignupForm() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="email">Work email</Label>
+          <Label htmlFor="hotel_name">{t.form.hotelName}</Label>
           <Input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
+            id="hotel_name"
+            name="hotel_name"
+            type="text"
+            autoComplete="organization"
             required
+            maxLength={200}
+            placeholder={t.form.hotelNamePlaceholder}
           />
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="hotel_name">Hotel name</Label>
+        <Label htmlFor="email">{t.form.workEmail}</Label>
         <Input
-          id="hotel_name"
-          name="hotel_name"
-          type="text"
-          autoComplete="organization"
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
           required
-          maxLength={200}
-          placeholder="e.g. The Coastal Inn"
         />
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="phone">
-          Phone <span className="text-subtle">(optional)</span>
-        </Label>
+        <Label htmlFor="password">{t.form.password}</Label>
         <Input
-          id="phone"
-          name="phone"
-          type="tel"
-          autoComplete="tel"
-          maxLength={40}
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          aria-describedby="password-hint"
         />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="message">
-          Anything else? <span className="text-subtle">(optional)</span>
-        </Label>
-        <textarea
-          id="message"
-          name="message"
-          rows={4}
-          maxLength={2000}
-          className={TEXTAREA_CLASSES}
-          placeholder="How many properties, what you're hoping to solve, when you'd like to be up and running…"
-        />
+        <p id="password-hint" className="text-xs text-subtle">
+          {t.form.passwordHint}
+        </p>
       </div>
 
       <label className="flex items-start gap-3 text-xs text-muted leading-relaxed">
@@ -105,26 +118,30 @@ export function SignupForm() {
           required
           className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-border-default text-fg focus-ring"
         />
+        {/* Segmented copy — same grammatical order in en/es/fr so the
+            link slots can stay positional. If we ever add a locale
+            with a different word order we'd switch to a richer
+            interpolation pattern. */}
         <span>
-          I agree to the{' '}
+          {t.form.consentPrefix}
           <a
             href="/terms"
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-fg hover:underline"
           >
-            Terms of Service
+            {t.form.consentTerms}
           </a>
-          {' '}and{' '}
+          {t.form.consentAnd}
           <a
             href="/privacy"
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-fg hover:underline"
           >
-            Privacy Policy
+            {t.form.consentPrivacy}
           </a>
-          , and consent to be contacted by the team about my account.
+          {t.form.consentSuffix}
         </span>
       </label>
 
@@ -133,8 +150,12 @@ export function SignupForm() {
       ) : null}
 
       <Button type="submit" className="w-full" size="lg" disabled={pending}>
-        {pending ? 'Sending…' : 'Create account'}
+        {pending ? t.form.ctaSending : t.form.ctaSend}
       </Button>
+
+      <p className="text-center text-xs text-subtle">
+        {t.form.noCardLine}
+      </p>
     </form>
   )
 }

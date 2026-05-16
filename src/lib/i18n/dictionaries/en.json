@@ -1,0 +1,564 @@
+{
+  "common": {
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "startFree": "Start free",
+    "seePricing": "See pricing",
+    "openDashboard": "Open dashboard",
+    "backToHome": "Back to home",
+    "logIn": "Log in",
+    "language": "Language"
+  },
+  "login": {
+    "title": "Log in to your account",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "cta": "Log in",
+    "noAccount": "Don’t have an account yet?",
+    "signUpLink": "Sign up",
+    "errors": {
+      "missing": "Email and password are required.",
+      "invalid": "Invalid email or password.",
+      "no_org": "Your account isn’t linked to an organization. Contact your admin.",
+      "unauthorized": "Your account is not authorized for the admin portal.",
+      "session_expired": "You were signed out after a period of inactivity. Please log in again.",
+      "rate_limited": "Too many failed sign-in attempts. Wait a few minutes and try again."
+    }
+  },
+  "forgotPassword": {
+    "title": "Reset your password",
+    "backToLogin": "Back to log in",
+    "email": "Email",
+    "hint": "We’ll send a one-time link to set a new password. The link expires in about an hour.",
+    "cta": "Send reset link",
+    "remembered": "Remembered it?",
+    "loginLink": "Log in",
+    "errors": {
+      "invalid": "Please enter a valid email address."
+    },
+    "sent": {
+      "headline": "Check your inbox.",
+      "body": "If an account exists for the address you entered, we’ve sent a one-time link to reset your password. The link expires in about an hour.",
+      "tryAgain": "Didn’t see anything?",
+      "tryAgainLink": "Try again",
+      "orEmail": "or email"
+    }
+  },
+  "setPassword": {
+    "title": "Set a password to finish signing up",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "cta": "Save password",
+    "errors": {
+      "too_short": "Password is too short.",
+      "weak": "Password doesn’t meet the requirements.",
+      "mismatch": "Passwords don’t match.",
+      "failed": "Couldn’t save that password. Make sure it meets the requirements below and try again."
+    }
+  },
+  "loginMfa": {
+    "eyebrow": "Two-factor authentication",
+    "headline": "Enter your 6-digit code",
+    "sub": "Open your authenticator app and enter the current code for your {email} account.",
+    "lostAccess": "Lost access?",
+    "signInAgain": "Sign in again",
+    "lostAccessSuffix": "or contact your admin to disable 2FA on your account.",
+    "codeLabel": "Code",
+    "ctaVerifying": "Verifying…",
+    "ctaVerify": "Verify and continue",
+    "errors": {
+      "wrong_code": "That code didn’t match. Try the next one your app shows.",
+      "invalid": "Enter the 6-digit code from your authenticator app.",
+      "unknown": "Something went wrong. Try again or sign in fresh."
+    }
+  },
+  "nav": {
+    "workOrders": "Work Orders",
+    "events": "Events & Catering",
+    "signage": "Signage",
+    "arrival": "Arrival",
+    "pricing": "Pricing"
+  },
+  "marketing": {
+    "hero": {
+      "eyebrow": "Hotel back-office software · works alongside any PMS",
+      "headline": "Everything your PMS doesn't do.",
+      "sub": "MyHotelOps is the operations layer that runs alongside your hotel's reservation system. Maintenance, events, vendors, signage, guest arrival — every part of running a boutique hotel that lives outside your PMS, in one place.",
+      "personaLine": "Built for owners, GMs, and managers — not for line staff fighting your reservation system.",
+      "trialLine": "7-day free trial. No credit card. 10 GB included.",
+      "ctaPrimary": "Start free trial",
+      "ctaSecondary": "See pricing"
+    },
+    "positioning": {
+      "title": "The category we're not in: your PMS.",
+      "body": "We will never replace Cloudbeds, Mews, Opera, or Little Hotelier. We sit next to them and handle every operational surface they leave to spreadsheets and group chats — work orders, event proposals, vendor logins, signage on every TV, the printable arrival card in every room."
+    },
+    "footer": {
+      "tagline": "The operations layer for boutique hotels.",
+      "rights": "All rights reserved."
+    }
+  },
+  "signup": {
+    "eyebrow": "Start free",
+    "headline": "Try MyHotelOps free for 7 days",
+    "sub": "Full access. No credit card. 10 GB of media included. We'll email you a verification code to confirm your address — takes under a minute end to end.",
+    "form": {
+      "yourName": "Your name",
+      "hotelName": "Hotel name",
+      "hotelNamePlaceholder": "e.g. The Coastal Inn",
+      "workEmail": "Work email",
+      "password": "Password",
+      "passwordHint": "At least 8 characters, with at least one lowercase letter, one uppercase letter, one number, and one symbol.",
+      "consentPrefix": "I agree to the ",
+      "consentTerms": "Terms of Service",
+      "consentAnd": " and ",
+      "consentPrivacy": "Privacy Policy",
+      "consentSuffix": ".",
+      "ctaSending": "Sending verification code…",
+      "ctaSend": "Send verification code",
+      "noCardLine": "No credit card required. 10 GB of media included."
+    },
+    "verify": {
+      "eyebrow": "Verify your email",
+      "headline": "Enter your {n}-digit code",
+      "sub": "We sent a code to {email}. It expires in {minutes} minutes.",
+      "startOver": "Start over",
+      "wrongEmail": "Wrong email?",
+      "needHelp": "Need help?",
+      "codeLabel": "Verification code",
+      "codeHint": "{n} digits, from the email we just sent.",
+      "ctaVerifying": "Verifying…",
+      "ctaVerify": "Verify and start trial",
+      "noEmail": "Didn’t get the email?",
+      "resending": "Sending…",
+      "resend": "Resend code",
+      "resentRecently": "A new code is on its way."
+    },
+    "errors": {
+      "missingFields": "Email, password, your name, and hotel name are required.",
+      "invalidEmail": "Please enter a valid email address.",
+      "tooLong": "That looks too long — keep names under 200 characters.",
+      "consentRequired": "Please agree to the Terms of Service and Privacy Policy to continue.",
+      "rateLimitIp": "Too many signup attempts from this network. Try again in a few minutes, or email {email}.",
+      "rateLimitEmail": "We’ve sent a code to {email} recently. Check your inbox or wait a few minutes before trying again.",
+      "emailExists": "{email} already has a MyHotelOps account. Log in or reset your password instead.",
+      "internalError": "Something went wrong. Please try again.",
+      "tempUnavailable": "Signup is temporarily unavailable. Please try again later.",
+      "createAccountFailed": "Something went wrong creating your account. Please try again.",
+      "profileFailed": "Something went wrong setting up your profile. Please try again.",
+      "codeRequired": "Enter the code from your email.",
+      "codeLength": "The code is {n} digits.",
+      "codeExpired": "That code has expired. Start over from /signup.",
+      "codeTooManyAttempts": "Too many wrong codes. Start over from /signup.",
+      "codeMismatchOne": "That code doesn’t match. 1 attempt left.",
+      "codeMismatchMany": "That code doesn’t match. {n} attempts left.",
+      "codeMismatchFinal": "That code doesn’t match. Start over from /signup.",
+      "noPendingSignup": "We don’t have a pending signup for that email. Start over from /signup.",
+      "tooManyResends": "Too many resends. Start over from /signup.",
+      "resendCooldown": "Hang on a moment before requesting another code.",
+      "resendNeedsEmail": "We need a valid email to resend the code."
+    }
+  },
+  "about": {
+    "navLabel": "About",
+    "eyebrow": "Why we built this",
+    "headline": "Boutique hotels deserve software built for them.",
+    "missionHeading": "Our mission",
+    "missionBody": "Big PMS suites and big-chain tooling were never built for the 20-, 40-, 60-room boutique. They bundle modules nobody asked for at prices that don't fit, then leave the actual day-to-day operations to spreadsheets, group chats, and paper. We think that's backwards. The boutique market is underserved by software, and the people running these properties — the GMs, the owners, the managers who actually live the chaos — deserve tools that fit their reality.",
+    "sectionTwoHeading": "What we do",
+    "sectionTwoBody": "MyHotelOps is the operations layer that runs alongside whatever PMS you already use. We handle the things your reservation system doesn't — maintenance work orders, event proposals, vendor logins, signage on every TV, the printable arrival card in every room. One subscription per property, no per-seat games, no per-screen tax. The kind of pricing a small business can plan around.",
+    "sectionThreeHeading": "Who we serve",
+    "sectionThreeBody": "Independent boutique hotels and small groups, anywhere in the world — the US, Mexico, Europe, Asia. People who care about hospitality as a craft and want their software to do the same. If that's you, we built this for you.",
+    "addressHeading": "Mailing address",
+    "supportHeading": "Get in touch",
+    "ctaHeading": "Try it free for 7 days.",
+    "ctaSub": "No credit card. 10 GB included.",
+    "ctaButton": "Start free trial"
+  },
+  "features": {
+    "navLabel": "Features",
+    "eyebrow": "Everything included",
+    "title": "Built like the boutique back office actually works.",
+    "sub": "The full surface area, in one place. No per-module pricing — every feature below is in the $100/property base or one of the two flat-rate add-ons. Nothing here costs extra by seat, by screen, or by room.",
+    "categories": [
+      {
+        "title": "Operations",
+        "items": [
+          {
+            "name": "Work Orders",
+            "description": "Photo-first maintenance tickets on a Kanban board. Every status change is time-stamped, every fix has visual evidence in the audit log."
+          },
+          {
+            "name": "Events & Catering",
+            "description": "Inquiry → proposal → invoice in one place. Send a branded PDF in minutes; track payments without a separate billing tool."
+          },
+          {
+            "name": "IT Hub",
+            "description": "Wi-Fi credentials, vendor logins, equipment serial numbers, warranty dates — searchable, role-gated, one source of truth."
+          },
+          {
+            "name": "Vendor Directory",
+            "description": "Plumbers, electricians, linen suppliers, food vendors — names, contacts, contracts, and last-called dates in one Rolodex."
+          }
+        ]
+      },
+      {
+        "title": "Guest-facing",
+        "items": [
+          {
+            "name": "Branded Arrival Page",
+            "description": "Per-room QR card that opens to your hotel's brand, your Wi-Fi, your room-service menus. No guest account, no app to download."
+          },
+          {
+            "name": "Digital Signage",
+            "description": "Any browser-capable TV becomes a display. Schedule by day, hour, or zone. Three screens included; unlimited via the add-on."
+          },
+          {
+            "name": "Emergency Broadcast",
+            "description": "Take over every screen at a property in one click. Pre-built templates for fire, weather, evacuation; custom messages anytime."
+          },
+          {
+            "name": "Guest Issue Intake",
+            "description": "Guests scan a QR and report problems in their language. Tickets land in the same Kanban board as staff-reported work orders."
+          }
+        ]
+      },
+      {
+        "title": "Media & content",
+        "items": [
+          {
+            "name": "Global Media CDN",
+            "description": "Photos and videos served from the edge worldwide. Same fast load in Tokyo, Lisbon, or Toronto. 25 GB included on every plan."
+          },
+          {
+            "name": "Floor Plans & Documents",
+            "description": "One canonical place for layouts, equipment manuals, vendor warranties, brand guidelines. Versioned, downloadable, never lost in chat."
+          },
+          {
+            "name": "Branded Text Cards",
+            "description": "Build sign content in-app with your brand color and typography. No Canva, no PowerPoint round-trip."
+          },
+          {
+            "name": "Restaurant & Room Service Menus",
+            "description": "Editable menus that auto-publish to the arrival page and signage. Update once, every surface refreshes."
+          }
+        ]
+      },
+      {
+        "title": "Team & multi-property",
+        "items": [
+          {
+            "name": "Unlimited Team Members",
+            "description": "Front desk, housekeeping, engineering, ownership — every staff member at every property included, no per-seat charges, ever."
+          },
+          {
+            "name": "Role-based Access",
+            "description": "Owners, GMs, managers, line staff — each role sees only what they need. Granular permissions per property, per module."
+          },
+          {
+            "name": "Multi-property Console",
+            "description": "Switch between properties in one click. Same login, same workflows. Group-level dashboards roll up automatically."
+          },
+          {
+            "name": "Two-factor Authentication",
+            "description": "Optional 2FA per user via any authenticator app. Owners can require it org-wide; recovery flow handled through admin support."
+          }
+        ]
+      },
+      {
+        "title": "Billing & trust",
+        "items": [
+          {
+            "name": "Per-property Pricing",
+            "description": "No per-seat, no per-screen, no per-room math. One flat number per property, predictable forever."
+          },
+          {
+            "name": "Local-currency Billing",
+            "description": "Sign up in your language; get invoiced in USD, EUR, GBP, MXN, AUD, JPY, KRW, VND, or SGD. No FX conversion surprises."
+          },
+          {
+            "name": "No Contracts",
+            "description": "Cancel from your account any time. No annual commitments, no notice periods, no exit interviews."
+          },
+          {
+            "name": "7-day Free Trial",
+            "description": "Full feature access for 7 days. No credit card to start; your data persists if you convert and exports if you don't."
+          }
+        ]
+      }
+    ]
+  },
+  "destinations": {
+    "eyebrow": "Markets we're built for",
+    "title": "Made for boutique hotels everywhere.",
+    "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Local-currency billing, signup in your language, the same back-office stack everywhere."
+  },
+  "asianDestinations": {
+    "eyebrow": "Now serving APAC",
+    "title": "Built for the boutique scene across Asia, too.",
+    "sub": "Tokyo, Seoul, Hanoi, Singapore — design hotels, ryokans, lifestyle properties, and small luxury groups. Sign up in your language, get billed in your currency, run the same operational stack we run for boutiques in Europe and the Americas.",
+    "items": [
+      {
+        "city": "Tokyo",
+        "country": "Japan",
+        "blurb": "Shibuya design hotels, Asakusa ryokans, Ginza lifestyle properties — JPY billing, 日本語 signup, the same maintenance + events + signage stack."
+      },
+      {
+        "city": "Seoul",
+        "country": "South Korea",
+        "blurb": "Gangnam boutiques, Itaewon hostels, Jeju resort branches — KRW billing, 한국어 signup, one subscription per property."
+      },
+      {
+        "city": "Hanoi",
+        "country": "Vietnam",
+        "blurb": "Old Quarter boutiques, Hội An heritage hotels, Da Nang beach properties — VND billing, Tiếng Việt signup, flat per-property pricing that scales."
+      },
+      {
+        "city": "Singapore",
+        "country": "Singapore",
+        "blurb": "Chinatown shophouse hotels, Tanjong Pagar lifestyle properties, design groups across the island — SGD billing, English signup, no per-screen surprises."
+      }
+    ]
+  },
+  "useCases": {
+    "eyebrow": "How customers use it",
+    "title": "Three boutiques, three different daily wins.",
+    "sub": "These are real customers running on MyHotelOps today. Names withheld at their request — boutique operators value their privacy and we honor it. The use cases are theirs.",
+    "items": [
+      {
+        "headline": "Cut maintenance lag from days to hours",
+        "type": "32-room boutique · East Coast US",
+        "body": "Front desk used to email engineering; tickets sat in inboxes. With photo-first work orders the cycle from guest report → completed fix dropped from a 2-3 day median to under 4 hours. Owner finally has a Kanban view of every open issue across the property in one place."
+      },
+      {
+        "headline": "Replaced four separate SaaS subscriptions",
+        "type": "Two-property design hotel group · West Coast US",
+        "body": "Cancelled their maintenance ticketing tool, their event-banquet platform, their digital signage subscription, and their guest concierge app. Net spend dropped about $400/property/mo with all the same workflows still running — just consolidated under one $188 line item."
+      },
+      {
+        "headline": "Onboarded GM in an afternoon, not a week",
+        "type": "Small group hotelier · Pacific Northwest",
+        "body": "New GM started on a Tuesday. By end of day they had work orders, vendor contacts, the Wi-Fi credentials, the printable arrival cards, and the events pipeline all in one tab. Owner used to budget two weeks for new-GM ramp and now allocates one afternoon."
+      }
+    ],
+    "footnote": "Want to share your story? Email {email} — we'll write it up so it reads honest, not like a pitch."
+  },
+  "demo": {
+    "navLabel": "Talk to us",
+    "eyebrow": "For multi-property groups",
+    "headline": "Want a tour before you sign up?",
+    "sub": "If you run more than one property — or you'd rather see the product walked through than poke around the trial — book 30 minutes with us. We'll show you the parts that matter for your operation, answer the awkward billing questions, and skip the parts that don't apply.",
+    "alternative": {
+      "heading": "Don't need a call?",
+      "body": "The 7-day free trial gives you the same access. No credit card, full feature set, your data stays if you don't convert.",
+      "cta": "Start the free trial instead"
+    },
+    "calendar": {
+      "heading": "Pick a time",
+      "intro": "30-minute calls on Google Meet. All times shown in US Pacific (PT).",
+      "takenLabel": "Taken",
+      "selectInstruction": "Tap an available slot to book it.",
+      "fallback": "None of these work? Email {email} and we'll find a time."
+    },
+    "booking": {
+      "heading": "Book {slot}",
+      "subtitle": "We'll email you a 6-digit code to confirm your address, then send a Google Meet calendar invite.",
+      "changeSlot": "Change time",
+      "yourName": "Your name",
+      "workEmail": "Work email",
+      "hotelName": "Hotel name",
+      "propertyCount": "How many properties?",
+      "propertyCountPlaceholder": "e.g. 1, 3, 12",
+      "preferredLanguage": "Preferred language for the call",
+      "preferredLanguageHint": "We'll match if we can — fallback is English.",
+      "languageEn": "English",
+      "languageEs": "Español",
+      "languageKo": "한국어 (Korean)",
+      "languageVi": "Tiếng Việt (Vietnamese)",
+      "notes": "Anything we should know? (optional)",
+      "notesPlaceholder": "What you're hoping to solve, your current stack, time-zone caveats…",
+      "cta": "Send verification code",
+      "ctaSending": "Sending…",
+      "successHeading": "You're booked.",
+      "successBody": "We'll send a Google Meet invite to {email} shortly. Reply to it if anything changes.",
+      "errorMissing": "Name, email, hotel name, language, and a slot are required.",
+      "errorEmail": "Please enter a valid email address.",
+      "errorSlot": "That time slot is no longer available — pick another.",
+      "errorLanguage": "Pick a language for the call.",
+      "errorGeneric": "Couldn't send the request. Please email {email} directly."
+    },
+    "otp": {
+      "heading": "Verify your email",
+      "subtitle": "We sent a {n}-digit code to {email}. Enter it to confirm your booking. The code expires in {minutes} minutes.",
+      "codeLabel": "Verification code",
+      "codeHint": "{n} digits, from the email we just sent.",
+      "cta": "Verify and book",
+      "ctaVerifying": "Verifying…",
+      "wrongEmail": "Wrong email?",
+      "startOver": "Start over",
+      "noEmail": "Didn't get the email?",
+      "resend": "Resend code",
+      "resending": "Sending…",
+      "resentRecently": "A new code is on its way.",
+      "errors": {
+        "codeRequired": "Enter the code from your email.",
+        "codeLength": "The code is {n} digits.",
+        "codeExpired": "That code has expired. Start over from /demo.",
+        "codeTooManyAttempts": "Too many wrong codes. Start over from /demo.",
+        "codeMismatchOne": "That code doesn't match. 1 attempt left.",
+        "codeMismatchMany": "That code doesn't match. {n} attempts left.",
+        "codeMismatchFinal": "That code doesn't match. Start over from /demo.",
+        "noPending": "We don't have a pending booking for that email. Start over from /demo.",
+        "tooManyResends": "Too many resends. Start over from /demo.",
+        "resendCooldown": "Hang on a moment before requesting another code."
+      }
+    }
+  },
+  "pricing": {
+    "eyebrow": "Pricing",
+    "headline": "Per property. Not per seat. Not per screen. Not per room.",
+    "sub": "One $100/property/month base. Two optional add-ons. That’s the whole price list — and the maximum a single property can possibly cost you is $188/month, regardless of how many screens, rooms, or staff you have.",
+    "midCycleNote": "No contracts. No annual commitments. Add or remove options whenever you want — cancel any time from your account.",
+    "cadence": "property / month",
+    "tagRequired": "Required",
+    "tagOptional": "Optional",
+    "plans": {
+      "base": {
+        "label": "Base",
+        "body": "Everything every property needs on day one — maintenance work orders, event proposals, IT records, media library, and 3 signage screens.",
+        "features": [
+          "Work Orders (Kanban with photo/video evidence)",
+          "Events & Catering (inquiry → proposal → invoice)",
+          "IT Hub (Wi-Fi, vendor logins, equipment)",
+          "Media catalog with global CDN",
+          "3 signage screens included",
+          "Unlimited team members"
+        ]
+      },
+      "signage": {
+        "label": "Signage Unlimited",
+        "body": "Lifts the 3-screen cap. Unlimited TVs at every property — lobby, breakroom, meeting rooms, pool deck. Same scheduler, same emergency broadcast.",
+        "features": [
+          "Unlimited screens per property",
+          "Per-property emergency takeover",
+          "Date + time-of-day scheduling",
+          "Pair any browser-capable TV",
+          "Image, video, web, or branded text card",
+          "Activated org-wide with one click"
+        ]
+      },
+      "guest": {
+        "label": "Guest Experience",
+        "body": "Branded arrival page, printable QR card for each room, and guest issue intake. Replaces $3–$6 per occupied room concierge tools at flat-rate.",
+        "features": [
+          "Arrival page builder with brand color",
+          "Wi-Fi auto-imported from IT Hub",
+          "Restaurant + room service menus",
+          "Letter / A4 printable QR card",
+          "No guest account, no app",
+          "Activated org-wide with one click"
+        ]
+      }
+    },
+    "compare": {
+      "eyebrow": "The math",
+      "headline": "For a 40-room boutique buying these tools today.",
+      "intro": "Hotels typically run a maintenance ticketing tool, a digital signage subscription, and a guest concierge / arrival platform — each on a different per-screen, per-room, or per-property billing axis. Here’s what one property pays for all three à la carte versus through MyHotelOps.",
+      "headers": {
+        "need": "Need",
+        "tool": "Standalone tool",
+        "standaloneCost": "Standalone cost",
+        "withUs": "With MyHotelOps"
+      },
+      "monthlyTotal": "Monthly total",
+      "alaCarte": "à la carte",
+      "savings": "Savings vs. standalone à la carte",
+      "footnote": "Standalone prices are publicly listed entry tiers as of May 2026; some vendors only quote on request and may be higher in practice. Guest-arrival vendors charge per occupied room, so the figure above assumes a 40-room property at typical mid-tier occupancy."
+    },
+    "scale": {
+      "headline": "What multi-property groups actually pay.",
+      "sub": "Add-ons activate org-wide and bill on every property’s invoice. A four-property group with both add-ons on pays 4 × $188 = $752/month — all in.",
+      "headers": {
+        "properties": "Properties",
+        "baseOnly": "Base only",
+        "baseSignage": "Base + Signage",
+        "everything": "Everything on"
+      },
+      "propertyOne": "1 property",
+      "propertyMany": "{n} properties",
+      "perMonth": "/mo"
+    },
+    "faq": {
+      "heading": "Common questions",
+      "items": [
+        {
+          "q": "Is there a setup or onboarding fee?",
+          "a": "One-time per tenant when you start with us — we apply it on the first property’s first invoice and never re-charge if you add more properties or resubscribe. We onboard your team personally; no DIY wizard."
+        },
+        {
+          "q": "What happens to my data if I cancel?",
+          "a": "You keep access to your media library and IT Hub records for 30 days, with an export option on day one. After 30 days your account is closed and storage is reclaimed."
+        },
+        {
+          "q": "Do you charge per user or per seat?",
+          "a": "No. Every staff member at every property is included — front desk, housekeeping, engineering, ownership. Per-property pricing is the only axis."
+        },
+        {
+          "q": "What if I only want maintenance, or only signage?",
+          "a": "You can. The base subscription includes maintenance work orders, events & catering, IT Hub, media, and three signage screens at $100/property. Add Signage Unlimited or Guest Experience only if you want them — toggle on /billing, billed prorated."
+        },
+        {
+          "q": "How is the signage add-on different from Yodeck or OptiSigns?",
+          "a": "Flat per-property pricing — unlimited screens at a property for $49 versus $8–$30 per screen per month elsewhere. Same player concept (any browser-capable TV), same scheduling. Break-even versus Yodeck at about 6 screens; cheaper above that."
+        },
+        {
+          "q": "Do you integrate with our PMS (Mews, Cloudbeds, Opera)?",
+          "a": "No, and that’s deliberate. We will never replace or sync with your PMS — we sit alongside it and handle every operational surface it leaves to spreadsheets and group chats. Reservation data stays in your PMS where it belongs; everything else (work orders, events, vendors, signage, guest arrival) lives here."
+        }
+      ]
+    },
+    "cta": {
+      "headline": "Start with the base. Add the rest only if you need it.",
+      "sub": "Sign up takes a minute. Full access for 7 days, no credit card.",
+      "button": "Start free trial"
+    }
+  },
+  "email": {
+    "signoff": "— MyHotelOps",
+    "otp": {
+      "subject": "Your MyHotelOps verification code: {code}",
+      "greeting": "Hi {name},",
+      "intro": "Your verification code for MyHotelOps is:",
+      "instructions": "Enter it on the signup page to finish creating {hotel}.",
+      "ttl": "The code expires in {minutes} minutes. If you didn’t request this, you can safely ignore this email."
+    },
+    "welcome": {
+      "subject": "Welcome to MyHotelOps — your {days}-day trial is live",
+      "greeting": "Hi {name},",
+      "intro": "{hotel} is set up on MyHotelOps. Your free trial gives you full access for {days} days — no credit card needed, {gb} GB of media included.",
+      "ctaOpen": "Open your dashboard",
+      "tryFirstHeading": "What to try first",
+      "tryFirstTeam": "Add your team from the Team page",
+      "tryFirstMedia": "Upload your first floor plans / photos to Media",
+      "tryFirstWO": "Create a work order to see the Kanban board in action",
+      "convertPrefix": "Ready to convert? ",
+      "convertLink": "Add a payment method",
+      "convertSuffix": " any time."
+    },
+    "reminder": {
+      "subjectOne": "Your MyHotelOps trial ends in 1 day",
+      "subjectMany": "Your MyHotelOps trial ends in {days} days",
+      "greeting": "Hi {name},",
+      "bodyOne": "Your MyHotelOps trial for {hotel} ends in 1 day. Add a payment method to keep editing — your data stays where it is regardless.",
+      "bodyMany": "Your MyHotelOps trial for {hotel} ends in {days} days. Add a payment method to keep editing — your data stays where it is regardless.",
+      "cta": "Open Billing"
+    },
+    "expired": {
+      "subject": "Your MyHotelOps trial has ended — your data is safe",
+      "greeting": "Hi {name},",
+      "body": "Your MyHotelOps trial for {hotel} ended today. We’ve moved your account to read-only and we’re holding all of your data — add a payment method any time to keep editing.",
+      "cta": "Open Billing"
+    }
+  }
+}

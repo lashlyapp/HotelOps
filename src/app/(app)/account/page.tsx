@@ -1,12 +1,15 @@
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
+import { listVerifiedFactors } from '@/lib/auth/mfa'
 import { requireSession } from '@/lib/auth/session'
 import { ChangeEmailForm } from './_components/change-email-form'
 import { ChangePasswordForm } from './_components/change-password-form'
 import { DeleteAccountSection } from './_components/delete-account-section'
+import { MfaSection } from './_components/mfa-section'
 import { ProfileForm } from './_components/profile-form'
 
 export default async function AccountPage() {
   const session = await requireSession()
+  const factors = await listVerifiedFactors()
   const deletableRole: 'org_owner' | 'org_staff' | null =
     session.profile.role === 'org_owner'
       ? 'org_owner'
@@ -47,8 +50,11 @@ export default async function AccountPage() {
         <CardHeader>
           <CardTitle>Security</CardTitle>
         </CardHeader>
-        <CardBody>
+        <CardBody className="space-y-6">
           <ChangePasswordForm />
+          <div className="border-t border-border-subtle pt-6">
+            <MfaSection factors={factors} />
+          </div>
         </CardBody>
       </Card>
 

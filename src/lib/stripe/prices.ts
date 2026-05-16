@@ -1,4 +1,8 @@
 import type Stripe from 'stripe'
+import {
+  currencyAwareLookupKey,
+  type Currency,
+} from '@/lib/billing/currency'
 
 /**
  * Stable lookup keys for the Prices HotelOps bills with. The actual Price ids
@@ -7,6 +11,14 @@ import type Stripe from 'stripe'
  * supports this on Price create with `transfer_lookup_key: true`). Existing
  * subscriptions stay on their grandfathered Price; new subscriptions pick up
  * the new one automatically.
+ *
+ * Multi-currency: a non-USD org resolves a Price by appending the
+ * lowercase currency code to the lookup key (see
+ * {@link currencyAwareLookupKey} in src/lib/billing/currency.ts). USD
+ * keeps the bare keys — no migration required for existing customers.
+ * For each currency we launch, the operator creates a parallel set
+ * of Stripe Prices with the suffixed lookup keys, e.g.
+ * `hotelops_per_property_monthly_eur` at €99/month.
  */
 export const HOTELOPS_PRICE_LOOKUP_KEYS = {
   // Base — $100 / property / month. Required for every active tenant.
@@ -46,35 +58,51 @@ const TTL_MS = 5 * 60 * 1000
  * Price has that key. Results are cached process-locally for 5 minutes so
  * we don't ping Stripe on every billing request — that's a short enough
  * window that a price update propagates quickly without manual cache busts.
+ *
+ * Pass `currency` to resolve the per-currency Price. USD returns the
+ * Price under the bare key (backwards compatible); other currencies
+ * resolve under the suffixed key, e.g. `<base>_eur`. Callers that
+ * don't pass a currency get the USD Price — same behavior as before
+ * multi-currency landed.
  */
 export async function resolvePriceIdByLookupKey(
   stripeClient: Stripe,
   lookupKey: string,
+  currency?: Currency,
 ): Promise<string | null> {
+  const effectiveKey = currency
+    ? currencyAwareLookupKey(lookupKey, currency)
+    : lookupKey
   const now = Date.now()
-  const cached = cache.get(lookupKey)
+  const cached = cache.get(effectiveKey)
   if (cached && cached.expiresAt > now) return cached.id
 
   const prices = await stripeClient.prices.list({
-    lookup_keys: [lookupKey],
+    lookup_keys: [effectiveKey],
     active: true,
     limit: 1,
   })
   const id = prices.data[0]?.id ?? null
-  cache.set(lookupKey, { id, expiresAt: now + TTL_MS })
+  cache.set(effectiveKey, { id, expiresAt: now + TTL_MS })
   return id
 }
 
 export async function requirePriceIdByLookupKey(
   stripeClient: Stripe,
   lookupKey: string,
+  currency?: Currency,
 ): Promise<string> {
-  const id = await resolvePriceIdByLookupKey(stripeClient, lookupKey)
+  const id = await resolvePriceIdByLookupKey(stripeClient, lookupKey, currency)
   if (!id) {
+    const effectiveKey = currency
+      ? currencyAwareLookupKey(lookupKey, currency)
+      : lookupKey
     throw new Error(
-      `No active Stripe Price with lookup_key "${lookupKey}". Create a Price ` +
+      `No active Stripe Price with lookup_key "${effectiveKey}". Create a Price ` +
         `in the Stripe Dashboard and set its lookup key, or transfer the key ` +
-        `onto a new Price (transfer_lookup_key=true).`,
+        `onto a new Price (transfer_lookup_key=true). For non-USD currencies, ` +
+        `the lookup key must be suffixed with the lowercase ISO code (e.g. ` +
+        `<base>_eur).`,
     )
   }
   return id
@@ -91,13 +119,17 @@ export async function requirePriceIdByLookupKey(
 export async function resolvePriceSnapshotByLookupKey(
   stripeClient: Stripe,
   lookupKey: string,
+  currency?: Currency,
 ): Promise<PriceSnapshot | null> {
+  const effectiveKey = currency
+    ? currencyAwareLookupKey(lookupKey, currency)
+    : lookupKey
   const now = Date.now()
-  const cached = snapshotCache.get(lookupKey)
+  const cached = snapshotCache.get(effectiveKey)
   if (cached && cached.expiresAt > now) return cached.snapshot
 
   const prices = await stripeClient.prices.list({
-    lookup_keys: [lookupKey],
+    lookup_keys: [effectiveKey],
     active: true,
     limit: 1,
   })
@@ -110,10 +142,8 @@ export async function resolvePriceSnapshotByLookupKey(
         interval: price.recurring?.interval ?? null,
       }
     : null
-  snapshotCache.set(lookupKey, { snapshot, expiresAt: now + TTL_MS })
-  // Keep the id cache populated too so a later resolvePriceIdByLookupKey
-  // call doesn't double-fetch.
-  cache.set(lookupKey, { id: snapshot?.id ?? null, expiresAt: now + TTL_MS })
+  snapshotCache.set(effectiveKey, { snapshot, expiresAt: now + TTL_MS })
+  cache.set(effectiveKey, { id: snapshot?.id ?? null, expiresAt: now + TTL_MS })
   return snapshot
 }
 

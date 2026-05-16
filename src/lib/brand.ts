@@ -4,7 +4,8 @@
  */
 export const BRAND = {
   name: 'MyHotelOps',
-  productTagline: 'Operations platform for hotel property owners',
+  productTagline:
+    "The operations layer for boutique hotels — everything your PMS doesn't do.",
   legalName: 'MyHotelOps',
   address: {
     line1: '2108 N St #15449',

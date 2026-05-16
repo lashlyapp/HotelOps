@@ -4,44 +4,44 @@ import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
 import { Card, CardBody } from '@/components/ui/card'
 import { BRAND } from '@/lib/brand'
+import { type Dictionary, getDictionary } from '@/lib/i18n/dictionaries'
+import { getLocale } from '@/lib/i18n/get-locale'
+import { interpolate } from '@/lib/i18n/interpolate'
 
 export const metadata: Metadata = {
   title: `Pricing — ${BRAND.name}`,
   description:
-    'Flat per-property pricing for hotel operations software. $100/property/month base with Work Orders, Events & Catering, IT Hub, and Media. Optional add-ons for unlimited signage and guest experience.',
+    "Flat per-property pricing for the boutique-hotel back-office layer that runs alongside your PMS. $100/property/month base. Optional add-ons for unlimited signage and guest arrival.",
   alternates: { canonical: `https://www.${BRAND.domain}/pricing` },
   openGraph: {
     type: 'website',
     title: `Pricing — ${BRAND.name}`,
     description:
-      'Hotel operations software with flat per-property pricing. Replace Quore, Yodeck, and Duve under one $188/property/mo cap.',
+      "Back-office operations for boutique hotels, alongside any PMS. Flat per-property pricing — $100/mo base, $188 with everything on.",
     url: `https://www.${BRAND.domain}/pricing`,
     siteName: BRAND.name,
   },
 }
 
-export default function PricingPage() {
-  // Single source of truth: docs/pricing.md. If these numbers change here
-  // but not there (or vice versa), one of them is wrong.
+export default async function PricingPage() {
+  const locale = await getLocale()
+  const dict = getDictionary(locale)
+  const t = dict.pricing
+
   return (
     <div className="flex flex-1 flex-col">
-      <PublicHeader />
+      <PublicHeader t={dict} />
 
       <main className="flex-1">
         <section className="mx-auto max-w-6xl px-6 pt-16 pb-12 lg:pt-24 text-center">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-            Pricing
+            {t.eyebrow}
           </p>
           <h1 className="mt-4 text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-fg leading-[1.05]">
-            Per property. Not per seat.
-            <br />
-            Not per screen. Not per room.
+            {t.headline}
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted leading-relaxed">
-            One $100/property/month base. Two optional add-ons. That&apos;s
-            the whole price list — and the maximum a single property
-            can possibly cost you is $188/month, regardless of how many
-            screens, rooms, or staff you have.
+            {t.sub}
           </p>
         </section>
 
@@ -49,55 +49,33 @@ export default function PricingPage() {
         <section className="mx-auto max-w-6xl px-6 py-8">
           <div className="grid gap-5 lg:grid-cols-3">
             <PlanCard
-              label="Base"
+              label={t.plans.base.label}
               price="$100"
-              cadence="property / month"
-              tag="Required"
+              cadence={t.cadence}
+              tag={t.tagRequired}
               tagTone="primary"
-              body="Everything every property needs on day one — maintenance work orders, event proposals, IT records, media library, and 3 signage screens."
-              features={[
-                'Work Orders (Kanban with photo/video evidence)',
-                'Events & Catering (inquiry → proposal → invoice)',
-                'IT Hub (Wi-Fi, vendor logins, equipment)',
-                'Media catalog with global CDN',
-                '3 signage screens included',
-                'Unlimited team members',
-              ]}
+              body={t.plans.base.body}
+              features={t.plans.base.features}
             />
             <PlanCard
-              label="Signage Unlimited"
+              label={t.plans.signage.label}
               price="+$49"
-              cadence="property / month"
-              tag="Optional"
-              body="Lifts the 3-screen cap. Unlimited TVs at every property — lobby, breakroom, meeting rooms, pool deck. Same scheduler, same emergency broadcast."
-              features={[
-                'Unlimited screens per property',
-                'Per-property emergency takeover',
-                'Date + time-of-day scheduling',
-                'Pair any browser-capable TV',
-                'Image, video, web, or branded text card',
-                'Activated org-wide with one click',
-              ]}
+              cadence={t.cadence}
+              tag={t.tagOptional}
+              body={t.plans.signage.body}
+              features={t.plans.signage.features}
             />
             <PlanCard
-              label="Guest Experience"
+              label={t.plans.guest.label}
               price="+$39"
-              cadence="property / month"
-              tag="Optional"
-              body="Branded arrival page, printable QR card for each room, and guest issue intake. Replaces $3–$6 per occupied room concierge tools at flat-rate."
-              features={[
-                'Arrival page builder with brand color',
-                'Wi-Fi auto-imported from IT Hub',
-                'Restaurant + room service menus',
-                'Letter / A4 printable QR card',
-                'No guest account, no app',
-                'Activated org-wide with one click',
-              ]}
+              cadence={t.cadence}
+              tag={t.tagOptional}
+              body={t.plans.guest.body}
+              features={t.plans.guest.features}
             />
           </div>
           <p className="mt-6 text-center text-xs text-subtle">
-            Mid-cycle add-on changes are prorated and invoiced immediately
-            so each property&apos;s billing timeline stays clean.
+            {t.midCycleNote}
           </p>
         </section>
 
@@ -106,17 +84,13 @@ export default function PricingPage() {
           <div className="mx-auto max-w-6xl px-6 py-20">
             <div className="max-w-2xl">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                The math
+                {t.compare.eyebrow}
               </p>
               <h2 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-                For a 40-room boutique buying these tools today.
+                {t.compare.headline}
               </h2>
               <p className="mt-4 text-base text-muted leading-relaxed">
-                Hotels typically run a maintenance ticketing tool, a digital
-                signage subscription, and a guest concierge / arrival
-                platform — each on a different per-screen, per-room, or
-                per-property billing axis. Here&apos;s what one property
-                pays for all three à la carte versus through {BRAND.name}.
+                {t.compare.intro}
               </p>
             </div>
 
@@ -124,16 +98,24 @@ export default function PricingPage() {
               <table className="w-full min-w-[720px] text-sm">
                 <thead className="text-left text-xs uppercase tracking-wider text-subtle">
                   <tr>
-                    <th className="px-4 py-3 font-medium">Need</th>
-                    <th className="px-4 py-3 font-medium">Standalone tool</th>
-                    <th className="px-4 py-3 font-medium text-right">
-                      Standalone cost
+                    <th className="px-4 py-3 font-medium">
+                      {t.compare.headers.need}
+                    </th>
+                    <th className="px-4 py-3 font-medium">
+                      {t.compare.headers.tool}
                     </th>
                     <th className="px-4 py-3 font-medium text-right">
-                      With {BRAND.name}
+                      {t.compare.headers.standaloneCost}
+                    </th>
+                    <th className="px-4 py-3 font-medium text-right">
+                      {t.compare.headers.withUs}
                     </th>
                   </tr>
                 </thead>
+                {/* Table body left in English: competitor names + prices
+                    are market-specific data, not chrome. Localized
+                    European competitor rows (Mews app store, Lybra,
+                    etc.) land in a follow-up content PR. */}
                 <tbody className="divide-y divide-border-subtle bg-surface">
                   <CompareRow
                     need="Maintenance + ticketing"
@@ -172,8 +154,12 @@ export default function PricingPage() {
                     hotelopsCost="$39"
                   />
                   <tr className="bg-surface-muted/60 font-medium">
-                    <td className="px-4 py-3 text-fg">Monthly total</td>
-                    <td className="px-4 py-3 text-muted">à la carte</td>
+                    <td className="px-4 py-3 text-fg">
+                      {t.compare.monthlyTotal}
+                    </td>
+                    <td className="px-4 py-3 text-muted">
+                      {t.compare.alaCarte}
+                    </td>
                     <td className="px-4 py-3 text-right text-fg tabular-nums">
                       ~$580
                     </td>
@@ -183,7 +169,7 @@ export default function PricingPage() {
                   </tr>
                   <tr className="bg-success-bg/30 font-semibold">
                     <td className="px-4 py-3 text-fg" colSpan={2}>
-                      Savings vs. standalone à la carte
+                      {t.compare.savings}
                     </td>
                     <td
                       className="px-4 py-3 text-right text-success-fg tabular-nums"
@@ -197,11 +183,7 @@ export default function PricingPage() {
             </div>
 
             <p className="mt-6 max-w-2xl text-xs text-subtle">
-              Standalone prices are publicly listed entry tiers as of
-              May 2026; some vendors only quote on request and may be
-              higher in practice. Guest-arrival vendors charge per
-              occupied room, so the figure above assumes a 40-room
-              property at typical mid-tier occupancy.
+              {t.compare.footnote}
             </p>
           </div>
         </section>
@@ -210,12 +192,10 @@ export default function PricingPage() {
         <section className="mx-auto max-w-6xl px-6 py-20">
           <div className="max-w-2xl">
             <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-              What multi-property groups actually pay.
+              {t.scale.headline}
             </h2>
             <p className="mt-4 text-base text-muted leading-relaxed">
-              Add-ons activate org-wide and bill on every property&apos;s
-              invoice. A four-property group with both add-ons on pays
-              4 × $188 = $752/month — all in.
+              {t.scale.sub}
             </p>
           </div>
 
@@ -223,24 +203,26 @@ export default function PricingPage() {
             <table className="w-full min-w-[640px] text-sm">
               <thead className="text-left text-xs uppercase tracking-wider text-subtle">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Properties</th>
-                  <th className="px-4 py-3 font-medium text-right">
-                    Base only
+                  <th className="px-4 py-3 font-medium">
+                    {t.scale.headers.properties}
                   </th>
                   <th className="px-4 py-3 font-medium text-right">
-                    Base + Signage
+                    {t.scale.headers.baseOnly}
                   </th>
                   <th className="px-4 py-3 font-medium text-right">
-                    Everything on
+                    {t.scale.headers.baseSignage}
+                  </th>
+                  <th className="px-4 py-3 font-medium text-right">
+                    {t.scale.headers.everything}
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-subtle">
-                <ScaleRow count={1} />
-                <ScaleRow count={3} />
-                <ScaleRow count={5} />
-                <ScaleRow count={10} />
-                <ScaleRow count={25} />
+                <ScaleRow count={1} t={t.scale} />
+                <ScaleRow count={3} t={t.scale} />
+                <ScaleRow count={5} t={t.scale} />
+                <ScaleRow count={10} t={t.scale} />
+                <ScaleRow count={25} t={t.scale} />
               </tbody>
             </table>
           </div>
@@ -250,33 +232,12 @@ export default function PricingPage() {
         <section className="border-t border-border-subtle bg-surface-muted/40">
           <div className="mx-auto max-w-3xl px-6 py-20">
             <h2 className="text-3xl font-semibold tracking-tight text-fg">
-              Common questions
+              {t.faq.heading}
             </h2>
             <div className="mt-8 space-y-6">
-              <Faq
-                q="Is there a setup or onboarding fee?"
-                a="One-time per tenant when you start with us — we apply it on the first property's first invoice and never re-charge if you add more properties or resubscribe. We onboard your team personally; no DIY wizard."
-              />
-              <Faq
-                q="What happens to my data if I cancel?"
-                a="You keep access to your media library and IT Hub records for 30 days, with an export option on day one. After 30 days your account is closed and storage is reclaimed."
-              />
-              <Faq
-                q="Do you charge per user or per seat?"
-                a="No. Every staff member at every property is included — front desk, housekeeping, engineering, ownership. Per-property pricing is the only axis."
-              />
-              <Faq
-                q="What if I only want maintenance, or only signage?"
-                a="You can. The base subscription includes maintenance work orders, events & catering, IT Hub, media, and three signage screens at $100/property. Add Signage Unlimited or Guest Experience only if you want them — toggle on /billing, billed prorated."
-              />
-              <Faq
-                q="How is the signage add-on different from Yodeck or OptiSigns?"
-                a="Flat per-property pricing — unlimited screens at a property for $49 versus $8–$30 per screen per month elsewhere. Same player concept (any browser-capable TV), same scheduling. Break-even versus Yodeck at about 6 screens; cheaper above that."
-              />
-              <Faq
-                q="Do you integrate with our PMS (Mews, Cloudbeds, Opera)?"
-                a="Not yet. The current product runs alongside whatever PMS you use; PMS adapters (reservation import for arrival personalization, etc.) are on the roadmap."
-              />
+              {t.faq.items.map((item) => (
+                <Faq key={item.q} q={item.q} a={item.a} />
+              ))}
             </div>
           </div>
         </section>
@@ -284,19 +245,17 @@ export default function PricingPage() {
         {/* ─── CTA ───────────────────────────────────────────────────── */}
         <section className="mx-auto max-w-6xl px-6 py-20 text-center">
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-            Start with the base. Add the rest only if you need it.
+            {t.cta.headline}
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-base text-muted leading-relaxed">
-            Sign up takes a minute. We&apos;ll be in touch to onboard
-            you and your team personally so you&apos;re running on
-            day one.
+            {t.cta.sub}
           </p>
           <div className="mt-8">
             <Link
               href="/signup"
               className="focus-ring inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-base font-medium text-primary-fg hover:bg-primary-hover transition-colors"
             >
-              Sign up
+              {t.cta.button}
             </Link>
           </div>
         </section>
@@ -307,7 +266,7 @@ export default function PricingPage() {
   )
 }
 
-function PublicHeader() {
+function PublicHeader({ t }: { t: Dictionary }) {
   return (
     <header className="border-b border-border-subtle">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
@@ -320,25 +279,43 @@ function PublicHeader() {
             href="/#work-orders"
             className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
           >
-            Work Orders
+            {t.nav.workOrders}
           </Link>
           <Link
             href="/#signage"
             className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
           >
-            Signage
+            {t.nav.signage}
           </Link>
           <Link
             href="/#arrival"
             className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
           >
-            Arrival
+            {t.nav.arrival}
+          </Link>
+          <Link
+            href="/features"
+            className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
+          >
+            {t.features.navLabel}
           </Link>
           <Link
             href="/pricing"
             className="focus-ring rounded-md px-3 py-1.5 font-medium text-fg"
           >
-            Pricing
+            {t.nav.pricing}
+          </Link>
+          <Link
+            href="/about"
+            className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
+          >
+            {t.about.navLabel}
+          </Link>
+          <Link
+            href="/demo"
+            className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
+          >
+            {t.demo.navLabel}
           </Link>
         </nav>
         <div className="flex items-center gap-2">
@@ -346,13 +323,13 @@ function PublicHeader() {
             href="/login"
             className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
           >
-            Log in
+            {t.common.logIn}
           </Link>
           <Link
             href="/signup"
             className="focus-ring inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-fg hover:bg-primary-hover transition-colors"
           >
-            Sign up
+            {t.common.signUp}
           </Link>
         </div>
       </div>
@@ -375,7 +352,7 @@ function PlanCard({
   tag: string
   tagTone?: 'primary'
   body: string
-  features: string[]
+  features: readonly string[]
 }) {
   const tagClass =
     tagTone === 'primary'
@@ -442,23 +419,32 @@ function CompareRow({
   )
 }
 
-function ScaleRow({ count }: { count: number }) {
+function ScaleRow({
+  count,
+  t,
+}: {
+  count: number
+  t: Dictionary['pricing']['scale']
+}) {
   const base = 100 * count
   const signage = base + 49 * count
   const all = base + 49 * count + 39 * count
+  const label =
+    count === 1 ? t.propertyOne : interpolate(t.propertyMany, { n: count })
   return (
     <tr>
-      <td className="px-4 py-3 font-medium text-fg">
-        {count} {count === 1 ? 'property' : 'properties'}
+      <td className="px-4 py-3 font-medium text-fg">{label}</td>
+      <td className="px-4 py-3 text-right text-muted tabular-nums">
+        ${base}
+        {t.perMonth}
       </td>
       <td className="px-4 py-3 text-right text-muted tabular-nums">
-        ${base}/mo
-      </td>
-      <td className="px-4 py-3 text-right text-muted tabular-nums">
-        ${signage}/mo
+        ${signage}
+        {t.perMonth}
       </td>
       <td className="px-4 py-3 text-right text-fg tabular-nums">
-        ${all}/mo
+        ${all}
+        {t.perMonth}
       </td>
     </tr>
   )
