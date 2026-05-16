@@ -36,18 +36,22 @@ type Destination = {
   sub: string
 }
 
-// Image paths point at the existing licensed Adobe Stock hospitality
-// imagery already in /public. They're not city-specific (a hotel
-// exterior is a hotel exterior) but they're polished, licensed for
-// commercial use, and guarantee no broken-image placeholders go to
-// production. Swap each entry for the corresponding city-landmark
-// photo when the new licensed photos land — see
-// /public/landmarks/README.md for the full spec + intended mapping.
+// Image sources are hotlinked Unsplash photos of each city. Free for
+// commercial use, no attribution required, served from Unsplash's
+// CDN so we don't fan out a /public/ blob library for placeholder
+// imagery. URLs use the Unsplash CDN image-pipeline parameters
+// (w=1200, q=80) so the served file is reasonably sized regardless
+// of the original upload resolution. Swap each entry to
+// /landmarks/<city>.jpg once licensed Adobe Stock photos land — see
+// /public/landmarks/README.md.
+const UNSPLASH = (id: string) =>
+  `https://images.unsplash.com/photo-${id}?w=1200&q=80&auto=format&fit=crop`
+
 const DESTINATIONS: Destination[] = [
   {
     slug: 'lisbon',
-    imageSrc: '/AdobeStock_1951250090.jpeg',
-    imageAlt: 'Boutique hotel in Lisbon — placeholder imagery',
+    imageSrc: UNSPLASH('1555881400-74d7acaacd8b'),
+    imageAlt: 'Lisbon — pastel facades and tiled streets',
     lang: 'pt',
     city: 'Lisboa',
     neighborhoods: 'Alfama · Chiado · Bairro Alto',
@@ -56,8 +60,8 @@ const DESTINATIONS: Destination[] = [
   },
   {
     slug: 'barcelona',
-    imageSrc: '/AdobeStock_1896833868.jpeg',
-    imageAlt: 'Boutique hotel in Barcelona — placeholder imagery',
+    imageSrc: UNSPLASH('1583422409516-2895a77efded'),
+    imageAlt: 'Barcelona — Gothic Quarter at golden hour',
     lang: 'es',
     city: 'Barcelona',
     neighborhoods: 'El Born · Gòtic · Eixample',
@@ -66,8 +70,8 @@ const DESTINATIONS: Destination[] = [
   },
   {
     slug: 'paris',
-    imageSrc: '/AdobeStock_327436679.jpeg',
-    imageAlt: 'Boutique hotel in Paris — placeholder imagery',
+    imageSrc: UNSPLASH('1502602898657-3e91760cbb34'),
+    imageAlt: 'Paris — Haussmann facades along a quiet street',
     lang: 'fr',
     city: 'Paris',
     neighborhoods: 'Le Marais · Saint-Germain · Montmartre',
@@ -76,8 +80,8 @@ const DESTINATIONS: Destination[] = [
   },
   {
     slug: 'mexico-city',
-    imageSrc: '/AdobeStock_131189921.jpeg',
-    imageAlt: 'Boutique hotel in Mexico City — placeholder imagery',
+    imageSrc: UNSPLASH('1518105779142-d975f22f1b0a'),
+    imageAlt: 'Mexico City — Roma neighborhood architecture',
     lang: 'es',
     city: 'Ciudad de México',
     neighborhoods: 'Roma · Condesa · Polanco',
