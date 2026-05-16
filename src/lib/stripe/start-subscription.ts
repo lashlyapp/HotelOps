@@ -229,6 +229,16 @@ export async function startSubscriptionForProperty(
           collection_method: 'send_invoice',
           days_until_due: graceDays,
         }),
+    // Stripe Tax: ask Stripe to compute + add the right tax line item
+    // on every invoice for this subscription. Requires Stripe Tax to
+    // be enabled in the Dashboard (Settings → Tax → Activate). When
+    // the Customer doesn't yet have a usable tax address, Stripe
+    // marks the line as inclusive=false and warns on the invoice
+    // rather than failing the subscription create — the operator
+    // adds the address from /billing later. Critical for EU/UK
+    // customers (VAT / GST) but harmless for US customers in states
+    // where we have no nexus.
+    automatic_tax: { enabled: true },
   }
   if (setupFeePriceId) {
     params.add_invoice_items = [{ price: setupFeePriceId, quantity: 1 }]

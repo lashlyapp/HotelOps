@@ -196,6 +196,34 @@ HotelOps replaces:
 
 Customer who only wants the base: ~$360 of competing tools for $100.
 
+### European comparison (EUR)
+
+The US comparison table doesn't ring true for European boutique
+operators — different vendor names, different baseline pricing, and
+in some cases categories where the standalone tools are *more*
+expensive than the US equivalents (digital signage in particular
+trends pricier in Europe). For the EU launch markets, lead with
+this table instead:
+
+| Need | Standalone (EU) | MyHotelOps |
+| --- | --- | --- |
+| Maintenance + ticketing | €110 / mo (Hotelkit / Flexkeeping) | included |
+| Event / banquet management | €150 / mo (Event Temple / Tripleseat EU) | included |
+| Media DAM | €45 / mo (Cloudinary / Bynder) | included |
+| IT inventory + password vault | €25 / mo (1Password Business) | included |
+| Digital signage (6 screens) | €80 / mo (ScreenCloud / Yodeck EU) | €49 / mo |
+| Guest arrival / concierge | €140 / mo (Hotelchamp / Duve EU) | €39 / mo |
+| **Monthly total** | **€550** | **€188** |
+| **Savings** | | **€362 / mo (66%)** |
+
+Vendor names + EU pricing as of May 2026 from publicly listed entry
+tiers. Some EU vendors only quote on request; the figures above are
+the lower bound of what a boutique would typically pay. Update the
+table whenever launch-market pricing shifts; the localized /pricing
+page (`src/app/pricing/page.tsx`) currently reuses the US comparison
+rows verbatim — swap them out in a follow-up content PR once the EU
+prices firm up.
+
 ## Multi-currency
 
 `organizations.currency` is set at signup from the visitor's locale
@@ -227,6 +255,16 @@ The same `_<code>` suffix applies to every Price in the family:
 `currencyAwareLookupKey()` in `src/lib/billing/currency.ts` — the
 codebase reads the org's currency once on the way into Stripe and
 every downstream Price lookup picks the right one automatically.
+
+**Stripe Tax.** Every subscription is created with `automatic_tax:
+{ enabled: true }`, so VAT (EU/UK), GST (AU), IVA (MX), and US
+state sales tax are all calculated and added to the invoice
+automatically. Requires Stripe Tax to be enabled in the Dashboard
+(Settings → Tax → Activate) and a tax-usable address on the Stripe
+Customer. Without an address the subscription still creates; Stripe
+flags the missing address on the invoice and the operator can add
+it from `/billing → Billing details` before the customer's first
+real charge. Stripe Tax pricing applies (currently 0.5%).
 
 **Operator workflow to launch a new market** (e.g. add GBP):
 1. In Stripe Dashboard, create one Price per family in the new
