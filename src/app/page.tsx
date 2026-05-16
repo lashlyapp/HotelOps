@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
@@ -6,7 +5,9 @@ import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
 import { AsianDestinationsBand } from '@/components/marketing/asian-destinations-band'
 import { DestinationsBand } from '@/components/marketing/destinations-band'
+import { FeaturesDropdown } from '@/components/marketing/features-dropdown'
 import { GroupsBand } from '@/components/marketing/groups-band'
+import { SharpHeroImage } from '@/components/marketing/sharp-hero-image'
 import { UseCasesBand } from '@/components/marketing/use-cases-band'
 import { Card, CardBody } from '@/components/ui/card'
 import { BRAND } from '@/lib/brand'
@@ -193,30 +194,15 @@ export default async function HomePage() {
             aria-label="Primary"
             className="hidden items-center gap-1 text-sm sm:flex"
           >
-            <Link
-              href="/#work-orders"
-              className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
-            >
-              {t.nav.workOrders}
-            </Link>
-            <Link
-              href="/#signage"
-              className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
-            >
-              {t.nav.signage}
-            </Link>
-            <Link
-              href="/#arrival"
-              className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
-            >
-              {t.nav.arrival}
-            </Link>
-            <Link
-              href="/features"
-              className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
-            >
-              {t.features.navLabel}
-            </Link>
+            <FeaturesDropdown
+              label={t.features.navLabel}
+              items={[
+                { href: '/#work-orders', label: t.nav.workOrders },
+                { href: '/#signage', label: t.nav.signage },
+                { href: '/#arrival', label: t.nav.arrival },
+                { href: '/features', label: t.features.allLabel },
+              ]}
+            />
             <Link
               href="/pricing"
               className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
@@ -296,14 +282,11 @@ export default async function HomePage() {
             </div>
 
             <div className="relative aspect-[4/5] sm:aspect-[5/4] lg:aspect-square overflow-hidden rounded-2xl border border-border-subtle bg-surface-muted">
-              <Image
+              <SharpHeroImage
                 src={HERO_IMAGE}
                 alt="Hotel manager reviewing operations on a tablet"
-                fill
                 priority
-                quality={95}
                 sizes="(min-width: 1024px) 540px, (min-width: 640px) 90vw, 100vw"
-                className="object-cover"
               />
             </div>
           </div>
@@ -370,13 +353,10 @@ export default async function HomePage() {
                 </ul>
               </div>
               <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-border-subtle bg-surface">
-                <Image
+                <SharpHeroImage
                   src={LOBBY_IMAGE}
                   alt="Hotel lobby — work order capture in context"
-                  fill
-                  quality={95}
                   sizes="(min-width: 1024px) 480px, 100vw"
-                  className="object-cover"
                 />
               </div>
             </div>
@@ -388,13 +368,10 @@ export default async function HomePage() {
           <div className="mx-auto max-w-6xl px-6 py-20">
             <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:items-center">
               <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-border-subtle bg-surface order-2 lg:order-1">
-                <Image
+                <SharpHeroImage
                   src={EXTERIOR_IMAGE}
                   alt="Hotel exterior — signage across the property"
-                  fill
-                  quality={95}
                   sizes="(min-width: 1024px) 480px, 100vw"
-                  className="object-cover"
                 />
               </div>
               <div className="order-1 lg:order-2">
@@ -462,13 +439,10 @@ export default async function HomePage() {
                 </ul>
               </div>
               <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-border-subtle bg-surface">
-                <Image
+                <SharpHeroImage
                   src={GUEST_ROOM_IMAGE}
                   alt="Modern hotel guest room with QR card on the desk"
-                  fill
-                  quality={95}
                   sizes="(min-width: 1024px) 480px, 100vw"
-                  className="object-cover"
                 />
               </div>
             </div>
@@ -506,13 +480,10 @@ export default async function HomePage() {
 
         {/* ─── Identity band: built for hotels ───────────────────────── */}
         <section className="relative isolate overflow-hidden">
-          <Image
+          <SharpHeroImage
             src={RECEPTION_IMAGE}
             alt="Hotel reception desk with brass service bell"
-            fill
-            quality={95}
             sizes="100vw"
-            className="object-cover"
           />
           {/* dark overlay so the headline is readable on top of the photo */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/55 to-black/35" />
