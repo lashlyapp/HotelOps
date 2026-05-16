@@ -300,14 +300,14 @@
     ]
   },
   "destinations": {
-    "eyebrow": "Markets we're built for",
-    "title": "Made for boutique hotels everywhere.",
-    "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Sign up in your language, the same back-office stack everywhere."
+    "eyebrow": "Built for boutique hotels worldwide",
+    "title": "Made for independent and small-group hotels everywhere.",
+    "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Get started in your language and use the same operational stack everywhere. Billed in USD, and most major credit cards are supported."
   },
   "asianDestinations": {
-    "eyebrow": "Now serving APAC",
-    "title": "Built for the boutique scene across Asia, too.",
-    "sub": "Tokyo, Seoul, Hanoi, Singapore — design hotels, ryokans, lifestyle properties, and small luxury groups. Sign up in your language and run the same operational stack we run for boutiques in Europe and the Americas.",
+    "eyebrow": "Now serving Asia-Pacific",
+    "title": "Built for boutique hotels across Asia, too.",
+    "sub": "Tokyo, Seoul, Hanoi, Singapore — from design hotels and ryokans to lifestyle properties and small luxury groups. Get started in your language and run the same operational stack we support for boutiques in Europe and the Americas. Billed in USD, and most major credit cards are supported.",
     "items": [
       {
         "city": "Tokyo",
@@ -353,7 +353,7 @@
   "useCases": {
     "eyebrow": "How customers use it",
     "title": "Three boutiques, three different daily wins.",
-    "sub": "These are real customers running on MyHotelOps today. Names withheld at their request — boutique operators value their privacy and we honor it. The use cases are theirs.",
+    "sub": "These are real customers running on MyHotelOps today.",
     "items": [
       {
         "headline": "Cut maintenance lag from days to hours",

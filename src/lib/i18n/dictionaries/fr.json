@@ -300,14 +300,14 @@
     ]
   },
   "destinations": {
-    "eyebrow": "Les marchés pour lesquels nous sommes faits",
-    "title": "Pour les hôtels boutique, partout.",
-    "sub": "Lisbonne, Barcelone, Paris, Mexico — les quartiers où les hôtels indépendants et des petits groupes opèrent réellement. Inscription dans votre langue, la même base opérationnelle partout."
+    "eyebrow": "Conçu pour les hôtels boutique du monde entier",
+    "title": "Pour les hôtels indépendants et des petits groupes, partout.",
+    "sub": "Lisbonne, Barcelone, Paris, Mexico — les quartiers où les hôtels indépendants et des petits groupes opèrent réellement. Commencez dans votre langue et utilisez la même base opérationnelle partout. Facturation en USD, la plupart des principales cartes de crédit sont acceptées."
   },
   "asianDestinations": {
-    "eyebrow": "Maintenant en APAC",
-    "title": "Conçu aussi pour la scène boutique en Asie.",
-    "sub": "Tokyo, Séoul, Hanoï, Singapour — hôtels de design, ryokans, propriétés lifestyle et petits groupes de luxe. Inscrivez-vous dans votre langue et exploitez la même base que nos boutiques en Europe et aux Amériques.",
+    "eyebrow": "Maintenant en Asie-Pacifique",
+    "title": "Conçu aussi pour les hôtels boutique en Asie.",
+    "sub": "Tokyo, Séoul, Hanoï, Singapour — des hôtels de design et ryokans aux propriétés lifestyle et petits groupes de luxe. Commencez dans votre langue et exploitez la même base opérationnelle que nous offrons aux boutiques en Europe et aux Amériques. Facturation en USD, la plupart des principales cartes de crédit sont acceptées.",
     "items": [
       {
         "city": "Tokyo",
@@ -353,7 +353,7 @@
   "useCases": {
     "eyebrow": "Comment les clients l'utilisent",
     "title": "Trois boutiques, trois victoires quotidiennes différentes.",
-    "sub": "Ce sont des clients réels qui utilisent MyHotelOps aujourd'hui. Noms réservés à leur demande — les exploitants boutique tiennent à leur vie privée et nous la respectons. Les cas d'usage sont les leurs.",
+    "sub": "Ce sont des clients réels qui utilisent MyHotelOps aujourd'hui.",
     "items": [
       {
         "headline": "Délai de maintenance réduit de jours à heures",

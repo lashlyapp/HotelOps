@@ -300,14 +300,14 @@
     ]
   },
   "destinations": {
-    "eyebrow": "Mercados para los que estamos hechos",
-    "title": "Para hoteles boutique en todas partes.",
-    "sub": "Lisboa, Barcelona, París, Ciudad de México — los barrios donde los hoteles independientes y de pequeños grupos realmente operan. Regístrate en tu idioma, la misma base operativa en cada destino."
+    "eyebrow": "Hecho para hoteles boutique en todo el mundo",
+    "title": "Para hoteles independientes y de pequeños grupos, en todas partes.",
+    "sub": "Lisboa, Barcelona, París, Ciudad de México — los barrios donde los hoteles independientes y de pequeños grupos realmente operan. Empieza en tu idioma y usa la misma base operativa en cada destino. Facturado en USD, y se aceptan la mayoría de las tarjetas de crédito principales."
   },
   "asianDestinations": {
-    "eyebrow": "Ahora en APAC",
-    "title": "Hecho también para la escena boutique en Asia.",
-    "sub": "Tokio, Seúl, Hanói, Singapur — hoteles de diseño, ryokans, propiedades lifestyle y pequeños grupos de lujo. Regístrate en tu idioma y opera con la misma base que usamos para boutiques en Europa y América.",
+    "eyebrow": "Ahora en Asia-Pacífico",
+    "title": "Hecho para hoteles boutique en toda Asia, también.",
+    "sub": "Tokio, Seúl, Hanói, Singapur — desde hoteles de diseño y ryokans hasta propiedades lifestyle y pequeños grupos de lujo. Empieza en tu idioma y opera con la misma base que damos a los boutiques en Europa y América. Facturado en USD, y se aceptan la mayoría de las tarjetas de crédito principales.",
     "items": [
       {
         "city": "Tokio",
@@ -353,7 +353,7 @@
   "useCases": {
     "eyebrow": "Cómo lo usan los clientes",
     "title": "Tres boutiques, tres victorias diarias diferentes.",
-    "sub": "Estos son clientes reales que usan MyHotelOps hoy. Nombres reservados a petición — los operadores boutique valoran su privacidad y la respetamos. Los casos de uso son suyos.",
+    "sub": "Estos son clientes reales que usan MyHotelOps hoy.",
     "items": [
       {
         "headline": "Redujeron el tiempo de mantenimiento de días a horas",

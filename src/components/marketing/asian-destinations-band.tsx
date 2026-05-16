@@ -48,7 +48,7 @@ const DESTINATIONS: AsianDestination[] = [
     city: '東京',
     neighborhoods: '渋谷 · 浅草 · 銀座',
     headline: '東京のブティックホテル向け',
-    sub: '渋谷、浅草、銀座、そしてその間のすべての物件のための MyHotelOps。PMSがしないことすべてを一つの場所に。',
+    sub: '渋谷、浅草、銀座、そしてその周辺のすべての施設に対応する MyHotelOps。PMSではできない業務を、ひとつの場所で。',
   },
   {
     slug: 'seoul',
@@ -57,8 +57,8 @@ const DESTINATIONS: AsianDestination[] = [
     lang: 'ko',
     city: '서울',
     neighborhoods: '강남 · 이태원 · 홍대',
-    headline: '서울의 부티크 호텔을 위해',
-    sub: '강남, 이태원, 홍대 — 그리고 그 사이의 모든 부동산을 위한 MyHotelOps. PMS가 하지 않는 모든 것을 한 곳에서.',
+    headline: '서울 부티크 호텔을 위해',
+    sub: '강남, 이태원, 홍대 — 그리고 그 주변의 모든 부티크 호텔을 위한 MyHotelOps. PMS가 하지 못하는 모든 업무를 한 곳에서.',
   },
   {
     slug: 'hanoi',
@@ -68,7 +68,7 @@ const DESTINATIONS: AsianDestination[] = [
     city: 'Hà Nội',
     neighborhoods: 'Phố Cổ · Tây Hồ · Ba Đình',
     headline: 'Khách sạn boutique tại Hà Nội',
-    sub: 'MyHotelOps cho Phố Cổ, Tây Hồ, Ba Đình — và mọi tài sản giữa chúng. Mọi thứ PMS của bạn không làm, ở một nơi.',
+    sub: 'MyHotelOps cho Phố Cổ, Tây Hồ, Ba Đình — và mọi khách sạn boutique ở giữa. Tất cả những gì PMS của bạn chưa làm được, trong một nơi duy nhất.',
   },
   {
     slug: 'singapore',

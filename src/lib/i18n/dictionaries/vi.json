@@ -300,14 +300,14 @@
     ]
   },
   "destinations": {
-    "eyebrow": "Thị trường chúng tôi được xây dựng cho",
-    "title": "Được làm cho khách sạn boutique ở mọi nơi.",
-    "sub": "Lisbon, Barcelona, Paris, Mexico City — các khu vực nơi khách sạn độc lập và nhóm nhỏ thực sự vận hành. Đăng ký bằng ngôn ngữ của bạn, cùng một ngăn xếp back-office ở mọi nơi."
+    "eyebrow": "Dành cho khách sạn boutique trên toàn thế giới",
+    "title": "Dành cho khách sạn độc lập và nhóm nhỏ, ở mọi nơi.",
+    "sub": "Lisbon, Barcelona, Paris, Mexico City — các khu vực nơi khách sạn độc lập và nhóm nhỏ thực sự vận hành. Bắt đầu bằng ngôn ngữ của bạn và dùng cùng một ngăn xếp vận hành ở mọi nơi. Thanh toán bằng USD, hỗ trợ hầu hết các loại thẻ tín dụng phổ biến."
   },
   "asianDestinations": {
-    "eyebrow": "Nay phục vụ APAC",
-    "title": "Cũng được xây dựng cho cảnh boutique khắp Châu Á.",
-    "sub": "Tokyo, Seoul, Hà Nội, Singapore — khách sạn thiết kế, ryokan, tài sản lifestyle và nhóm sang trọng nhỏ. Đăng ký bằng ngôn ngữ của bạn và vận hành cùng ngăn xếp mà chúng tôi vận hành cho các boutique ở Châu Âu và Châu Mỹ.",
+    "eyebrow": "Nay phục vụ Châu Á – Thái Bình Dương",
+    "title": "Cũng được xây dựng cho khách sạn boutique khắp Châu Á.",
+    "sub": "Tokyo, Seoul, Hà Nội, Singapore — từ khách sạn thiết kế và ryokan đến các cơ sở lifestyle và nhóm sang trọng quy mô nhỏ. Bắt đầu bằng ngôn ngữ của bạn và vận hành cùng ngăn xếp mà chúng tôi hỗ trợ cho các boutique ở Châu Âu và Châu Mỹ. Thanh toán bằng USD, hỗ trợ hầu hết các loại thẻ tín dụng phổ biến.",
     "items": [
       {
         "city": "Tokyo",
@@ -353,7 +353,7 @@
   "useCases": {
     "eyebrow": "Khách hàng sử dụng nó như thế nào",
     "title": "Ba boutique, ba chiến thắng hàng ngày khác nhau.",
-    "sub": "Đây là những khách hàng thực sự đang chạy MyHotelOps hôm nay. Tên được giữ kín theo yêu cầu của họ — các nhà vận hành boutique coi trọng quyền riêng tư và chúng tôi tôn trọng điều đó. Các trường hợp sử dụng là của họ.",
+    "sub": "Đây là những khách hàng thực sự đang chạy MyHotelOps hôm nay.",
     "items": [
       {
         "headline": "Cắt giảm độ trễ bảo trì từ vài ngày xuống vài giờ",
