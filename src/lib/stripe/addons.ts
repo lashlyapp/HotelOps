@@ -202,6 +202,8 @@ export function orgFlagColumnFor(addonKey: AddonKey): string {
       return 'signage_unlimited_addon_active'
     case 'guest_experience':
       return 'guest_experience_addon_active'
+    case 'social_studio':
+      return 'social_studio_addon_active'
   }
 }
 

@@ -15,6 +15,7 @@ import * as gmOnboarding from './posts/onboarding-new-gm-week-one'
 import * as operationsBudget from './posts/operations-budget'
 import * as ownerMonthlyReport from './posts/owner-monthly-report'
 import * as pmsVsOperations from './posts/pms-vs-operations-system'
+import * as socialPresence from './posts/take-control-hotel-social-media'
 import * as techModernization from './posts/tech-modernization'
 import * as underservedIndustry from './posts/underserved-industry'
 import * as whatGuestsNotice from './posts/what-guests-notice-day-one'
@@ -52,6 +53,7 @@ const MODULES: BlogPostModule[] = [
   guestConciergeCost, // 2026-06-26
   wifiSetup, // 2026-06-12
   maintenanceTicket, // 2026-05-29
+  socialPresence, // 2026-05-17
   modernizeChecklist, // 2026-05-15 (live)
   underservedIndustry,
   pmsVsOperations,

@@ -23,7 +23,7 @@ export function AddonToggle({
   active,
   description,
 }: {
-  addonKey: 'signage_unlimited' | 'guest_experience'
+  addonKey: 'signage_unlimited' | 'guest_experience' | 'social_studio'
   label: string
   priceCents: number
   /** Number of properties in the org. Used to compute "× N properties"

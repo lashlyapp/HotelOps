@@ -15,7 +15,9 @@ import type { AddonKey } from '@/lib/stripe/addon-config'
 export function hasAddon(
   organization: Pick<
     Organization,
-    'signage_unlimited_addon_active' | 'guest_experience_addon_active'
+    | 'signage_unlimited_addon_active'
+    | 'guest_experience_addon_active'
+    | 'social_studio_addon_active'
   >,
   addonKey: AddonKey,
 ): boolean {
@@ -24,5 +26,7 @@ export function hasAddon(
       return Boolean(organization.signage_unlimited_addon_active)
     case 'guest_experience':
       return Boolean(organization.guest_experience_addon_active)
+    case 'social_studio':
+      return Boolean(organization.social_studio_addon_active)
   }
 }

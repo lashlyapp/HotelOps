@@ -34,13 +34,13 @@ export async function reconcileOrgSubscriptions(
       admin
         .from('billing_subscriptions')
         .select(
-          'property_id, stripe_subscription_id, signage_unlimited_active, signage_unlimited_item_id, guest_experience_active, guest_experience_item_id',
+          'property_id, stripe_subscription_id, signage_unlimited_active, signage_unlimited_item_id, guest_experience_active, guest_experience_item_id, social_studio_active, social_studio_item_id',
         )
         .eq('org_id', orgId),
       admin
         .from('organizations')
         .select(
-          'signage_unlimited_addon_active, guest_experience_addon_active',
+          'signage_unlimited_addon_active, guest_experience_addon_active, social_studio_addon_active',
         )
         .eq('id', orgId)
         .maybeSingle(),
@@ -57,6 +57,8 @@ export async function reconcileOrgSubscriptions(
     signage_unlimited_item_id: string | null
     guest_experience_active: boolean
     guest_experience_item_id: string | null
+    social_studio_active: boolean
+    social_studio_item_id: string | null
   }>
 
   // Fast path: every property has a synced subscription AND every
@@ -80,6 +82,12 @@ export async function reconcileOrgSubscriptions(
         if (
           (org.guest_experience_addon_active ?? false) !==
           s.guest_experience_active
+        ) {
+          return true
+        }
+        if (
+          (org.social_studio_addon_active ?? false) !==
+          s.social_studio_active
         ) {
           return true
         }
@@ -203,6 +211,7 @@ export async function reconcileOrgSubscriptions(
   const want: Record<AddonKey, boolean> = {
     signage_unlimited: org.signage_unlimited_addon_active ?? false,
     guest_experience: org.guest_experience_addon_active ?? false,
+    social_studio: org.social_studio_addon_active ?? false,
   }
 
   const addonPriceIds = new Map<AddonKey, string>()

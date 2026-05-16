@@ -191,7 +191,7 @@
     "allLabel": "Toutes les fonctionnalités",
     "eyebrow": "Tout est inclus",
     "title": "Conçu comme un back-office boutique fonctionne réellement.",
-    "sub": "Toute la surface, en un seul endroit. Pas de tarification par module — chaque fonctionnalité ci-dessous est dans la base à 100$/propriété ou dans l'une des deux options à tarif forfaitaire. Rien ici ne coûte plus par siège, par écran ou par chambre.",
+    "sub": "Toute la surface, en un seul endroit. Pas de tarification par module — chaque fonctionnalité ci-dessous est dans la base à 100$/propriété ou dans l'une des trois options à tarif forfaitaire. Rien ici ne coûte plus par siège, par écran ou par chambre.",
     "categories": [
       {
         "title": "Exploitation",
@@ -253,6 +253,10 @@
           {
             "name": "Menus Restaurant et Room Service",
             "description": "Menus modifiables qui se publient automatiquement sur la page d'accueil et l'affichage. Mettez à jour une fois, chaque surface se rafraîchit."
+          },
+          {
+            "name": "Social Studio (option)",
+            "description": "Une publication sociale rédigée par IA par établissement, chaque jour — légende, hashtags et une photo choisie dans ce catalogue. Copiez-la, téléchargez-la ou envoyez-la-vous par email ; vous publiez depuis le téléphone. Pas d'intégration de plateforme."
           }
         ]
       },
@@ -332,25 +336,6 @@
       }
     ]
   },
-  "groups": {
-    "eyebrow": "Pour les groupes",
-    "title": "Une seule base, dans chaque ville où vous opérez.",
-    "sub": "Gérez un établissement à Lisbonne, un autre à Mexico, un troisième à Tokyo — même connexion, mêmes flux, une seule ligne mensuelle. Chaque équipe travaille dans sa langue ; les propriétaires voient l'ensemble dans la leur.",
-    "items": [
-      {
-        "title": "Langue locale pour chaque équipe.",
-        "body": "Le personnel de chaque établissement s'inscrit et travaille dans sa langue. La vue du propriétaire se consolide dans la sienne."
-      },
-      {
-        "title": "Une console, tous les établissements.",
-        "body": "Passez d'une ville à l'autre en un clic. Les tableaux de bord du groupe s'agrègent automatiquement ; les vues par établissement restent séparées au besoin."
-      },
-      {
-        "title": "Ajoutez ou suspendez à tout moment.",
-        "body": "Ouvrir une nouvelle ville ou clôturer un établissement se fait en quelques clics — pas de contrats à renégocier, pas de calcul par siège ou par écran."
-      }
-    ]
-  },
   "useCases": {
     "eyebrow": "Comment les clients l'utilisent",
     "title": "Trois boutiques, trois victoires quotidiennes différentes.",
@@ -366,7 +351,7 @@
         "headline": "Quatre abonnements SaaS distincts remplacés",
         "type": "Groupe hôtelier design de deux propriétés",
         "region": "Mexico, Mexique",
-        "body": "Ils ont résilié leur outil de tickets de maintenance, leur plateforme événements et banquets, leur abonnement d'affichage numérique et leur app de conciergerie. La dépense nette a baissé d'environ $400/propriété/mois avec les mêmes workflows — tout consolidé en une seule ligne à $188."
+        "body": "Ils ont résilié leur outil de tickets de maintenance, leur plateforme événements et banquets, leur abonnement d'affichage numérique, leur app de conciergerie et le freelance qui rédigeait leurs posts. La dépense nette a baissé d'environ $500/propriété/mois avec les mêmes workflows — tout consolidé en une seule ligne à $207."
       },
       {
         "headline": "Nouveau directeur opérationnel en une après-midi, pas une semaine",
@@ -451,7 +436,7 @@
   "pricing": {
     "eyebrow": "Tarifs",
     "headline": "Par propriété. Pas par utilisateur. Pas par écran. Pas par chambre.",
-    "sub": "Une base de $100/propriété/mois. Deux options. C'est toute la grille tarifaire — et le maximum qu'une seule propriété peut vous coûter est $188/mois, quel que soit le nombre d'écrans, de chambres ou de personnel.",
+    "sub": "Une base de $100/propriété/mois. Trois options. C'est toute la grille tarifaire — et le maximum qu'une seule propriété peut vous coûter est $207/mois, quel que soit le nombre d'écrans, de chambres ou de personnel.",
     "midCycleNote": "Sans contrat. Sans engagement annuel. Ajoutez ou retirez des options quand vous voulez — annulez à tout moment depuis votre compte.",
     "cadence": "propriété / mois",
     "tagRequired": "Obligatoire",
@@ -492,6 +477,18 @@
           "Pas de compte client, pas d'application",
           "Activé pour toute l'organisation en un clic"
         ]
+      },
+      "social": {
+        "label": "Social Studio",
+        "body": "Une publication sociale rédigée par IA par établissement, chaque matin. Légendes, hashtags et une photo choisie dans votre bibliothèque média — prête à copier, télécharger ou vous envoyer par e-mail. Nous ne touchons jamais aux plateformes sociales.",
+        "features": [
+          "Une publication on-brand par établissement et par jour",
+          "Trois variantes de légende, hashtags thématiques",
+          "Image suggérée depuis votre catalogue média",
+          "Aperçu Instagram / Facebook / TikTok",
+          "Pouces haut/bas entraînent votre voix de marque",
+          "Activé pour toute l'organisation en un clic"
+        ]
       }
     },
     "compare": {
@@ -526,11 +523,15 @@
         },
         {
           "q": "Et si je ne veux que la maintenance, ou seulement l'affichage ?",
-          "a": "Vous pouvez. L'abonnement de base inclut les bons de travail de maintenance, les événements & banquets, IT Hub, les médias et trois écrans d'affichage à $100/propriété. Ajoutez Affichage Illimité ou Expérience Client uniquement si vous le souhaitez — bascule sur /billing, facturé au prorata."
+          "a": "Vous pouvez. L'abonnement de base inclut les bons de travail de maintenance, les événements & banquets, IT Hub, les médias et trois écrans d'affichage à $100/propriété. Ajoutez Affichage Illimité, Expérience Client ou Social Studio uniquement si vous le souhaitez — bascule sur /billing, facturé au prorata."
         },
         {
           "q": "En quoi l'option d'affichage diffère-t-elle de Yodeck ou OptiSigns ?",
           "a": "Tarif fixe par propriété — écrans illimités dans une propriété pour $49 contre $8–$30 par écran par mois ailleurs. Même concept de player (n'importe quel TV avec navigateur), même planification. Seuil de rentabilité versus Yodeck à environ 6 écrans ; moins cher au-dessus."
+        },
+        {
+          "q": "Social Studio publie-t-il sur mon Instagram automatiquement ?",
+          "a": "Non, et c'est volontaire. Social Studio rédige le post chaque matin — légende, hashtags, photo suggérée — et vous laisse le copier, le télécharger ou vous l'envoyer par email. Vous publiez depuis votre téléphone. Pas d'intégration de plateforme qui casse, pas de OAuth à gérer, et vos comptes sociaux restent les vôtres."
         },
         {
           "q": "Vous intégrez-vous à notre PMS (Mews, Cloudbeds, Opera) ?",
