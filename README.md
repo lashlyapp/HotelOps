@@ -1,6 +1,6 @@
 # MyHotelOps
 
-Multi-tenant SaaS for hotel property owners. v1 ships a centralized media library with permanent CDN URLs, plus check-payment billing. Auth is invite-only, RLS-enforced.
+Multi-tenant operations stack for independent and boutique hotels. Self-serve signup with a 7-day free trial (no credit card), Stripe-billed per property after that. RLS-enforced multi-tenancy on Supabase; media on Cloudflare R2 behind `cdn.myhotelops.com`.
 
 ## Stack
 
@@ -10,18 +10,44 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
 - **Resend** — transactional email (welcome emails to new members)
 - **Vercel** — hosting
 
-## Features (v1)
+## Modules
 
-- **Public landing page** at `/`
-- **Three-tier roles**: platform admin (us) → tenant owner (customer) → tenant staff
-- **Admin portal** (`/admin`) — list tenants, create new tenants with initial owner credentials
-- **Tenant portal** (`/dashboard`, `/media`, `/billing`, `/team`, `/account`) — owner manages their team; staff can browse the catalog
-- **Dashboard** — per-org overview: total files, storage used, last upload, open invoices, per-property breakdown, recent invoices
-- **Media catalog** — per-property tabs, search, type filter, click-to-preview lightbox, copy permanent URL
-- **Library stats** — file count, storage used, breakdown by type, last updated
-- **Billing** — invoice list with check-payment instructions
-- **Account** — profile, role, change password, sign out
-- **Design system foundation** — semantic tokens, primitives, brand wordmark, footer
+**Public site** (`/`, `/features`, `/pricing`, `/blog`, `/about`, `/demo`, `/signup`, `/login`, `/proposal`, `/privacy`, `/terms`) — i18n'd across `en`, `es`, `fr`, `ja`, `ko`, `vi` (see `src/lib/i18n/dictionaries/`).
+
+**Authenticated app** under `src/app/(app)/`:
+
+| Path             | What it does                                                                                                                  |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `/dashboard`     | Per-org overview: files, storage, recent invoices, per-property roll-up.                                                      |
+| `/work-orders`   | Photo-first maintenance tickets on a Kanban board, time-stamped audit log.                                                    |
+| `/events`        | Events & catering: inquiry → proposal → invoice in one place; branded PDFs.                                                   |
+| `/signage`       | Browser-based digital signage. 3 screens in base; unlimited via the **Signage Unlimited** add-on.                             |
+| `/arrival`       | Per-room QR / arrival page (Wi-Fi, room-service menus, brand). Part of the **Guest Experience** add-on surface.               |
+| `/media`         | Media catalog: per-property tabs, search, type filter, lightbox, copy permanent CDN URL.                                      |
+| `/social`        | **Social Studio** add-on — one AI-drafted post per property per day (caption, hashtags, photo from the catalog or Unsplash). No platform integrations; operator copies and posts from their phone. |
+| `/it-hub`        | Wi-Fi credentials, vendor logins, equipment serials, warranty dates. Role-gated.                                              |
+| `/properties`    | Tenant-owner CRUD on the org's properties.                                                                                    |
+| `/team`          | Tenant-owner invites / removes staff. Welcome email via Resend.                                                               |
+| `/billing`       | Invoice list, Stripe Customer Portal launcher, add-on toggles.                                                                |
+| `/account`       | Profile, password change, sign out.                                                                                           |
+| `/admin/**`      | Platform-admin only — list/manage tenants, force-start subscriptions, view per-tenant stats.                                  |
+
+**Three-tier roles**: `platform_admin` (us) → `org_owner` (customer) → `org_staff`.
+
+**Add-ons** (toggle on `/billing`, billed prorated; see `src/lib/stripe/addon-config.ts`):
+
+- `signage_unlimited` — removes the 3-screen cap.
+- `guest_experience` — unlocks the full arrival / guest-facing surface.
+- `social_studio` — daily AI post drafts (gated by `hasAddon(org, 'social_studio')`).
+
+## Self-serve signup
+
+`/signup` collects email + name + hotel name + password, then emails a 6-digit OTP via Resend (`src/app/signup/actions.ts`). On verify, the flow atomically provisions org → first property → auth user → `org_owner` profile, then signs the user in to `/dashboard?welcome=trial`.
+
+- **Trial:** 7 days, 10 GB per property, no credit card. Constants in `src/lib/billing/trial.ts`.
+- **Bot protection:** honeypot field, per-IP and per-email rate limits backed by `tenant_signup_requests.created_at`, OTP as the final gate.
+- **Attribution:** UTM params + referrer are captured on the landing page (`src/components/marketing/utm-capture.tsx`), persisted onto `signup_pending`, and carried forward to the `organizations` row.
+- **Locale:** captured at form submit and stored on both `signup_pending` and the org so subsequent emails (OTP, welcome, T-3 trial reminder, T+0 expired) stay in the same language.
 
 ## Local development
 
@@ -36,9 +62,9 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
 2. Apply the database schema. Two options:
 
    - **CI/CD (recommended):** push to GitHub. The `Database` workflow runs `supabase db push` against the linked remote project. Set the repo secrets listed under [CI / CD](#ci--cd).
-   - **Manual one-time:** open Supabase Dashboard → SQL Editor and paste the contents of the latest file in `supabase/migrations/`.
+   - **Manual one-time:** open Supabase Dashboard → SQL Editor and paste each file in `supabase/migrations/` in order.
 
-3. Bootstrap the first platform admin (one-time). They can then manage every tenant from the UI:
+3. Bootstrap the first platform admin (one-time, only needed if you also want to access `/admin`). Customers don't need this — they self-serve at `/signup`. Platform admins can manage every tenant from the admin portal:
 
    - **CI/CD (recommended):** add a temporary `BOOTSTRAP_ADMIN_PASSWORD` repo secret, then GitHub → Actions → **Bootstrap platform admin** → Run workflow → enter email (default `support@myhotelops.com`). Sign in at `/login`. After signing in, you may delete the secret.
    - **Local:**
@@ -51,15 +77,15 @@ Multi-tenant SaaS for hotel property owners. v1 ships a centralized media librar
 
    Platform admin emails must end in `@myhotelops.com`. Tenant/customer emails are unrestricted.
 
-4. Create and manage tenants from the UI:
+4. Create and manage tenants. Three paths:
 
-   - **Platform admin** (`/admin`): lists every tenant on the platform; click a row to manage it (edit name, add/remove properties, add/remove members of any role, see per-property file/storage stats, delete tenant). Click **Create tenant** to onboard a new customer with org name, slug, properties, and initial owner credentials.
+   - **Self-serve (default)**: customer visits `/signup` and gets a 7-day trial. No platform-admin involvement.
+   - **Platform admin** (`/admin`): lists every tenant; click a row to manage it (edit name, add/remove properties, add/remove members of any role, see per-property file/storage stats, force-start the subscription, delete tenant). Click **Create tenant** to provision an account directly (useful for white-glove onboarding).
    - **Tenant owner** (`/properties` and `/team`, visible to `org_owner` role only): manages their own properties and team members. When adding a member, choose either "let them set their own password" (sends a one-time setup link by email) or "set a temporary password" (share it manually).
-   - **Anyone**: change their own password from `/account`.
 
-   Welcome emails go through Resend. Set `RESEND_API_KEY` and `EMAIL_FROM` env vars (Vercel + `.env.local`). Without these, member creation still works but the email is skipped (logged as a warning). For production, verify your sending domain in Resend and use `noreply@myhotelops.com` as `EMAIL_FROM`.
+   Anyone can change their own password from `/account`.
 
-   The `Onboard tenant` GitHub Actions workflow remains as an ops fallback for non-UI provisioning.
+   Transactional email goes through Resend (signup OTP, trial welcome, T-3 trial reminder, T+0 trial expired, team invites). Set `RESEND_API_KEY` and `EMAIL_FROM` env vars (Vercel + `.env.local`). Without these, signup still provisions the account but emails are skipped (logged as warnings) — fine for local dev, broken for production. Verify your sending domain in Resend and use `noreply@myhotelops.com` as `EMAIL_FROM`.
 
 4. Smoke-test R2 access:
 
@@ -119,53 +145,67 @@ The bucket is configured with **public access enabled** and a custom domain boun
 
 Schedules live in [`vercel.json`](vercel.json); routes live under `src/app/api/cron/`. Vercel calls each route on the configured schedule with `Authorization: Bearer ${CRON_SECRET}`; the handler rejects anything else.
 
-| Schedule        | Route                       | Purpose                                                                                                                                           |
-| --------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `0 4 * * *` UTC | `/api/cron/orphan-posters`  | Delete `_posters/` JPEGs whose owning video is no longer in R2 — closes the leak when a delete fails between the video and poster object DELETEs. |
+| Schedule           | Route                         | Purpose                                                                                                                                           |
+| ------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0 4 * * *` UTC    | `/api/cron/orphan-posters`    | Delete `_posters/` JPEGs whose owning video is no longer in R2 — closes the leak when a delete fails between the video and poster object DELETEs. |
+| `0 2 * * *` UTC    | `/api/cron/billing-reconcile` | Reconcile Stripe subscription / invoice state onto local org rows; recovers from missed webhooks.                                                 |
+| `30 3 * * *` UTC   | `/api/cron/storage-usage`     | Recompute per-property storage usage from R2 so the dashboard / quota gates don't drift.                                                          |
+| `0 * * * *` UTC    | `/api/cron/trial-expiry`      | Hourly sweep: fire T-3 reminder emails, lock orgs at T+0, surface the recovery banner.                                                            |
+| `0 13 * * *` UTC   | `/api/cron/blog-publishing`   | Promote scheduled blog posts whose `published_at` has passed.                                                                                     |
+| `0 11 * * *` UTC   | `/api/cron/social-daily-posts`| Generate the daily Social Studio draft (caption + hashtags + photo pick) for every property whose org has the `social_studio` add-on.            |
 
 Set `CRON_SECRET` (any high-entropy string — `openssl rand -base64 32`) as a Vercel project env var; copy the same value into `.env.local` if you want to hit the route locally for testing (`curl -H "Authorization: Bearer …" http://localhost:3000/api/cron/orphan-posters`).
 
 ## Tenant model
 
-- **organizations** — top-level tenant. Slug, name.
+- **organizations** — top-level tenant. Slug, name, locale, currency, trial window, Stripe customer + subscription ids, add-on active flags, UTM attribution.
 - **profiles** — 1:1 with `auth.users`; each profile belongs to one org. Roles: `platform_admin`, `org_owner`, `org_staff`.
-- **properties** — hotels owned by an org. `r2_prefix` maps to a folder.
-- **invoices** — offline (check) billing.
+- **properties** — hotels owned by an org. `r2_prefix` maps to a folder; `storage_quota_bytes` enforced at upload time.
+- **invoices** — mirrored from Stripe; the `/billing` UI reads from this table, not Stripe directly.
+- **signup_pending** / **tenant_signup_requests** — pre-OTP staging + audit trail for self-serve signup.
+- Module tables: `work_orders`, `events`, `signage_*`, `arrival_*`, `media_metadata`, `social_post_log`, `social_caption_feedback`, `property_social_settings`, `it_hub_*`.
 
-RLS is enabled on every table; org members can only read their own org's rows. Writes happen via the service role (which bypasses RLS) in admin scripts.
+RLS is enabled on every table; org members can only read their own org's rows. Writes that cross org boundaries (signup, admin tools, webhook handlers, cron jobs) go through the service-role client (`src/lib/supabase/admin.ts`), which bypasses RLS.
 
 ## Project layout
 
 ```
 src/
   app/
-    page.tsx                  Marketing landing page (public)
-    login/                    Sign in (server actions)
-    set-password/             Post-invite password setup
-    auth/callback/            Supabase magic-link redirect handler
-    (app)/                    Authenticated app (sidebar layout)
-      media/                  Catalog: stats, search, preview, copy URL
-      billing/                Invoice list + payment instructions
-      account/                Profile + sign out
+    page.tsx                       Landing page (i18n'd, UTM-capturing)
+    features/                      Full feature catalog (FeatureGrid)
+    pricing/                       Pricing page + FAQ
+    blog/                          MDX-ish blog with scheduled publishing
+    about/, demo/, proposal/       Marketing surface
+    signup/                        Self-serve signup + OTP verify
+    login/, forgot-password/, set-password/, auth/callback/
+    (app)/                         Authenticated app shell (sidebar layout)
+      dashboard/, work-orders/, events/, signage/, arrival/,
+      media/, social/, it-hub/, properties/, team/, billing/, account/
+    (admin)/                       Platform-admin pages (/admin/**)
+    api/
+      stripe/webhook/              Stripe event ingestion
+      cron/                        Vercel cron handlers (see table above)
   components/
-    brand/wordmark.tsx        MyHotelOps wordmark lockup
-    layout/footer.tsx         Public + app footer variants
-    ui/                       Button, Input, Label, Card, Badge
+    brand/, layout/, ui/           Wordmark, header/footer, primitives
+    marketing/                     FeatureGrid, FeaturesDropdown, UtmCapture, etc.
   lib/
-    auth/session.ts           requireSession() helper
-    brand.ts                  Brand strings (legal name, address, support)
-    media/humanize.ts         filename → human description
-    r2/                       R2 client, listing, stats
-    supabase/                 Browser/server/admin clients + types
-    utils/cn.ts               className helper
-  proxy.ts                    Edge proxy refreshing Supabase sessions
-docs/
-  design-system.md            Token reference + component conventions
-supabase/migrations/0001_init.sql
+    auth/                          Session helpers, password policy, OTP
+    billing/                       Trial state machine, addon gating, currency
+    stripe/                        Customer/subscription/addon clients + prices
+    crypto/                        AES helpers (used to stage signup passwords)
+    email/                         Resend wrappers + templates
+    i18n/                          Dictionaries (en/es/fr/ja/ko/vi) + locale resolver
+    r2/                            R2 client, listing, stats
+    supabase/                      Browser/server/admin clients + generated types
+    media/, utils/, brand.ts
+  proxy.ts                         Edge proxy refreshing Supabase sessions
+docs/design-system.md              Token reference + component conventions
+supabase/migrations/               Append-only, timestamp-prefixed
 scripts/
-  setup.ts                    Seed org + properties + invite owner
-  smoke-r2.ts                 Quick R2 connectivity check
-.github/workflows/ci.yml      Lint + build on every push / PR
+  bootstrap-admin.ts               Create the first platform_admin
+  smoke-r2.ts                      Quick R2 connectivity check
+.github/workflows/                 ci.yml, database.yml, bootstrap-admin.yml, r2-cors.yml
 ```
 
 ## Design system
@@ -222,25 +262,35 @@ See [`docs/design-system.md`](docs/design-system.md). TL;DR: every color in mark
 HotelOps uses its own Stripe account (separate from Lashly). Each organization
 maps 1:1 to a Stripe Customer + Subscription. Pricing is **$100/property/month**
 (subscription quantity = property count) plus a one-time **$250 setup fee** on
-the first invoice. The flow:
+the first invoice. Add-ons (Signage Unlimited, Guest Experience, Social Studio)
+are extra subscription items keyed by `Price.lookup_key` so prices can be
+rotated without code changes.
 
-1. **Admin starts the subscription** from `/admin/tenants/<id>` → "Start
-   subscription". This creates the Stripe Customer and a per-property
-   Subscription billed via `collection_method=send_invoice` with a 14-day
-   grace window (`days_until_due=14`). The first invoice — including the
-   setup fee — is issued immediately and listed under `/billing`. No
-   payment method is required up front.
-2. **Customer saves a card for auto-renewal** during the 14-day window via
-   `/billing` → "Save card for auto-renewal". The CTA opens Stripe Checkout in
-   `setup` mode; the webhook attaches the card to the customer + subscription
-   and flips collection from `send_invoice` to `charge_automatically` so
-   future monthly invoices auto-charge. The first invoice stays open for the
-   customer to pay through their preferred channel.
-3. **Cooling period passes without a card:** Stripe transitions the open
-   invoice (and the subscription) to `past_due`, and the billing page surfaces
-   a recovery message.
-4. **Customer manages billing** at `/billing` → "Manage billing", which opens
-   the Stripe Billing Portal (update card, view invoices, cancel).
+Two onboarding paths converge on the same Stripe model:
+
+**Self-serve trial (default).** `/signup` provisions the org with a 7-day trial,
+no Stripe customer yet. The trial-state machine in `src/lib/billing/trial.ts`
+gates write access at T+0. The customer converts from `/billing` → "Add payment
+method", which creates the Stripe Customer + per-property Subscription on
+`charge_automatically` and (if it's the org's first time) adds the setup fee
+to the first invoice.
+
+**Admin-started subscription.** From `/admin/tenants/<id>` → "Start
+subscription", `src/lib/stripe/start-subscription.ts` creates the Customer +
+Subscription on `collection_method=send_invoice` with a 14-day grace
+(`days_until_due=14`). The first invoice — including the setup fee — is
+issued immediately and listed under `/billing`. The customer can then either
+pay the open invoice through their preferred channel or save a card via
+`/billing` → "Save card for auto-renewal" (Stripe Checkout in `setup` mode);
+the webhook flips collection to `charge_automatically` for future months.
+If the grace window lapses without payment, Stripe transitions the invoice
+(and subscription) to `past_due` and the billing page surfaces a recovery
+message.
+
+Customers manage their billing at `/billing` → "Manage billing", which opens
+the Stripe Billing Portal (update card, view invoices, cancel). Add-ons can
+be toggled on the same page (`src/app/(app)/billing/_components/addon-toggle.tsx`),
+billed prorated.
 
 ### Setup
 
@@ -275,4 +325,4 @@ org that already has a non-terminal subscription is a no-op.
 
 ## Roadmap
 
-Modules planned beyond v1: reservations, housekeeping, staff scheduling, multi-org users / staff invitations, owner-editable file descriptions, AI-assisted captioning.
+Shipped beyond initial v1: work orders, events & catering, signage, arrival, social studio, IT hub, self-serve signup with trial, Stripe add-ons, 6-locale i18n. Still on the list: reservations, housekeeping, staff scheduling, multi-org users / staff invitations, owner-editable file descriptions, automatic publishing for Social Studio (currently copy-and-paste by design).
