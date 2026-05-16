@@ -336,25 +336,6 @@
       }
     ]
   },
-  "groups": {
-    "eyebrow": "Para grupos",
-    "title": "Una sola plataforma, en cada ciudad donde operas.",
-    "sub": "Gestiona una propiedad en Lisboa, otra en Ciudad de México, una tercera en Tokio — mismo login, mismos flujos, una sola línea mensual. Cada equipo trabaja en su idioma; los propietarios lo ven todo en el suyo.",
-    "items": [
-      {
-        "title": "Idioma local para cada equipo.",
-        "body": "El personal de cada propiedad se registra y trabaja en su idioma. La vista del propietario se consolida en el suyo."
-      },
-      {
-        "title": "Una consola, todas las propiedades.",
-        "body": "Cambia de ciudad con un clic. Los paneles del grupo se agregan automáticamente; las vistas por propiedad permanecen separadas cuando las necesitas."
-      },
-      {
-        "title": "Añade o pausa cuando quieras.",
-        "body": "Abrir una nueva ciudad o cerrar una propiedad lleva unos clics — sin contratos que renegociar, sin cuentas por asiento o por pantalla."
-      }
-    ]
-  },
   "useCases": {
     "eyebrow": "Cómo lo usan los clientes",
     "title": "Tres boutiques, tres victorias diarias diferentes.",

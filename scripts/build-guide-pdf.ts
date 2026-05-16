@@ -413,10 +413,20 @@ function renderOutros(doc: PDFKit.PDFDocument, outros: Block[]): void {
 // own page so the page-break never amputates it.
 // ---------------------------------------------------------------------------
 function renderClosingCta(doc: PDFKit.PDFDocument): void {
-  doc.addPage()
+  // Reserve enough room for the box (280) + the two lines below it
+  // (~60). Only push to a new page if the current one can't fit the
+  // whole block — otherwise we strand the previous page near-empty
+  // for the sake of CTA visual separation, which is the bug the
+  // "extra blank pages at the end" complaint described.
+  const requiredHeight = 280 + 60
+  if (doc.y + requiredHeight > PAGE_H - 80) {
+    doc.addPage()
+  } else {
+    doc.moveDown(1.2)
+  }
 
   const boxX = MARGIN
-  const boxY = MARGIN + 8
+  const boxY = doc.y
   const boxW = CONTENT_W
   const boxH = 280
 
@@ -502,10 +512,11 @@ function renderClosingCta(doc: PDFKit.PDFDocument): void {
     .fillColor(FG_MUTED)
     .text('.', { underline: false })
 
-  // Below the box: a small "share this guide" prompt and the legal
-  // line. Encourages forward-friendliness — the same lead funnel that
-  // got this PDF to one operator can get it to the operator down the
-  // street.
+  // Below the box: a small "share this guide" prompt plus the
+  // website URL (no physical address — the PDF doesn't need to look
+  // like an invoice). Encourages forward-friendliness — the same
+  // lead funnel that got this PDF to one operator can get it to the
+  // operator down the street.
   const belowY = boxY + boxH + 28
   doc
     .font('Helvetica-Oblique')
@@ -522,13 +533,12 @@ function renderClosingCta(doc: PDFKit.PDFDocument): void {
   doc
     .font('Helvetica')
     .fontSize(9)
-    .fillColor(FG_SUBTLE)
-    .text(
-      `${BRAND.legalName} · ${BRAND.address.line1}, ${BRAND.address.city}, ${BRAND.address.state} ${BRAND.address.postalCode}`,
-      MARGIN,
-      doc.y,
-      { width: CONTENT_W, align: 'center' },
-    )
+    .fillColor(BRAND_BLUE)
+    .text(BRAND.domain, MARGIN, doc.y, {
+      width: CONTENT_W,
+      align: 'center',
+      link: HOME_URL,
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -592,6 +602,16 @@ function renderFooters(doc: PDFKit.PDFDocument): void {
   for (let i = range.start; i < range.start + range.count; i++) {
     doc.switchToPage(i)
 
+    // pdfkit auto-paginates when a .text() call would render past the
+    // bottom margin — even with absolute (x, y) coordinates. Since
+    // the footer intentionally sits below the bottom margin, drop the
+    // margin to zero for the duration of the footer draw so the last
+    // page doesn't spawn a trailing blank page. Restore it after so
+    // anything else that touches the page (it shouldn't) behaves
+    // normally.
+    const originalBottom = doc.page.margins.bottom
+    doc.page.margins.bottom = 0
+
     // Hairline separator above the footer so the wordmark feels
     // anchored to the page rather than floating.
     doc
@@ -629,6 +649,7 @@ function renderFooters(doc: PDFKit.PDFDocument): void {
         align: 'center',
         link: HOME_URL,
         underline: false,
+        lineBreak: false,
       })
 
     // Right: page x of y. Use the same baseline; absolute positioning
@@ -641,8 +662,10 @@ function renderFooters(doc: PDFKit.PDFDocument): void {
         `page ${i - range.start + 1} of ${range.count}`,
         MARGIN,
         FOOTER_BASELINE,
-        { width: CONTENT_W, align: 'right' },
+        { width: CONTENT_W, align: 'right', lineBreak: false },
       )
+
+    doc.page.margins.bottom = originalBottom
   }
 }
 

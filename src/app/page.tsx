@@ -6,7 +6,6 @@ import { Footer } from '@/components/layout/footer'
 import { AsianDestinationsBand } from '@/components/marketing/asian-destinations-band'
 import { DestinationsBand } from '@/components/marketing/destinations-band'
 import { FeaturesDropdown } from '@/components/marketing/features-dropdown'
-import { GroupsBand } from '@/components/marketing/groups-band'
 import { SharpHeroImage } from '@/components/marketing/sharp-hero-image'
 import { UseCasesBand } from '@/components/marketing/use-cases-band'
 import { Card, CardBody } from '@/components/ui/card'
@@ -312,9 +311,6 @@ export default async function HomePage() {
 
         {/* ─── APAC destinations: Tokyo / Seoul / Hanoi / Singapore ──── */}
         <AsianDestinationsBand t={t} />
-
-        {/* ─── Groups: multi-property / multi-city value proposition ──── */}
-        <GroupsBand t={t} />
 
         {/* ─── Use cases: anonymized real-customer stories ────────────── */}
         <UseCasesBand t={t.useCases} />

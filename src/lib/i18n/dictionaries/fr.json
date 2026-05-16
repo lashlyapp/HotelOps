@@ -336,25 +336,6 @@
       }
     ]
   },
-  "groups": {
-    "eyebrow": "Pour les groupes",
-    "title": "Une seule base, dans chaque ville où vous opérez.",
-    "sub": "Gérez un établissement à Lisbonne, un autre à Mexico, un troisième à Tokyo — même connexion, mêmes flux, une seule ligne mensuelle. Chaque équipe travaille dans sa langue ; les propriétaires voient l'ensemble dans la leur.",
-    "items": [
-      {
-        "title": "Langue locale pour chaque équipe.",
-        "body": "Le personnel de chaque établissement s'inscrit et travaille dans sa langue. La vue du propriétaire se consolide dans la sienne."
-      },
-      {
-        "title": "Une console, tous les établissements.",
-        "body": "Passez d'une ville à l'autre en un clic. Les tableaux de bord du groupe s'agrègent automatiquement ; les vues par établissement restent séparées au besoin."
-      },
-      {
-        "title": "Ajoutez ou suspendez à tout moment.",
-        "body": "Ouvrir une nouvelle ville ou clôturer un établissement se fait en quelques clics — pas de contrats à renégocier, pas de calcul par siège ou par écran."
-      }
-    ]
-  },
   "useCases": {
     "eyebrow": "Comment les clients l'utilisent",
     "title": "Trois boutiques, trois victoires quotidiennes différentes.",

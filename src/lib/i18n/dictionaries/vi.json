@@ -336,25 +336,6 @@
       }
     ]
   },
-  "groups": {
-    "eyebrow": "Dành cho nhóm",
-    "title": "Một nền tảng, trong mọi thành phố bạn vận hành.",
-    "sub": "Vận hành một cơ sở ở Lisbon, một ở Mexico City, một ở Tokyo — cùng đăng nhập, cùng quy trình, cùng một dòng hóa đơn hàng tháng. Mỗi đội làm việc bằng ngôn ngữ của mình; chủ sở hữu thấy mọi thứ bằng ngôn ngữ của họ.",
-    "items": [
-      {
-        "title": "Ngôn ngữ bản địa cho mỗi đội.",
-        "body": "Nhân viên ở mỗi cơ sở đăng ký và làm việc bằng ngôn ngữ của họ. Góc nhìn của chủ sở hữu được tổng hợp bằng ngôn ngữ của họ."
-      },
-      {
-        "title": "Một bảng điều khiển, mọi cơ sở.",
-        "body": "Chuyển đổi giữa các thành phố trong một cú nhấp. Bảng điều khiển nhóm tự động tổng hợp; góc nhìn theo từng cơ sở vẫn tách biệt khi cần."
-      },
-      {
-        "title": "Thêm hoặc tạm dừng bất cứ lúc nào.",
-        "body": "Mở một thành phố mới hay đóng một cơ sở chỉ mất vài cú nhấp — không có hợp đồng để đàm phán lại, không có phép tính theo ghế hay theo màn hình."
-      }
-    ]
-  },
   "useCases": {
     "eyebrow": "Khách hàng sử dụng nó như thế nào",
     "title": "Ba boutique, ba chiến thắng hàng ngày khác nhau.",

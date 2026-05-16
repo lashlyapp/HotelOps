@@ -336,25 +336,6 @@
       }
     ]
   },
-  "groups": {
-    "eyebrow": "For groups",
-    "title": "One stack, every city you operate in.",
-    "sub": "Run a property in Lisbon, another in Mexico City, a third in Tokyo — same login, same workflows, same monthly line. Each team works in their language; owners see everything in theirs.",
-    "items": [
-      {
-        "title": "Local language for every team.",
-        "body": "Staff at each property sign up and work in their language. The owner's view rolls up in theirs."
-      },
-      {
-        "title": "One console, every property.",
-        "body": "Switch between cities in a click. Group dashboards aggregate automatically; per-property views stay separate when you need them."
-      },
-      {
-        "title": "Add or pause anytime.",
-        "body": "Opening a new city or sunsetting a property is a few clicks — no contracts to renegotiate, no per-seat or per-screen math."
-      }
-    ]
-  },
   "useCases": {
     "eyebrow": "How customers use it",
     "title": "Three boutiques, three different daily wins.",
