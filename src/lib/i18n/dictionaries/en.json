@@ -162,8 +162,31 @@
   },
   "destinations": {
     "eyebrow": "Markets we're built for",
-    "title": "Made for boutique hotels everywhere they cluster.",
+    "title": "Made for boutique hotels everywhere.",
     "sub": "Lisbon, Barcelona, Paris, Mexico City — the neighborhoods where independent and small-group hotels actually run. Local-currency billing, signup in your language, the same back-office stack everywhere."
+  },
+  "useCases": {
+    "eyebrow": "How customers use it",
+    "title": "Three boutiques, three different daily wins.",
+    "sub": "These are real customers running on MyHotelOps today. Names withheld at their request — boutique operators value their privacy and we honor it. The use cases are theirs.",
+    "items": [
+      {
+        "headline": "Cut maintenance lag from days to hours",
+        "type": "32-room boutique · East Coast US",
+        "body": "Front desk used to email engineering; tickets sat in inboxes. With photo-first work orders the cycle from guest report → completed fix dropped from a 2-3 day median to under 4 hours. Owner finally has a Kanban view of every open issue across the property in one place."
+      },
+      {
+        "headline": "Replaced four separate SaaS subscriptions",
+        "type": "Two-property design hotel group · West Coast US",
+        "body": "Cancelled their maintenance ticketing tool, their event-banquet platform, their digital signage subscription, and their guest concierge app. Net spend dropped about $400/property/mo with all the same workflows still running — just consolidated under one $188 line item."
+      },
+      {
+        "headline": "Onboarded GM in an afternoon, not a week",
+        "type": "Small group hotelier · Pacific Northwest",
+        "body": "New GM started on a Tuesday. By end of day they had work orders, vendor contacts, the Wi-Fi credentials, the printable arrival cards, and the events pipeline all in one tab. Owner used to budget two weeks for new-GM ramp and now allocates one afternoon."
+      }
+    ],
+    "footnote": "Want to share your story? Email {email} — we'll write it up so it reads honest, not like a pitch."
   },
   "demo": {
     "navLabel": "Talk to us",

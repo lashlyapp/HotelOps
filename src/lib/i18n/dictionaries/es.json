@@ -162,8 +162,31 @@
   },
   "destinations": {
     "eyebrow": "Mercados para los que estamos hechos",
-    "title": "Para hoteles boutique donde realmente se agrupan.",
+    "title": "Para hoteles boutique en todas partes.",
     "sub": "Lisboa, Barcelona, París, Ciudad de México — los barrios donde los hoteles independientes y de pequeños grupos realmente operan. Facturación en moneda local, registro en tu idioma, la misma base operativa en cada destino."
+  },
+  "useCases": {
+    "eyebrow": "Cómo lo usan los clientes",
+    "title": "Tres boutiques, tres victorias diarias diferentes.",
+    "sub": "Estos son clientes reales que usan MyHotelOps hoy. Nombres reservados a petición — los operadores boutique valoran su privacidad y la respetamos. Los casos de uso son suyos.",
+    "items": [
+      {
+        "headline": "Redujeron el tiempo de mantenimiento de días a horas",
+        "type": "Boutique de 32 habitaciones · Costa Este EE. UU.",
+        "body": "Recepción enviaba correos a mantenimiento; los tickets se acumulaban. Con órdenes de trabajo basadas en fotos, el ciclo desde el reporte del huésped hasta la reparación pasó de una mediana de 2-3 días a menos de 4 horas. La propiedad por fin tiene una vista Kanban de todas las incidencias abiertas en un solo lugar."
+      },
+      {
+        "headline": "Sustituyeron cuatro suscripciones SaaS independientes",
+        "type": "Grupo hotelero de diseño con dos propiedades · Costa Oeste EE. UU.",
+        "body": "Cancelaron su herramienta de tickets de mantenimiento, su plataforma de eventos y banquetes, su suscripción de señalización digital y su app de conserjería. El gasto neto bajó unos $400/propiedad/mes con los mismos flujos de trabajo — todo consolidado en una sola línea de $188."
+      },
+      {
+        "headline": "Director nuevo operativo en una tarde, no en una semana",
+        "type": "Pequeño grupo hotelero · Noroeste del Pacífico",
+        "body": "El nuevo Director empezó un martes. Al final del día tenía las órdenes de trabajo, los contactos de proveedores, las credenciales Wi-Fi, las tarjetas de bienvenida imprimibles y la canalización de eventos en una sola pestaña. El propietario solía reservar dos semanas para la incorporación y ahora dedica una tarde."
+      }
+    ],
+    "footnote": "¿Quieres compartir tu historia? Escribe a {email} — la redactamos para que se lea auténtica, no como una venta."
   },
   "demo": {
     "navLabel": "Habla con nosotros",

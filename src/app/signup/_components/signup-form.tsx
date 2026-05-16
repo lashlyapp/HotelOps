@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { Dictionary } from '@/lib/i18n/dictionaries'
+import type { UtmAttribution } from '@/lib/marketing/utm'
 import { submitSignupRequest, type SignupActionResult } from '../actions'
 
 const initial: SignupActionResult = {}
@@ -14,8 +15,18 @@ const initial: SignupActionResult = {}
  * so every label / placeholder / hint / CTA renders in the right
  * language; server action also resolves the locale and returns
  * localized error strings.
+ *
+ * `attribution` carries UTM params + referrer resolved server-side
+ * (URL > cookie). Rendered as hidden inputs so the action persists
+ * them on signup_pending → organizations for ad-campaign attribution.
  */
-export function SignupForm({ t }: { t: Dictionary['signup'] }) {
+export function SignupForm({
+  t,
+  attribution,
+}: {
+  t: Dictionary['signup']
+  attribution: UtmAttribution
+}) {
   const [state, action, pending] = useActionState(
     submitSignupRequest,
     initial,
@@ -28,6 +39,22 @@ export function SignupForm({ t }: { t: Dictionary['signup'] }) {
         <Label htmlFor="website">Website</Label>
         <Input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
+
+      {/* UTM attribution. Server-rendered from the URL or the
+          UTM_COOKIE; flows through formData into signup_pending and
+          eventually onto the org row. Empty values are skipped so
+          we don't store empty strings. */}
+      {(['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'referrer'] as const).map(
+        (k) =>
+          attribution[k as keyof UtmAttribution] ? (
+            <input
+              key={k}
+              type="hidden"
+              name={k}
+              value={attribution[k as keyof UtmAttribution]}
+            />
+          ) : null,
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">

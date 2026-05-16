@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
+import { TrackingScripts } from '@/components/marketing/tracking-scripts'
+import { UtmCapture } from '@/components/marketing/utm-capture'
 import { BRAND } from '@/lib/brand'
 import './globals.css'
 
@@ -38,7 +40,11 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${jetbrainsMono.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <UtmCapture />
+        <TrackingScripts />
+        {children}
+      </body>
     </html>
   )
 }

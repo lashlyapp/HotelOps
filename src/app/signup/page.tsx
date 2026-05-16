@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Wordmark } from '@/components/brand/wordmark'
@@ -5,10 +6,21 @@ import { Footer } from '@/components/layout/footer'
 import { Card, CardBody } from '@/components/ui/card'
 import { getDictionary } from '@/lib/i18n/dictionaries'
 import { getLocale } from '@/lib/i18n/get-locale'
+import {
+  deserializeUtm,
+  readUtmFromSearchParams,
+  UTM_COOKIE,
+} from '@/lib/marketing/utm'
 import { createClient } from '@/lib/supabase/server'
 import { SignupForm } from './_components/signup-form'
 
-export default async function SignupPage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>
+
+export default async function SignupPage({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -17,6 +29,23 @@ export default async function SignupPage() {
 
   const locale = await getLocale()
   const t = getDictionary(locale)
+
+  // Resolve attribution: URL params win (a fresh ad click), then
+  // fall back to the cookie set by UtmCapture on a previous landing.
+  // Either way the values flow into the form as hidden inputs and
+  // the action persists them onto signup_pending → organizations.
+  const params = await searchParams
+  const urlAttribution = readUtmFromSearchParams(
+    new URLSearchParams(
+      Object.entries(params).flatMap(([k, v]) =>
+        Array.isArray(v) ? v.map((vi) => [k, vi]) : v ? [[k, v]] : [],
+      ),
+    ),
+  )
+  const cookieAttribution = deserializeUtm(
+    (await cookies()).get(UTM_COOKIE)?.value,
+  )
+  const attribution = { ...cookieAttribution, ...urlAttribution }
 
   return (
     <div className="flex flex-1 flex-col">
@@ -56,7 +85,7 @@ export default async function SignupPage() {
 
           <Card className="mt-10">
             <CardBody className="p-6 sm:p-8">
-              <SignupForm t={t.signup} />
+              <SignupForm t={t.signup} attribution={attribution} />
             </CardBody>
           </Card>
         </section>

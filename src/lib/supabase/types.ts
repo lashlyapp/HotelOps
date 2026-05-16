@@ -33,6 +33,17 @@ export type Organization = {
   // live request context to read getLocale() from. See
   // 20260515030000_org_locale.sql.
   locale: string
+  // UTM attribution captured at signup-form-submission time. See
+  // 20260515040000_utm_capture.sql + src/lib/marketing/utm.ts.
+  // Persisted forever so the admin dashboard's per-campaign CAC view
+  // works historically even after a 90-day attribution window
+  // closes. All nullable: organic / direct visitors have no UTMs.
+  utm_source: string | null
+  utm_medium: string | null
+  utm_campaign: string | null
+  utm_content: string | null
+  utm_term: string | null
+  referrer: string | null
 }
 
 export type Profile = {
@@ -422,6 +433,15 @@ export type SignupPending = {
   // any resend speak the same language even if the user starts /signup
   // in one tab and finishes /signup/verify in another.
   locale: string
+  // UTM attribution captured from the signup-form hidden inputs.
+  // Copied to organizations on OTP verify; nullable for organic
+  // signups.
+  utm_source: string | null
+  utm_medium: string | null
+  utm_campaign: string | null
+  utm_content: string | null
+  utm_term: string | null
+  referrer: string | null
   created_at: string
 }
 

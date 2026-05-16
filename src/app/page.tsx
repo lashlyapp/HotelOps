@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
 import { DestinationsBand } from '@/components/marketing/destinations-band'
+import { UseCasesBand } from '@/components/marketing/use-cases-band'
 import { Card, CardBody } from '@/components/ui/card'
 import { BRAND } from '@/lib/brand'
 import { getDictionary } from '@/lib/i18n/dictionaries'
@@ -304,6 +305,9 @@ export default async function HomePage() {
 
         {/* ─── Destinations: city-targeted cards in local languages ──── */}
         <DestinationsBand t={t} />
+
+        {/* ─── Use cases: anonymized real-customer stories ────────────── */}
+        <UseCasesBand t={t.useCases} />
 
         {/* ─── Module: Work Orders (SEO: "hotel maintenance software") ─ */}
         <section

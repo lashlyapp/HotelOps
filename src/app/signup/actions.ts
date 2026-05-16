@@ -140,6 +140,23 @@ export async function submitSignupRequest(
     return { error: e.tempUnavailable }
   }
 
+  // Capture attribution from hidden form inputs populated by /signup
+  // page (URL query params win, then the UTM_COOKIE set on landing).
+  // Each value is capped at 255 chars defensively even though the
+  // form-side reader already truncates.
+  const cap = (v: FormDataEntryValue | null): string | null => {
+    const s = typeof v === 'string' ? v.trim().slice(0, 255) : ''
+    return s.length > 0 ? s : null
+  }
+  const utm = {
+    utm_source: cap(formData.get('utm_source')),
+    utm_medium: cap(formData.get('utm_medium')),
+    utm_campaign: cap(formData.get('utm_campaign')),
+    utm_content: cap(formData.get('utm_content')),
+    utm_term: cap(formData.get('utm_term')),
+    referrer: cap(formData.get('referrer')),
+  }
+
   const { error: upsertErr } = await admin
     .from('signup_pending')
     .upsert(
@@ -155,6 +172,7 @@ export async function submitSignupRequest(
         resends: 0,
         resent_at: null,
         locale,
+        ...utm,
       },
       { onConflict: 'email' },
     )
@@ -302,6 +320,16 @@ export async function verifySignupOtp(
       trial_ends_at: trialEnd.toISOString(),
       currency,
       locale,
+      // Carry attribution forward to the org row so the admin
+      // dashboard's per-campaign view can report "this org came
+      // from utm_campaign='may-eu'" forever, not just during the
+      // signup_pending window.
+      utm_source: pending.utm_source ?? null,
+      utm_medium: pending.utm_medium ?? null,
+      utm_campaign: pending.utm_campaign ?? null,
+      utm_content: pending.utm_content ?? null,
+      utm_term: pending.utm_term ?? null,
+      referrer: pending.referrer ?? null,
     })
     .select('id')
     .single()

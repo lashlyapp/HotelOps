@@ -162,8 +162,31 @@
   },
   "destinations": {
     "eyebrow": "Les marchés pour lesquels nous sommes faits",
-    "title": "Pour les hôtels boutique, là où ils se concentrent vraiment.",
+    "title": "Pour les hôtels boutique, partout.",
     "sub": "Lisbonne, Barcelone, Paris, Mexico — les quartiers où les hôtels indépendants et des petits groupes opèrent réellement. Facturation en devise locale, inscription dans votre langue, la même base opérationnelle partout."
+  },
+  "useCases": {
+    "eyebrow": "Comment les clients l'utilisent",
+    "title": "Trois boutiques, trois victoires quotidiennes différentes.",
+    "sub": "Ce sont des clients réels qui utilisent MyHotelOps aujourd'hui. Noms réservés à leur demande — les exploitants boutique tiennent à leur vie privée et nous la respectons. Les cas d'usage sont les leurs.",
+    "items": [
+      {
+        "headline": "Délai de maintenance réduit de jours à heures",
+        "type": "Boutique de 32 chambres · Côte Est États-Unis",
+        "body": "La réception envoyait des emails à la maintenance ; les tickets s'accumulaient. Avec les bons de travail basés sur photo, le cycle entre signalement client et réparation est passé d'une médiane de 2-3 jours à moins de 4 heures. Le propriétaire a enfin une vue Kanban de chaque incident ouvert au même endroit."
+      },
+      {
+        "headline": "Quatre abonnements SaaS distincts remplacés",
+        "type": "Groupe hôtelier design de deux propriétés · Côte Ouest États-Unis",
+        "body": "Ils ont résilié leur outil de tickets de maintenance, leur plateforme événements et banquets, leur abonnement d'affichage numérique et leur app de conciergerie. La dépense nette a baissé d'environ $400/propriété/mois avec les mêmes workflows — tout consolidé en une seule ligne à $188."
+      },
+      {
+        "headline": "Nouveau directeur opérationnel en une après-midi, pas une semaine",
+        "type": "Petit groupe hôtelier · Pacifique Nord-Ouest",
+        "body": "Le nouveau directeur a commencé un mardi. En fin de journée il avait les bons de travail, les contacts fournisseurs, les identifiants Wi-Fi, les cartes d'accueil imprimables et le pipeline d'événements dans un seul onglet. Le propriétaire prévoyait deux semaines pour la montée en charge ; il alloue maintenant une après-midi."
+      }
+    ],
+    "footnote": "Vous voulez partager votre histoire ? Écrivez à {email} — nous la rédigeons pour qu'elle se lise authentique, pas comme un argumentaire."
   },
   "demo": {
     "navLabel": "Parlons-en",
