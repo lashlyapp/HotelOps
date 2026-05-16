@@ -193,32 +193,44 @@
     "eyebrow": "For multi-property groups",
     "headline": "Want a tour before you sign up?",
     "sub": "If you run more than one property — or you'd rather see the product walked through than poke around the trial — book 30 minutes with us. We'll show you the parts that matter for your operation, answer the awkward billing questions, and skip the parts that don't apply.",
-    "personaList": {
-      "heading": "Especially useful if you're",
-      "items": [
-        "An owner / GM evaluating for 3+ properties",
-        "Switching from Quore, Tripleseat, or a multi-tool stack",
-        "Operating outside the US and want pricing in your currency",
-        "Asking the questions our PLG flow doesn't answer"
-      ]
-    },
     "alternative": {
       "heading": "Don't need a call?",
       "body": "The 7-day free trial gives you the same access. No credit card, full feature set, your data stays if you don't convert.",
       "cta": "Start the free trial instead"
     },
-    "calendly": {
+    "calendar": {
       "heading": "Pick a time",
-      "body": "Choose a 30-minute slot that works. We'll meet on Google Meet — link arrives in your calendar invite.",
-      "openExternal": "Open the calendar",
-      "fallback": "Or email {email} and we'll set something up by hand."
+      "intro": "30-minute calls on Google Meet. All times shown in US Eastern (ET).",
+      "takenLabel": "Taken",
+      "selectInstruction": "Tap an available slot to book it.",
+      "fallback": "None of these work? Email {email} and we'll find a time."
+    },
+    "booking": {
+      "heading": "Book {slot}",
+      "subtitle": "We'll send a Google Meet calendar invite to the email below.",
+      "changeSlot": "Change time",
+      "yourName": "Your name",
+      "workEmail": "Work email",
+      "hotelName": "Hotel name",
+      "propertyCount": "How many properties?",
+      "propertyCountPlaceholder": "e.g. 1, 3, 12",
+      "notes": "Anything we should know? (optional)",
+      "notesPlaceholder": "What you're hoping to solve, your current stack, time-zone caveats…",
+      "cta": "Confirm booking",
+      "ctaSending": "Sending…",
+      "successHeading": "You're booked.",
+      "successBody": "We'll send a Google Meet invite to {email} shortly. Reply to it if anything changes.",
+      "errorMissing": "Name, email, hotel name, and a slot are required.",
+      "errorEmail": "Please enter a valid email address.",
+      "errorSlot": "That time slot is no longer available — pick another.",
+      "errorGeneric": "Couldn't send the request. Please email {email} directly."
     }
   },
   "pricing": {
     "eyebrow": "Pricing",
     "headline": "Per property. Not per seat. Not per screen. Not per room.",
     "sub": "One $100/property/month base. Two optional add-ons. That’s the whole price list — and the maximum a single property can possibly cost you is $188/month, regardless of how many screens, rooms, or staff you have.",
-    "midCycleNote": "Mid-cycle add-on changes are prorated and invoiced immediately so each property’s billing timeline stays clean.",
+    "midCycleNote": "No contracts. No annual commitments. Add or remove options whenever you want — cancel any time from your account.",
     "cadence": "property / month",
     "tagRequired": "Required",
     "tagOptional": "Optional",

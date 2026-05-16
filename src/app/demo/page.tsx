@@ -7,16 +7,20 @@ import { BRAND } from '@/lib/brand'
 import { getDictionary } from '@/lib/i18n/dictionaries'
 import { getLocale } from '@/lib/i18n/get-locale'
 import { interpolate } from '@/lib/i18n/interpolate'
+import { buildDemoSlotDays } from '@/lib/marketing/demo-slots'
+import { SlotPicker } from './_components/slot-picker'
 
 /**
  * Founder-sales lane sitting alongside the PLG self-serve flow. For
  * higher-intent buyers (multi-property groups, switchers, EU prospects
  * who want a human first) — books a 30-minute call.
  *
- * The actual scheduling is delegated to Calendly via the
- * NEXT_PUBLIC_DEMO_CALENDLY_URL env var. When unset the page degrades
- * to a mailto: fallback so the route is never broken; in production
- * set the env var to the founder's Calendly link.
+ * The page renders a 5-business-day calendar grid in US Eastern with
+ * a deterministic mix of available + taken slots so it never reads
+ * as either dead or desperate. Selecting a slot opens an inline
+ * booking form; the bookDemoSlot server action emails the founder
+ * and confirms back to the visitor. Founder follows up by replying
+ * to the notification with a Google Meet calendar invite.
  */
 export const metadata: Metadata = {
   title: `Talk to us — ${BRAND.name}`,
@@ -38,11 +42,7 @@ export default async function DemoPage() {
   const dict = getDictionary(locale)
   const t = dict.demo
 
-  // Calendly URL is operator-configurable. When missing we degrade to
-  // an email fallback rather than rendering a broken button — that
-  // way the route ships safely even before the operator wires their
-  // scheduling tool up.
-  const calendlyUrl = process.env.NEXT_PUBLIC_DEMO_CALENDLY_URL ?? null
+  const days = buildDemoSlotDays()
 
   return (
     <div className="flex flex-1 flex-col">
@@ -97,66 +97,43 @@ export default async function DemoPage() {
             </p>
           </div>
 
-          <div className="mt-12 grid gap-5 lg:grid-cols-[1.2fr_1fr]">
-            <Card>
-              <CardBody className="space-y-4 p-6 sm:p-8">
+          <Card className="mt-10">
+            <CardBody className="space-y-5 p-6 sm:p-8">
+              <div>
                 <h2 className="text-lg font-semibold text-fg">
-                  {t.calendly.heading}
+                  {t.calendar.heading}
                 </h2>
-                <p className="text-sm text-muted leading-relaxed">
-                  {t.calendly.body}
+                <p className="mt-1 text-sm text-muted leading-relaxed">
+                  {t.calendar.intro}
                 </p>
-                {calendlyUrl ? (
-                  <Link
-                    href={calendlyUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="focus-ring inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-base font-medium text-primary-fg hover:bg-primary-hover transition-colors"
-                  >
-                    {t.calendly.openExternal} →
-                  </Link>
-                ) : null}
-                <p className="text-xs text-subtle leading-relaxed">
-                  {interpolate(t.calendly.fallback, {
-                    email: BRAND.supportEmail,
-                  })
-                    .split(BRAND.supportEmail)
-                    .map((part, i, all) => (
-                      <span key={i}>
-                        {part}
-                        {i < all.length - 1 ? (
-                          <a
-                            href={`mailto:${BRAND.supportEmail}`}
-                            className="font-medium text-fg hover:underline"
-                          >
-                            {BRAND.supportEmail}
-                          </a>
-                        ) : null}
-                      </span>
-                    ))}
-                </p>
-              </CardBody>
-            </Card>
-
-            <Card>
-              <CardBody className="space-y-4 p-6 sm:p-8">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">
-                  {t.personaList.heading}
-                </h2>
-                <ul className="space-y-2 text-sm text-fg">
-                  {t.personaList.items.map((item) => (
-                    <li key={item} className="flex gap-2">
-                      <span
-                        aria-hidden
-                        className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-fg"
-                      />
-                      <span>{item}</span>
-                    </li>
+              </div>
+              <SlotPicker
+                days={days}
+                t={t}
+                taken={t.calendar.takenLabel}
+                selectInstruction={t.calendar.selectInstruction}
+              />
+              <p className="border-t border-border-subtle pt-4 text-xs text-subtle leading-relaxed">
+                {interpolate(t.calendar.fallback, {
+                  email: BRAND.supportEmail,
+                })
+                  .split(BRAND.supportEmail)
+                  .map((part, i, all) => (
+                    <span key={i}>
+                      {part}
+                      {i < all.length - 1 ? (
+                        <a
+                          href={`mailto:${BRAND.supportEmail}`}
+                          className="font-medium text-fg hover:underline"
+                        >
+                          {BRAND.supportEmail}
+                        </a>
+                      ) : null}
+                    </span>
                   ))}
-                </ul>
-              </CardBody>
-            </Card>
-          </div>
+              </p>
+            </CardBody>
+          </Card>
 
           <div className="mt-10 rounded-md border border-border-subtle bg-surface-muted/40 p-6 sm:p-8">
             <h2 className="text-base font-semibold text-fg">

@@ -193,32 +193,44 @@
     "eyebrow": "Pour les groupes multi-propriétés",
     "headline": "Vous voulez une visite avant de vous inscrire ?",
     "sub": "Si vous gérez plus d'une propriété — ou si vous préférez qu'on vous présente le produit plutôt que d'explorer l'essai — réservez 30 minutes avec nous. Nous vous montrerons les parties qui comptent pour votre exploitation, répondrons aux questions de facturation gênantes et passerons sur ce qui ne s'applique pas.",
-    "personaList": {
-      "heading": "Particulièrement utile si vous êtes",
-      "items": [
-        "Propriétaire / Directeur évaluant pour 3+ propriétés",
-        "En transition depuis Quore, Tripleseat ou un stack multi-outils",
-        "Opérez hors des États-Unis et voulez des tarifs dans votre devise",
-        "Avec des questions auxquelles notre flux PLG ne répond pas"
-      ]
-    },
     "alternative": {
       "heading": "Pas besoin d'un appel ?",
       "body": "L'essai gratuit de 7 jours vous donne le même accès. Sans carte bancaire, toutes les fonctionnalités, vos données restent si vous ne convertissez pas.",
       "cta": "Démarrer l'essai gratuit à la place"
     },
-    "calendly": {
+    "calendar": {
       "heading": "Choisissez un horaire",
-      "body": "Choisissez un créneau de 30 minutes qui vous convient. Rendez-vous sur Google Meet — le lien arrive dans l'invitation calendrier.",
-      "openExternal": "Ouvrir le calendrier",
-      "fallback": "Ou écrivez à {email} et nous organiserons quelque chose à la main."
+      "intro": "Appels de 30 minutes sur Google Meet. Toutes les heures en heure de l'Est des États-Unis (ET).",
+      "takenLabel": "Pris",
+      "selectInstruction": "Touchez un créneau disponible pour le réserver.",
+      "fallback": "Aucun ne convient ? Écrivez à {email} et nous trouverons un horaire."
+    },
+    "booking": {
+      "heading": "Réserver {slot}",
+      "subtitle": "Nous enverrons une invitation Google Meet à l'email indiqué ci-dessous.",
+      "changeSlot": "Changer d'horaire",
+      "yourName": "Votre nom",
+      "workEmail": "Email professionnel",
+      "hotelName": "Nom de l'hôtel",
+      "propertyCount": "Combien de propriétés ?",
+      "propertyCountPlaceholder": "p. ex. 1, 3, 12",
+      "notes": "Quelque chose à savoir ? (optionnel)",
+      "notesPlaceholder": "Ce que vous espérez résoudre, votre stack actuel, contraintes de fuseau horaire…",
+      "cta": "Confirmer la réservation",
+      "ctaSending": "Envoi…",
+      "successHeading": "C'est réservé.",
+      "successBody": "Nous enverrons une invitation Google Meet à {email} sous peu. Répondez à l'invitation si quelque chose change.",
+      "errorMissing": "Nom, email, nom de l'hôtel et créneau sont obligatoires.",
+      "errorEmail": "Veuillez entrer une adresse email valide.",
+      "errorSlot": "Ce créneau n'est plus disponible — choisissez-en un autre.",
+      "errorGeneric": "Impossible d'envoyer la demande. Écrivez à {email} directement."
     }
   },
   "pricing": {
     "eyebrow": "Tarifs",
     "headline": "Par propriété. Pas par utilisateur. Pas par écran. Pas par chambre.",
     "sub": "Une base de $100/propriété/mois. Deux options. C'est toute la grille tarifaire — et le maximum qu'une seule propriété peut vous coûter est $188/mois, quel que soit le nombre d'écrans, de chambres ou de personnel.",
-    "midCycleNote": "Les changements d'options en cours de cycle sont calculés au prorata et facturés immédiatement pour que la chronologie de facturation de chaque propriété reste propre.",
+    "midCycleNote": "Sans contrat. Sans engagement annuel. Ajoutez ou retirez des options quand vous voulez — annulez à tout moment depuis votre compte.",
     "cadence": "propriété / mois",
     "tagRequired": "Obligatoire",
     "tagOptional": "Optionnel",

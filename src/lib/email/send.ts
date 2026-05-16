@@ -385,3 +385,135 @@ async function sendOrLog(
     return false
   }
 }
+
+// ---------------------------------------------------------------------------
+// /demo booking — visitor picks a slot, we email founder + visitor
+// ---------------------------------------------------------------------------
+type DemoBookingNotificationArgs = {
+  /** Operator inbox (typically BRAND.supportEmail). */
+  to: string
+  /** Optional cc — useful when more than one person fields demos. */
+  cc?: string
+  visitorName: string
+  visitorEmail: string
+  hotelName: string
+  propertyCount: string | null
+  notes: string | null
+  slotHumanLabel: string
+  /** Visitor's locale at request time, for the operator's reference. */
+  visitorLocale: string
+}
+
+/**
+ * Internal notification: a visitor just booked a slot on /demo.
+ * Goes to the founder/operator inbox; reply-to is the visitor so a
+ * direct reply lands in their inbox without copy-pasting.
+ */
+export async function sendDemoBookingNotification(
+  args: DemoBookingNotificationArgs,
+): Promise<boolean> {
+  const resend = getResend()
+  if (!resend) {
+    console.warn('[email] RESEND_API_KEY not set; skipping demo notification')
+    return false
+  }
+
+  const subject = `[${BRAND.name}] Demo request: ${args.hotelName} (${args.slotHumanLabel})`
+  const lines = [
+    `New demo request via /demo.`,
+    '',
+    `Slot:        ${args.slotHumanLabel}`,
+    `Hotel:       ${args.hotelName}`,
+    `Properties:  ${args.propertyCount ?? '—'}`,
+    `Name:        ${args.visitorName}`,
+    `Email:       ${args.visitorEmail}`,
+    `Locale:      ${args.visitorLocale}`,
+    '',
+    args.notes ? `Notes:\n${args.notes}` : 'No notes provided.',
+    '',
+    `Reply to this email to confirm and send the calendar invite.`,
+  ]
+  const text = lines.join('\n')
+
+  const html = wrapEmailHtml(`
+    <p>New demo request via <strong>/demo</strong>.</p>
+    <table style="border-collapse:collapse;margin:12px 0">
+      <tr><td style="padding:4px 12px 4px 0;color:#57534e">Slot</td><td style="padding:4px 0"><strong>${escapeHtml(args.slotHumanLabel)}</strong></td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#57534e">Hotel</td><td style="padding:4px 0"><strong>${escapeHtml(args.hotelName)}</strong></td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#57534e">Properties</td><td style="padding:4px 0">${escapeHtml(args.propertyCount ?? '—')}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#57534e">Name</td><td style="padding:4px 0">${escapeHtml(args.visitorName)}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#57534e">Email</td><td style="padding:4px 0"><a href="mailto:${escapeHtml(args.visitorEmail)}">${escapeHtml(args.visitorEmail)}</a></td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#57534e">Locale</td><td style="padding:4px 0"><code>${escapeHtml(args.visitorLocale)}</code></td></tr>
+    </table>
+    ${args.notes ? `<p style="color:#57534e;white-space:pre-wrap;border-left:3px solid #e7e5e4;padding:4px 12px;margin:12px 0">${escapeHtml(args.notes)}</p>` : '<p style="color:#a8a29e">No notes provided.</p>'}
+    <p>Reply to this email to confirm and send the calendar invite.</p>
+  `)
+
+  try {
+    const { error } = await resend.emails.send({
+      from: getEmailFrom(),
+      to: args.to,
+      cc: args.cc,
+      subject,
+      text,
+      html,
+      replyTo: args.visitorEmail,
+    })
+    if (error) {
+      console.error('[email] resend error (demo notification)', error)
+      return false
+    }
+    return true
+  } catch (err) {
+    console.error('[email] resend threw (demo notification)', err)
+    return false
+  }
+}
+
+type DemoBookingConfirmationArgs = {
+  to: string
+  visitorName: string
+  hotelName: string
+  slotHumanLabel: string
+}
+
+/**
+ * Confirmation back to the visitor. Promises a Google Meet invite;
+ * the founder follows up by replying to the notification email
+ * (which lands in the visitor's inbox via the configured reply-to).
+ *
+ * Stays English regardless of visitor locale for now — this email
+ * is short, intent is clear, and translating + plumbing locale
+ * through every email function adds surface for a low-volume
+ * touchpoint. Revisit when /demo bookings get heavy international
+ * volume.
+ */
+export async function sendDemoBookingConfirmation(
+  args: DemoBookingConfirmationArgs,
+): Promise<boolean> {
+  const resend = getResend()
+  if (!resend) return false
+  const subject = `Confirmed: your ${BRAND.name} demo on ${args.slotHumanLabel}`
+  const text = [
+    `Hi ${args.visitorName},`,
+    '',
+    `We've received your demo request for ${args.hotelName} at ${args.slotHumanLabel}.`,
+    `A Google Meet calendar invite is on its way — usually within an hour during business hours, otherwise next morning ET.`,
+    '',
+    `If anything changes, just reply to this email.`,
+    '',
+    `— ${BRAND.name}`,
+  ].join('\n')
+  const html = wrapEmailHtml(`
+    <p>Hi ${escapeHtml(args.visitorName)},</p>
+    <p>We've received your demo request for <strong>${escapeHtml(args.hotelName)}</strong> at <strong>${escapeHtml(args.slotHumanLabel)}</strong>.</p>
+    <p>A Google Meet calendar invite is on its way — usually within an hour during business hours, otherwise next morning ET.</p>
+    <p style="color:#57534e">If anything changes, just reply to this email.</p>
+    <p style="color:#a8a29e;font-size:12px;margin-top:32px">— ${escapeHtml(BRAND.name)}</p>
+  `)
+  return sendOrLog(
+    resend,
+    { to: args.to, subject, text, html },
+    'demo confirmation',
+  )
+}
