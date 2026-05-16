@@ -321,6 +321,25 @@
       }
     ]
   },
+  "groups": {
+    "eyebrow": "Para grupos",
+    "title": "Una sola plataforma, en cada ciudad donde operas.",
+    "sub": "Gestiona una propiedad en Lisboa, otra en Ciudad de México, una tercera en Tokio — mismo login, mismos flujos, una sola línea mensual. Cada equipo trabaja en su idioma; los propietarios lo ven todo en el suyo.",
+    "items": [
+      {
+        "title": "Idioma local para cada equipo.",
+        "body": "El personal de cada propiedad se registra y trabaja en su idioma. La vista del propietario se consolida en el suyo."
+      },
+      {
+        "title": "Una consola, todas las propiedades.",
+        "body": "Cambia de ciudad con un clic. Los paneles del grupo se agregan automáticamente; las vistas por propiedad permanecen separadas cuando las necesitas."
+      },
+      {
+        "title": "Añade o pausa cuando quieras.",
+        "body": "Abrir una nueva ciudad o cerrar una propiedad lleva unos clics — sin contratos que renegociar, sin cuentas por asiento o por pantalla."
+      }
+    ]
+  },
   "useCases": {
     "eyebrow": "Cómo lo usan los clientes",
     "title": "Tres boutiques, tres victorias diarias diferentes.",
@@ -475,19 +494,6 @@
       "alaCarte": "à la carte",
       "savings": "Ahorro frente a herramientas independientes",
       "footnote": "Los precios independientes son los niveles de entrada listados públicamente a mayo de 2026; algunos proveedores solo cotizan a petición y pueden ser más altos en la práctica. Los proveedores de bienvenida cobran por habitación ocupada, así que la cifra anterior asume una propiedad de 40 habitaciones con ocupación media-alta típica."
-    },
-    "scale": {
-      "headline": "Lo que pagan realmente los grupos multi-propiedad.",
-      "sub": "Los complementos se activan en toda la organización y se facturan en cada factura de propiedad. Un grupo de cuatro propiedades con ambos complementos paga 4 × $188 = $752/mes — todo incluido.",
-      "headers": {
-        "properties": "Propiedades",
-        "baseOnly": "Solo base",
-        "baseSignage": "Base + Señalización",
-        "everything": "Todo activado"
-      },
-      "propertyOne": "1 propiedad",
-      "propertyMany": "{n} propiedades",
-      "perMonth": "/mes"
     },
     "faq": {
       "heading": "Preguntas frecuentes",

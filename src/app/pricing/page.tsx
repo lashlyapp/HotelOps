@@ -6,7 +6,6 @@ import { Card, CardBody } from '@/components/ui/card'
 import { BRAND } from '@/lib/brand'
 import { type Dictionary, getDictionary } from '@/lib/i18n/dictionaries'
 import { getLocale } from '@/lib/i18n/get-locale'
-import { interpolate } from '@/lib/i18n/interpolate'
 
 export const metadata: Metadata = {
   title: `Pricing — ${BRAND.name}`,
@@ -185,46 +184,6 @@ export default async function PricingPage() {
             <p className="mt-6 max-w-2xl text-xs text-subtle">
               {t.compare.footnote}
             </p>
-          </div>
-        </section>
-
-        {/* ─── Scaling by property count ─────────────────────────────── */}
-        <section className="mx-auto max-w-6xl px-6 py-20">
-          <div className="max-w-2xl">
-            <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-              {t.scale.headline}
-            </h2>
-            <p className="mt-4 text-base text-muted leading-relaxed">
-              {t.scale.sub}
-            </p>
-          </div>
-
-          <div className="mt-10 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead className="text-left text-xs uppercase tracking-wider text-subtle">
-                <tr>
-                  <th className="px-4 py-3 font-medium">
-                    {t.scale.headers.properties}
-                  </th>
-                  <th className="px-4 py-3 font-medium text-right">
-                    {t.scale.headers.baseOnly}
-                  </th>
-                  <th className="px-4 py-3 font-medium text-right">
-                    {t.scale.headers.baseSignage}
-                  </th>
-                  <th className="px-4 py-3 font-medium text-right">
-                    {t.scale.headers.everything}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border-subtle">
-                <ScaleRow count={1} t={t.scale} />
-                <ScaleRow count={3} t={t.scale} />
-                <ScaleRow count={5} t={t.scale} />
-                <ScaleRow count={10} t={t.scale} />
-                <ScaleRow count={25} t={t.scale} />
-              </tbody>
-            </table>
           </div>
         </section>
 
@@ -414,37 +373,6 @@ function CompareRow({
       </td>
       <td className="px-4 py-3 text-right text-fg tabular-nums">
         {hotelopsCost}
-      </td>
-    </tr>
-  )
-}
-
-function ScaleRow({
-  count,
-  t,
-}: {
-  count: number
-  t: Dictionary['pricing']['scale']
-}) {
-  const base = 100 * count
-  const signage = base + 49 * count
-  const all = base + 49 * count + 39 * count
-  const label =
-    count === 1 ? t.propertyOne : interpolate(t.propertyMany, { n: count })
-  return (
-    <tr>
-      <td className="px-4 py-3 font-medium text-fg">{label}</td>
-      <td className="px-4 py-3 text-right text-muted tabular-nums">
-        ${base}
-        {t.perMonth}
-      </td>
-      <td className="px-4 py-3 text-right text-muted tabular-nums">
-        ${signage}
-        {t.perMonth}
-      </td>
-      <td className="px-4 py-3 text-right text-fg tabular-nums">
-        ${all}
-        {t.perMonth}
       </td>
     </tr>
   )

@@ -6,6 +6,7 @@ import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
 import { AsianDestinationsBand } from '@/components/marketing/asian-destinations-band'
 import { DestinationsBand } from '@/components/marketing/destinations-band'
+import { GroupsBand } from '@/components/marketing/groups-band'
 import { UseCasesBand } from '@/components/marketing/use-cases-band'
 import { Card, CardBody } from '@/components/ui/card'
 import { BRAND } from '@/lib/brand'
@@ -321,6 +322,9 @@ export default async function HomePage() {
 
         {/* ─── APAC destinations: Tokyo / Seoul / Hanoi / Singapore ──── */}
         <AsianDestinationsBand t={t} />
+
+        {/* ─── Groups: multi-property / multi-city value proposition ──── */}
+        <GroupsBand t={t} />
 
         {/* ─── Use cases: anonymized real-customer stories ────────────── */}
         <UseCasesBand t={t.useCases} />

@@ -321,6 +321,25 @@
       }
     ]
   },
+  "groups": {
+    "eyebrow": "Dành cho nhóm",
+    "title": "Một nền tảng, trong mọi thành phố bạn vận hành.",
+    "sub": "Vận hành một cơ sở ở Lisbon, một ở Mexico City, một ở Tokyo — cùng đăng nhập, cùng quy trình, cùng một dòng hóa đơn hàng tháng. Mỗi đội làm việc bằng ngôn ngữ của mình; chủ sở hữu thấy mọi thứ bằng ngôn ngữ của họ.",
+    "items": [
+      {
+        "title": "Ngôn ngữ bản địa cho mỗi đội.",
+        "body": "Nhân viên ở mỗi cơ sở đăng ký và làm việc bằng ngôn ngữ của họ. Góc nhìn của chủ sở hữu được tổng hợp bằng ngôn ngữ của họ."
+      },
+      {
+        "title": "Một bảng điều khiển, mọi cơ sở.",
+        "body": "Chuyển đổi giữa các thành phố trong một cú nhấp. Bảng điều khiển nhóm tự động tổng hợp; góc nhìn theo từng cơ sở vẫn tách biệt khi cần."
+      },
+      {
+        "title": "Thêm hoặc tạm dừng bất cứ lúc nào.",
+        "body": "Mở một thành phố mới hay đóng một cơ sở chỉ mất vài cú nhấp — không có hợp đồng để đàm phán lại, không có phép tính theo ghế hay theo màn hình."
+      }
+    ]
+  },
   "useCases": {
     "eyebrow": "Khách hàng sử dụng nó như thế nào",
     "title": "Ba boutique, ba chiến thắng hàng ngày khác nhau.",
@@ -475,19 +494,6 @@
       "alaCarte": "mua riêng",
       "savings": "Tiết kiệm so với mua riêng độc lập",
       "footnote": "Giá độc lập là các bậc nhập cảnh được niêm yết công khai tính đến tháng 5 năm 2026; một số nhà cung cấp chỉ báo giá khi yêu cầu và có thể cao hơn trong thực tế. Các nhà cung cấp đón khách tính phí theo phòng được sử dụng, vì vậy con số trên giả định một tài sản 40 phòng ở mức công suất trung bình điển hình."
-    },
-    "scale": {
-      "headline": "Các nhóm đa tài sản thực sự trả gì.",
-      "sub": "Các bổ sung kích hoạt toàn tổ chức và thanh toán trên hóa đơn của mọi tài sản. Một nhóm bốn tài sản với cả hai bổ sung trả 4 × $188 = $752/tháng — tất cả bao gồm.",
-      "headers": {
-        "properties": "Tài sản",
-        "baseOnly": "Chỉ nền tảng",
-        "baseSignage": "Nền tảng + Biển hiển thị",
-        "everything": "Bật mọi thứ"
-      },
-      "propertyOne": "1 tài sản",
-      "propertyMany": "{n} tài sản",
-      "perMonth": "/tháng"
     },
     "faq": {
       "heading": "Câu hỏi thường gặp",
