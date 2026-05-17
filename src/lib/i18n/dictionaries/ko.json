@@ -118,6 +118,8 @@
       "consentAnd": " 및 ",
       "consentPrivacy": "개인정보 처리방침",
       "consentSuffix": "에 동의합니다.",
+      "onboardingLabel": "저희 팀과 1시간 1:1 온보딩 세션 예약하기.",
+      "onboardingHelp": "선택 사항입니다. 대부분의 팀은 건너뜁니다 — 무료 체험판이 설정 과정을 안내합니다. 첫 청구서에 일회성 온보딩 수수료가 추가됩니다.",
       "ctaSending": "인증 코드 전송 중…",
       "ctaSend": "인증 코드 전송",
       "noCardLine": "신용카드 불필요. 10GB 미디어 포함."

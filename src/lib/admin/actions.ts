@@ -355,6 +355,34 @@ export async function updateOrgNameAction(
   return { success: 'Saved.' }
 }
 
+/**
+ * Platform-admin backstop for the onboarding-session opt-in. The
+ * normal path is the checkbox on the /signup form, but support staff
+ * need a way to flip the flag for a customer who calls in after the
+ * fact (either to add or to drop the 1-on-1 session). Toggling on does
+ * NOT retroactively invoice the fee — it only opens the gate so the
+ * next subscription start attaches it.
+ */
+export async function setOrgWantsOnboardingSessionAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requirePlatformAdmin()
+  const orgId = String(formData.get('org_id') ?? '')
+  if (!orgId) return { error: 'Missing org.' }
+  const wants = formData.get('wants_onboarding_session') === 'yes'
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('organizations')
+    .update({ wants_onboarding_session: wants })
+    .eq('id', orgId)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/admin/tenants/${orgId}`)
+  return { success: wants ? 'Onboarding session enabled.' : 'Onboarding session disabled.' }
+}
+
 export async function addPropertyAction(
   _prev: ActionResult,
   formData: FormData,

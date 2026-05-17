@@ -79,6 +79,8 @@ export async function submitSignupRequest(
   const fullName = String(formData.get('full_name') ?? '').trim()
   const hotelName = String(formData.get('hotel_name') ?? '').trim()
   const consent = formData.get('consent') === 'yes'
+  const wantsOnboardingSession =
+    formData.get('wants_onboarding_session') === 'yes'
 
   if (!email || !fullName || !hotelName || !password) {
     return { error: e.missingFields }
@@ -172,6 +174,7 @@ export async function submitSignupRequest(
         resends: 0,
         resent_at: null,
         locale,
+        wants_onboarding_session: wantsOnboardingSession,
         ...utm,
       },
       { onConflict: 'email' },
@@ -330,6 +333,7 @@ export async function verifySignupOtp(
       utm_content: pending.utm_content ?? null,
       utm_term: pending.utm_term ?? null,
       referrer: pending.referrer ?? null,
+      wants_onboarding_session: Boolean(pending.wants_onboarding_session),
     })
     .select('id')
     .single()

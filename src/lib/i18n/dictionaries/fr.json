@@ -118,6 +118,8 @@
       "consentAnd": " et la ",
       "consentPrivacy": "Politique de confidentialité",
       "consentSuffix": ".",
+      "onboardingLabel": "Réserver une session d'onboarding individuelle d'une heure avec notre équipe.",
+      "onboardingHelp": "Facultatif. La plupart des équipes s'en passent — l'essai gratuit vous guide dans la configuration. Ajoute des frais d'onboarding uniques à votre première facture.",
       "ctaSending": "Envoi du code de vérification…",
       "ctaSend": "Envoyer le code de vérification",
       "noCardLine": "Sans carte bancaire. 10 Go de médias inclus."

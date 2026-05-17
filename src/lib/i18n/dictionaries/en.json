@@ -118,6 +118,8 @@
       "consentAnd": " and ",
       "consentPrivacy": "Privacy Policy",
       "consentSuffix": ".",
+      "onboardingLabel": "Book a 1-hour 1-on-1 onboarding session with our team.",
+      "onboardingHelp": "Optional. Most teams skip it — the free trial walks you through setup. Adds a one-time onboarding fee to your first invoice.",
       "ctaSending": "Sending verification code…",
       "ctaSend": "Send verification code",
       "noCardLine": "No credit card required. 10 GB of media included."

@@ -45,6 +45,13 @@ export type Organization = {
   utm_content: string | null
   utm_term: string | null
   referrer: string | null
+  // Optional 1-on-1 onboarding session opt-in — see
+  // 20260521020000_org_onboarding_session_optin.sql. When true, the
+  // one-time hotelops_setup_fee line item is attached to the org's
+  // first property subscription; onboarding_fee_invoiced_at then
+  // dedupes across properties so the fee never re-attaches.
+  wants_onboarding_session: boolean
+  onboarding_fee_invoiced_at: string | null
 }
 
 export type Profile = {
@@ -444,6 +451,10 @@ export type SignupPending = {
   utm_content: string | null
   utm_term: string | null
   referrer: string | null
+  // Optional 1-on-1 onboarding session opt-in. Mirrors the checkbox
+  // on the /signup form and is copied onto organizations on OTP
+  // verify. See 20260521020000_org_onboarding_session_optin.sql.
+  wants_onboarding_session: boolean
   created_at: string
 }
 
