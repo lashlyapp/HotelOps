@@ -529,7 +529,7 @@
       "items": [
         {
           "q": "Y a-t-il des frais de configuration ou d'installation ?",
-          "a": "Une fois par locataire à votre arrivée — nous l'appliquons sur la première facture de la première propriété et ne le refacturons jamais si vous ajoutez des propriétés ou vous réabonnez. Nous vous accompagnons personnellement ; pas d'assistant DIY."
+          "a": "Uniquement si vous le souhaitez. L'essai gratuit guide votre équipe dans la configuration, donc la plupart des clients n'ont pas besoin d'aide supplémentaire. Si vous préférez réserver une session d'onboarding individuelle d'une heure avec notre équipe à l'inscription, nous ajoutons des frais uniques à la première facture de votre première propriété — jamais refacturés lorsque vous ajoutez des propriétés ou vous réabonnez. Sans cela, aucun frais de configuration."
         },
         {
           "q": "Que se passe-t-il avec mes données si j'annule ?",
