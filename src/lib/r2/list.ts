@@ -21,7 +21,17 @@ export type MediaFile = {
   size: number
   lastModified: string | null
   contentType: string | null
+  /** User-applied tags (GM types these in /media). Lowercase, hyphenated. */
   tags: string[]
+  /** Vision-model-produced tags (e.g. ['terrace', 'morning_light',
+   *  'two_chairs']). Empty when the image hasn't been analyzed yet —
+   *  callers must treat empty as "unknown contents," not as "no
+   *  visual subjects." Populated by the upload-time vision pass. */
+  visionTags: string[]
+  /** One-sentence description from the same vision pass, fed into
+   *  the social-caption prompt so the LLM writes about the actual
+   *  photo rather than a generic topic. Null until tagged. */
+  visionDescription: string | null
 }
 
 /**
@@ -103,6 +113,8 @@ export async function listMediaForPrefix(prefix: string): Promise<MediaFile[]> {
           : null,
         contentType: guessContentType(filename),
         tags: [] as string[],
+        visionTags: [] as string[],
+        visionDescription: null,
       } satisfies MediaFile
     })
     .sort((a, b) => a.filename.localeCompare(b.filename))
@@ -148,7 +160,9 @@ async function listMediaWithTagsUncached(
       .order('tag', { ascending: true }),
     admin
       .from('media_metadata')
-      .select('file_key, display_name, description, poster_key, updated_at')
+      .select(
+        'file_key, display_name, description, poster_key, updated_at, vision_description, vision_tags',
+      )
       .eq('property_id', propertyId),
   ])
 
@@ -166,6 +180,8 @@ async function listMediaWithTagsUncached(
       description: string | null
       poster_key: string | null
       updated_at: string | null
+      vision_description: string | null
+      vision_tags: string[] | null
     }
   >()
   for (const row of metadataRows ?? []) {
@@ -174,6 +190,8 @@ async function listMediaWithTagsUncached(
       description: row.description,
       poster_key: row.poster_key,
       updated_at: row.updated_at,
+      vision_description: row.vision_description,
+      vision_tags: row.vision_tags,
     })
   }
 
@@ -192,6 +210,8 @@ async function listMediaWithTagsUncached(
         description: meta?.description ?? null,
         posterUrl,
         tags: tagsByKey.get(f.key) ?? [],
+        visionTags: meta?.vision_tags ?? [],
+        visionDescription: meta?.vision_description ?? null,
       }
     })
     .sort((a, b) => a.filename.localeCompare(b.filename))

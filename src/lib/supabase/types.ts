@@ -783,6 +783,11 @@ export type SocialPostLog = {
   // Full https URL when the photo came from outside (Unsplash today).
   // Mutually exclusive with media_key.
   external_media_url: string | null
+  // Stable id from the external source (Unsplash photo id). Lets the
+  // next day's generator skip photos used in the last 30 days for
+  // this property so the same stock shot doesn't cycle weekly. Null
+  // for catalog posts and for pre-2026-05 rows.
+  external_media_id: string | null
   // Required attribution when external_media_url is set; null otherwise.
   external_media_credit: SocialMediaCredit | null
   marked_used_at: string | null
