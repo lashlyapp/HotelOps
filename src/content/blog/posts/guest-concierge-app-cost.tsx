@@ -18,19 +18,12 @@ export default function Post() {
   return (
     <>
       <p>
-        Of all the back-office subscriptions a boutique hotel
-        carries, the guest concierge app is the one most
-        operators have the least clear picture of the cost of —
-        in part because the pricing model is built to obscure it.
-        Every major vendor in the category prices per occupied
-        room per month, which sounds reasonable until you do
-        the multiplication and realize you are paying the most
-        in the months you are doing the best.
-      </p>
-      <p>
-        This is the cost breakdown we wish operators saw before
-        they signed a contract. Real numbers, real screen
-        counts, real implications.
+        The guest concierge app is one of the back-office
+        subscriptions most boutique operators have the least clear
+        picture of, in part because every major vendor prices per
+        occupied room per month — you pay the most in the months
+        you are doing the best. This is the breakdown we wish
+        operators saw before they signed a contract.
       </p>
 
       <h2>The vendors and their pricing</h2>

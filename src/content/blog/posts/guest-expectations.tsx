@@ -39,10 +39,9 @@ export default function Post() {
 
       <h2>What “the digital floor” actually is</h2>
       <p>
-        We have spent enough time in boutique back offices to see
-        the same handful of guest expectations recur across markets,
-        across price points, across age cohorts. None of them are
-        exotic. All of them are reachable.
+        The same handful of expectations recur across markets, price
+        points, and age cohorts. None of them are exotic; all of
+        them are reachable.
       </p>
       <ul>
         <li>
