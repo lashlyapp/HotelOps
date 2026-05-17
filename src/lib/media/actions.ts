@@ -2,8 +2,10 @@
 
 import { randomBytes } from 'node:crypto'
 import { revalidatePath, revalidateTag } from 'next/cache'
+import { after } from 'next/server'
 import { requireOrgUser } from '@/lib/auth/session'
 import { mediaCacheTag } from '@/lib/media/cache-tags'
+import { tagUploadedImage } from '@/lib/media/vision'
 import { r2PublicUrl } from '@/lib/r2/client'
 import {
   r2AbortMultipartUpload,
@@ -152,6 +154,35 @@ export async function revalidateAfterUploadAction(args: {
   revalidatePath(`/dashboard`)
   // Slug retained for future per-property path scoping.
   void args.propertySlug
+}
+
+/**
+ * Schedule the background vision-tag pass on a freshly-uploaded
+ * image. Called from the drop-zone right after the R2 PUT succeeds.
+ * Returns immediately; the analyzeImageWithVision + persist runs via
+ * `after()` so the browser's batch-upload loop never blocks on AI
+ * latency. Best-effort — failures are logged inside tagUploadedImage
+ * and never surface to the customer. Non-image content types are
+ * skipped at the tagger.
+ */
+export async function scheduleMediaVisionTagAction(args: {
+  propertyId: string
+  key: string
+  contentType: string
+}): Promise<void> {
+  const session = await requireOrgUser({ write: true })
+  const property = session.properties.find((p) => p.id === args.propertyId)
+  if (!property) return
+  if (!args.key.startsWith(property.r2_prefix)) return
+  const { key, contentType, propertyId } = args
+  after(() =>
+    tagUploadedImage({
+      propertyId,
+      key,
+      publicUrl: r2PublicUrl(key),
+      contentType,
+    }),
+  )
 }
 
 // ----------------------------------------------------------------------------
