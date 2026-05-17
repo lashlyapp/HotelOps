@@ -78,6 +78,9 @@
     "events": "Sự kiện & Tiệc",
     "signage": "Biển hiển thị",
     "arrival": "Đón khách",
+    "media": "Phương tiện",
+    "social": "Social Studio",
+    "itHub": "Hub IT",
     "pricing": "Giá"
   },
   "marketing": {
@@ -253,10 +256,6 @@
           {
             "name": "Thực Đơn Nhà Hàng & Dịch Vụ Phòng",
             "description": "Thực đơn có thể chỉnh sửa tự động xuất bản trên trang đón khách và biển hiển thị. Cập nhật một lần, mọi bề mặt làm mới."
-          },
-          {
-            "name": "Social Studio (bổ sung)",
-            "description": "Một bài đăng mạng xã hội do AI soạn cho mỗi tài sản, mỗi ngày — chú thích, hashtag, và một bức ảnh được chọn từ catalog này. Sao chép, tải xuống hoặc gửi qua email cho bạn; bạn đăng từ điện thoại. Không có tích hợp nền tảng."
           }
         ]
       },
@@ -299,6 +298,23 @@
           {
             "name": "Dùng Thử Miễn Phí 7 Ngày",
             "description": "Truy cập đầy đủ tính năng trong 7 ngày. Không cần thẻ tín dụng để bắt đầu; dữ liệu của bạn tồn tại nếu chuyển đổi và xuất nếu không."
+          }
+        ]
+      },
+      {
+        "title": "Bổ sung",
+        "items": [
+          {
+            "name": "Biển hiển thị không giới hạn",
+            "description": "Bỏ giới hạn 3 màn hình. Chạy biển hiển thị trên mọi TV ở mọi tài sản — sảnh, nhà hàng, phòng họp, hậu trường — với một mức phí cố định."
+          },
+          {
+            "name": "Trải nghiệm khách",
+            "description": "Mở khóa toàn bộ bề mặt hướng khách — trang đón khách có thương hiệu, tiếp nhận sự cố đa ngôn ngữ, menu QR trong phòng. Mỗi điểm chạm của khách đều mang thương hiệu của bạn."
+          },
+          {
+            "name": "Social Studio",
+            "description": "Một bài đăng mạng xã hội do AI soạn mỗi ngày cho mỗi tài sản — chú thích, hashtag và một bức ảnh chọn từ danh mục này. Sao chép, tải xuống hoặc gửi email cho chính bạn; bạn đăng từ điện thoại. Không có tích hợp nền tảng."
           }
         ]
       }

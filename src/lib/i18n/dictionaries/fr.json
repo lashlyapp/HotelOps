@@ -78,6 +78,9 @@
     "events": "Événements & banquets",
     "signage": "Affichage",
     "arrival": "Accueil",
+    "media": "Médias",
+    "social": "Social Studio",
+    "itHub": "Hub IT",
     "pricing": "Tarifs"
   },
   "marketing": {
@@ -253,10 +256,6 @@
           {
             "name": "Menus Restaurant et Room Service",
             "description": "Menus modifiables qui se publient automatiquement sur la page d'accueil et l'affichage. Mettez à jour une fois, chaque surface se rafraîchit."
-          },
-          {
-            "name": "Social Studio (option)",
-            "description": "Une publication sociale rédigée par IA par établissement, chaque jour — légende, hashtags et une photo choisie dans ce catalogue. Copiez-la, téléchargez-la ou envoyez-la-vous par email ; vous publiez depuis le téléphone. Pas d'intégration de plateforme."
           }
         ]
       },
@@ -299,6 +298,23 @@
           {
             "name": "Essai Gratuit 7 Jours",
             "description": "Accès complet aux fonctionnalités pendant 7 jours. Sans carte pour commencer ; vos données persistent si vous convertissez et s'exportent sinon."
+          }
+        ]
+      },
+      {
+        "title": "Modules complémentaires",
+        "items": [
+          {
+            "name": "Affichage illimité",
+            "description": "Supprime la limite de 3 écrans. Affichage sur chaque TV dans chaque établissement — halls, restaurants, salles de réunion, back-office — pour un tarif fixe."
+          },
+          {
+            "name": "Expérience client",
+            "description": "Débloque toute la surface client — pages d'accueil avec votre marque, signalement d'incidents multilingue, menus QR en chambre. Chaque point de contact reflète votre marque."
+          },
+          {
+            "name": "Social Studio",
+            "description": "Un post social rédigé par IA par établissement et par jour — légendes, hashtags et une photo choisie dans ce catalogue. Copiez, téléchargez ou envoyez-le par email ; vous publiez depuis votre téléphone. Aucune intégration de plateforme."
           }
         ]
       }
