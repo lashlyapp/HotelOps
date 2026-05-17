@@ -27,18 +27,21 @@ export default async function LoginPage({
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-border-subtle">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Wordmark size="md" href="/" />
           <div className="flex items-center gap-2">
+            {/* Wordmark already links to /, so the explicit Back link
+                is desktop-only — keeps the mobile header from
+                wrapping the right-side CTA onto two lines. */}
             <Link
               href="/"
-              className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
+              className="focus-ring hidden sm:inline-flex rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
             >
               ← {common.backToHome}
             </Link>
             <Link
               href="/signup"
-              className="focus-ring inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-fg hover:bg-primary-hover transition-colors"
+              className="focus-ring inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md bg-primary px-4 text-sm font-medium text-primary-fg hover:bg-primary-hover transition-colors"
             >
               {common.signUp}
             </Link>
