@@ -266,26 +266,28 @@ the first invoice. Add-ons (Signage Unlimited, Guest Experience, Social Studio)
 are extra subscription items keyed by `Price.lookup_key` so prices can be
 rotated without code changes.
 
-Two onboarding paths converge on the same Stripe model:
+Every subscription is created on `collection_method=charge_automatically` with
+a payment method already on file. There is no `send_invoice` fallback —
+without a card we don't start a subscription. Two onboarding paths converge on
+that same model:
 
-**Self-serve trial (default).** `/signup` provisions the org with a 7-day trial,
-no Stripe customer yet. The trial-state machine in `src/lib/billing/trial.ts`
-gates write access at T+0. The customer converts from `/billing` → "Add payment
-method", which creates the Stripe Customer + per-property Subscription on
-`charge_automatically` and (if it's the org's first time) adds the setup fee
-to the first invoice.
+**Self-serve trial (default).** `/signup` provisions the org with a 7-day
+trial, no Stripe customer yet. The trial-state machine in
+`src/lib/billing/trial.ts` gates write access at T+0. The customer converts
+from `/billing` → "Start & add card", which opens Stripe Checkout in
+subscription mode: card is collected, Customer + Subscription are created, and
+the setup fee (if it's the org's first property) lands on the first invoice
+which Stripe charges immediately.
 
 **Admin-started subscription.** From `/admin/tenants/<id>` → "Start
 subscription", `src/lib/stripe/start-subscription.ts` creates the Customer +
-Subscription on `collection_method=send_invoice` with a 14-day grace
-(`days_until_due=14`). The first invoice — including the setup fee — is
-issued immediately and listed under `/billing`. The customer can then either
-pay the open invoice through their preferred channel or save a card via
-`/billing` → "Save card for auto-renewal" (Stripe Checkout in `setup` mode);
-the webhook flips collection to `charge_automatically` for future months.
-If the grace window lapses without payment, Stripe transitions the invoice
-(and subscription) to `past_due` and the billing page surfaces a recovery
-message.
+Subscription using the org's designated auto-pay default card. If the org has
+no auto-pay default on file, the action refuses with an actionable message and
+the admin routes the customer through self-serve Checkout instead.
+
+For an existing past_due subscription, `/billing` → "Update card" opens
+setup-mode Checkout; the webhook attaches the new card to the subscription
+and pays any open invoice with it.
 
 Customers manage their billing at `/billing` → "Manage billing", which opens
 the Stripe Billing Portal (update card, view invoices, cancel). Add-ons can

@@ -95,11 +95,10 @@ export async function setPropertyDefaultPaymentMethodAction(
   }
 
   // Try to pay any open invoice on this subscription with the newly-set
-  // card — without this, a subscription started via send_invoice (admin
-  // path or owner add-property path) keeps its first invoice OPEN even
-  // after the customer "attaches a card", silently slipping into
-  // past_due 14 days later. Best-effort: a decline just leaves the
-  // invoice open and Stripe's dunning takes over.
+  // card. Covers the case where a subscription went past_due (Stripe's
+  // auto-charge failed and dunning hasn't recovered yet) and the customer
+  // is fixing it by swapping the default card. Best-effort: a decline
+  // just leaves the invoice open and Stripe's dunning takes over.
   const payResult = await payOpenInvoiceForSubscription(
     sub.stripe_subscription_id,
     paymentMethodId,
@@ -111,9 +110,7 @@ export async function setPropertyDefaultPaymentMethodAction(
   const fresh = await stripe().subscriptions.retrieve(
     sub.stripe_subscription_id,
   )
-  await syncSubscriptionToDb(propertyId, sub.org_id, fresh, {
-    paymentMethodDueAt: null,
-  })
+  await syncSubscriptionToDb(propertyId, sub.org_id, fresh)
 
   revalidatePath('/billing')
   return {
@@ -396,16 +393,25 @@ export async function resubscribePropertyAction(
   // Prefer reusing the card that was on the property's PREVIOUS sub so
   // the customer doesn't have to re-pick. resolveResubscribePaymentMethod
   // validates that the PM is still attached to the org's Customer; if
-  // it's been detached we fall back to send_invoice + 14-day grace.
+  // it's been detached, surface an actionable error pointing the customer
+  // back to the "Start & add card" Checkout flow — a subscription
+  // can no longer be created without a card on file.
   const customerId = await getStripeCustomerForOrg(property.org_id)
   const priorPmId = customerId
     ? await resolveResubscribePaymentMethod(propertyId, customerId)
     : null
+  if (!priorPmId) {
+    return {
+      error:
+        'No card on file for this property. Use "Start & add card" to ' +
+        'pick a payment method via Stripe Checkout.',
+    }
+  }
 
   let result
   try {
     result = await startSubscriptionForProperty(propertyId, {
-      defaultPaymentMethodId: priorPmId ?? undefined,
+      defaultPaymentMethodId: priorPmId,
     })
   } catch (err) {
     return {
@@ -420,9 +426,7 @@ export async function resubscribePropertyAction(
     }
   }
   return {
-    success: priorPmId
-      ? 'Resubscribed. Your previous card has been charged for the new period.'
-      : 'Resubscribed. An invoice was emailed — pay it within 14 days or attach a card from the row above to auto-charge.',
+    success: 'Resubscribed. Your previous card has been charged for the new period.',
   }
 }
 

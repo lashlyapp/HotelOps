@@ -248,7 +248,6 @@ export type BillingSubscription = {
   stripe_subscription_id: string | null
   stripe_price_id: string | null
   status: BillingSubscriptionStatus
-  payment_method_due_at: string | null
   past_due_since: string | null
   current_period_start: string | null
   current_period_end: string | null

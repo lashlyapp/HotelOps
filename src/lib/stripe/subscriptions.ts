@@ -10,14 +10,6 @@ import {
   resolvePriceIdByLookupKey,
 } from './prices'
 
-/**
- * Days the customer has, after a subscription starts, to attach a payment
- * method before the first invoice goes past due. Implemented Stripe-side as
- * collection_method='send_invoice' + days_until_due=N. The subscription is
- * `active` from day one — this is *not* a trial.
- */
-export const PAYMENT_METHOD_GRACE_DAYS = 14
-
 type EnsureCustomerInput = {
   orgId: string
   orgName: string
@@ -99,8 +91,9 @@ export async function ensureStripeCustomer({
  * the customer might have detached it from the wallet in the interim.
  *
  * Returns null when no prior PM is recoverable. Callers that get null
- * should fall back to send_invoice + grace days so the customer can pay
- * the first invoice manually or attach a fresh card.
+ * must route the customer through Stripe Checkout to collect a fresh
+ * card — there is no longer a send-invoice fallback that lets a
+ * subscription start without a payment method.
  */
 export async function resolveResubscribePaymentMethod(
   propertyId: string,
@@ -187,12 +180,6 @@ export async function propertyHasBeenSubscribed(
   return Boolean(data)
 }
 
-type SyncOptions = {
-  /** Override the stored cooling-period deadline (set on creation, cleared
-   *  on card attach). Omit to leave the existing value unchanged. */
-  paymentMethodDueAt?: Date | null
-}
-
 /**
  * Mirror a Stripe subscription into billing_subscriptions, keyed by the
  * property the subscription was created for. The Stripe Subscription must
@@ -211,7 +198,6 @@ export async function syncSubscriptionToDb(
   propertyId: string,
   orgId: string,
   subscription: Stripe.Subscription,
-  options: SyncOptions = {},
 ): Promise<void> {
   const admin = createAdminClient()
 
@@ -307,11 +293,6 @@ export async function syncSubscriptionToDb(
     default_payment_brand: pmBrand,
     default_payment_last4: pmLast4,
     updated_at: new Date().toISOString(),
-  }
-  if (Object.prototype.hasOwnProperty.call(options, 'paymentMethodDueAt')) {
-    update.payment_method_due_at = options.paymentMethodDueAt
-      ? options.paymentMethodDueAt.toISOString()
-      : null
   }
 
   // Add-on columns were introduced in migration 20260514050000. We write
@@ -419,8 +400,8 @@ export async function getSubscriptionsForOrg(
  * source of truth is the Stripe Customer's invoice_settings
  * .default_payment_method — set only when the customer explicitly opts
  * in via the autopay_default custom_field on Checkout. Returns null
- * when nothing is designated (in which case callers should fall back to
- * send_invoice rather than guessing which card to charge).
+ * when nothing is designated (in which case callers must route the
+ * customer through Checkout rather than guessing which card to charge).
  *
  * Also returns null when the designated PM has been detached from the
  * Customer wallet — that's the safe interpretation of "card is no

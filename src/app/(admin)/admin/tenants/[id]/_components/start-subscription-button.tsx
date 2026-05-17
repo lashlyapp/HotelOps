@@ -30,8 +30,8 @@ export function StartSubscriptionButton({
           `Creates one subscription per property (${n} total), each with ` +
           `quantity 1, using the hotelops_per_property_monthly price. The ` +
           `one-time setup fee is added to each property's first invoice ` +
-          `(skipped on resubscribe). Each customer gets 14 days to attach a ` +
-          `card per subscription.`
+          `(skipped on resubscribe). The org's auto-pay default card is ` +
+          `charged for each first invoice — refuses if no card is on file.`
         if (!confirm(msg)) e.preventDefault()
       }}
       className="space-y-2"

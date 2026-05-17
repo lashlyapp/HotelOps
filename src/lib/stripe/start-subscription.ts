@@ -65,17 +65,16 @@ export type StartSubscriptionOptions = {
    *  property has no prior subscription history — a resubscribe after
    *  cancellation is NOT a new property. */
   setupFeePriceId?: string
-  graceDays?: number
   /** Suppress the setup fee for this specific call even if a Price is
    *  configured. Useful for ops/migration scripts that re-create a sub
    *  for a property that's already paid setup historically. */
   skipSetupFee?: boolean
-  /** When set, create the subscription with `charge_automatically` +
-   *  this payment method instead of the default `send_invoice` flow.
-   *  Stripe will immediately attempt to pay the first invoice. Used by
-   *  the resubscribe + add-property flows when a saved card is on
-   *  file. graceDays is ignored when this is provided. */
-  defaultPaymentMethodId?: string
+  /** Required. The payment method to charge the first (and subsequent)
+   *  invoices against. Every subscription is created on
+   *  `charge_automatically` — there is no fall-back send-invoice path.
+   *  Callers without a saved card on file should route the customer
+   *  through Stripe Checkout (`/api/stripe/setup-checkout`) instead. */
+  defaultPaymentMethodId: string
 }
 
 export type StartSubscriptionForPropertyResult =
@@ -88,10 +87,6 @@ export type StartSubscriptionForPropertyResult =
       status: Stripe.Subscription.Status
       priceId: string
       setupFeePriceId: string | null
-      /** Null when the subscription was created with a payment method
-       *  on file (charge_automatically) — there's no grace deadline in
-       *  that case because Stripe pays the first invoice immediately. */
-      paymentMethodDueAt: Date | null
     }
   | {
       kind: 'existing'
@@ -120,11 +115,13 @@ export type StartSubscriptionForOrgResult = {
  */
 export async function startSubscriptionForProperty(
   propertyId: string,
-  opts: StartSubscriptionOptions = {},
+  opts: StartSubscriptionOptions,
 ): Promise<StartSubscriptionForPropertyResult> {
-  const graceDays = opts.graceDays ?? 14
-  if (!Number.isInteger(graceDays) || graceDays < 0 || graceDays > 90) {
-    throw new Error('graceDays must be an integer between 0 and 90')
+  if (!opts.defaultPaymentMethodId) {
+    throw new Error(
+      'defaultPaymentMethodId is required — route the customer through ' +
+        '/api/stripe/setup-checkout when no saved card is available.',
+    )
   }
 
   const admin = createAdminClient()
@@ -215,7 +212,6 @@ export async function startSubscriptionForProperty(
   // Stripe caps Subscription.description at 500 chars; property.name is a
   // free-form text column so truncate defensively.
   const description = `HotelOps subscription — ${property.name}`.slice(0, 500)
-  const useChargeAutomatically = Boolean(opts.defaultPaymentMethodId)
   const params: Stripe.SubscriptionCreateParams = {
     customer: customerId,
     items: [
@@ -235,15 +231,8 @@ export async function startSubscriptionForProperty(
       property_slug: property.slug,
       app: 'hotelops',
     },
-    ...(useChargeAutomatically
-      ? {
-          collection_method: 'charge_automatically',
-          default_payment_method: opts.defaultPaymentMethodId,
-        }
-      : {
-          collection_method: 'send_invoice',
-          days_until_due: graceDays,
-        }),
+    collection_method: 'charge_automatically',
+    default_payment_method: opts.defaultPaymentMethodId,
     // Stripe Tax: ask Stripe to compute + add the right tax line item
     // on every invoice for this subscription. Requires Stripe Tax to
     // be enabled in the Dashboard (Settings → Tax → Activate). When
@@ -255,10 +244,9 @@ export async function startSubscriptionForProperty(
     // where we have no nexus.
     automatic_tax: { enabled: true },
     // When the org is still inside its 7-day signup trial, defer the
-    // first invoice to trial_end. The customer's card (or grace
-    // invoice) is on file from this call onward, but no money moves
-    // until the trial window closes. Honors the marketing promise:
-    // "7 days free, then $100/property/month."
+    // first invoice to trial_end. The card is on file from this call
+    // onward, but no money moves until the trial window closes. Honors
+    // the marketing promise: "7 days free, then $100/property/month."
     ...(trialEndUnix ? { trial_end: trialEndUnix } : {}),
   }
   if (setupFeePriceId) {
@@ -275,19 +263,7 @@ export async function startSubscriptionForProperty(
     idempotencyKey: `subscription:${property.id}:${priceId}`,
   })
 
-  // When charging automatically with a card on file the grace deadline
-  // is meaningless — Stripe attempts payment immediately (or at
-  // trial_end when set) and the gate is driven by subscription.status
-  // (active vs. past_due) from then on. For the send_invoice path,
-  // anchor the deadline on the invoice generation time: trial_end if
-  // we're deferring into a trial window, otherwise now.
-  const dueAt = useChargeAutomatically
-    ? null
-    : new Date(
-        (trialEndUnix ? trialEndUnix * 1000 : Date.now()) +
-          graceDays * 24 * 60 * 60 * 1000,
-      )
-  await syncToDb(admin, property.id, org.id, customerId, subscription, dueAt)
+  await syncToDb(admin, property.id, org.id, customerId, subscription)
 
   // Trial → paid conversion: the signup flow created this property with
   // a 10 GB cap (TRIAL_STORAGE_BYTES); the base plan includes 25 GB. Lift
@@ -320,7 +296,6 @@ export async function startSubscriptionForProperty(
     status: subscription.status,
     priceId,
     setupFeePriceId,
-    paymentMethodDueAt: dueAt,
   }
 }
 
@@ -333,7 +308,7 @@ export async function startSubscriptionForProperty(
  */
 export async function startSubscriptionsForOrg(
   orgId: string,
-  opts: StartSubscriptionOptions = {},
+  opts: StartSubscriptionOptions,
 ): Promise<StartSubscriptionForOrgResult> {
   const admin = createAdminClient()
   const { data: properties, error } = await admin
@@ -439,7 +414,6 @@ async function syncToDb(
   orgId: string,
   customerId: string,
   subscription: Stripe.Subscription,
-  dueAt: Date | null,
 ) {
   const item = subscription.items.data[0]
   const price = item?.price
@@ -451,7 +425,6 @@ async function syncToDb(
       stripe_subscription_id: subscription.id,
       stripe_price_id: price?.id ?? null,
       status: subscription.status,
-      payment_method_due_at: dueAt ? dueAt.toISOString() : null,
       current_period_start: item?.current_period_start
         ? new Date(item.current_period_start * 1000).toISOString()
         : null,

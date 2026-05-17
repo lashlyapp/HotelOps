@@ -67,11 +67,11 @@ export const dynamic = 'force-dynamic'
  *
  * Behavior depends on what's already in place for the property:
  *
- *  - Subscription exists (admin-created, or self-started earlier) →
- *    mode=setup. The card from this checkout is attached to the org's
- *    Customer, then promoted via the webhook to *this property's*
- *    subscription default_payment_method and the subscription is flipped
- *    from send_invoice to charge_automatically.
+ *  - Subscription exists (created earlier and currently has no card,
+ *    e.g. a legacy past_due sub being recovered) → mode=setup. The card
+ *    from this checkout is attached to the org's Customer, then promoted
+ *    via the webhook to *this property's* subscription
+ *    default_payment_method.
  *
  *  - No subscription yet for the property → mode=subscription. Stripe
  *    creates the property's subscription AND collects its card in one

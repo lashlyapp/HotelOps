@@ -389,19 +389,25 @@ export async function addPropertyAction(
     return { error: error.message }
   }
 
-  // Start the property's subscription on Stripe (best-effort — the property
-  // is created even if Stripe is unreachable; admin can retry from the
-  // Billing page). The setup fee IS charged on this property's first
-  // subscription regardless of whether the org has other paid properties —
+  // Start the property's subscription on Stripe ONLY when the org has an
+  // auto-pay default card. Without one, leave it un-started — the customer
+  // will use /billing → Start & add card to provision via Stripe Checkout.
+  // The setup fee IS charged on this property's first subscription
+  // regardless of whether the org has other paid properties —
   // propertyHasBeenSubscribed is keyed per property_id, not org-wide.
   if (inserted?.id) {
-    try {
-      await startSubscriptionForProperty(inserted.id)
-    } catch (err) {
-      console.warn(
-        '[admin] addPropertyAction: subscription start failed',
-        err instanceof Error ? err.message : err,
-      )
+    const designatedPmId = await getOrgAutopayDefaultPaymentMethod(orgId)
+    if (designatedPmId) {
+      try {
+        await startSubscriptionForProperty(inserted.id, {
+          defaultPaymentMethodId: designatedPmId,
+        })
+      } catch (err) {
+        console.warn(
+          '[admin] addPropertyAction: subscription start failed',
+          err instanceof Error ? err.message : err,
+        )
+      }
     }
   }
 
@@ -648,39 +654,40 @@ export async function ownerAddPropertyAction(
     .single()
   if (error) return { error: error.message }
 
-  // Create the per-property Stripe subscription. Auto-charge ONLY when
-  // the customer has explicitly designated an auto-pay default card
+  // Create the per-property Stripe subscription only when the org has
+  // an explicit auto-pay default card on file
   // (Customer.invoice_settings.default_payment_method, set via the
-  // autopay_default opt-in on Checkout). Without that designation, fall
-  // back to send_invoice + 14-day grace so we never charge an
-  // unintended card. Best-effort — the property is created either way.
+  // autopay_default opt-in on Checkout). Without one, leave billing
+  // un-started and tell the owner to add a card from /billing — we
+  // never start a subscription that has no way to settle the first
+  // invoice. Best-effort — the property row is created either way.
   let billingMessage = ''
   if (inserted?.id) {
-    try {
-      const designatedPmId = await getOrgAutopayDefaultPaymentMethod(
-        session.organization.id,
-      )
-      await startSubscriptionForProperty(inserted.id, {
-        defaultPaymentMethodId: designatedPmId ?? undefined,
-      })
-      if (designatedPmId) {
+    const designatedPmId = await getOrgAutopayDefaultPaymentMethod(
+      session.organization.id,
+    )
+    if (designatedPmId) {
+      try {
+        await startSubscriptionForProperty(inserted.id, {
+          defaultPaymentMethodId: designatedPmId,
+        })
         const saved = await listOrgPaymentMethods(session.organization.id)
         const card = saved.find((c) => c.id === designatedPmId)
         billingMessage = card
           ? ` Charged your auto-pay default (${formatPmLabel(card)}) for the first invoice.`
           : ' Charged your auto-pay default for the first invoice.'
-      } else {
-        billingMessage =
-          ' An invoice was emailed — pay it within 14 days or add a card ' +
-          'from Billing. To auto-charge future properties, mark a card as ' +
-          'the default for auto-pay during checkout.'
+      } catch (err) {
+        console.warn(
+          '[owner] addProperty: subscription start failed',
+          err instanceof Error ? err.message : err,
+        )
+        billingMessage = ' Billing setup failed — start it manually from /billing.'
       }
-    } catch (err) {
-      console.warn(
-        '[owner] addProperty: subscription start failed',
-        err instanceof Error ? err.message : err,
-      )
-      billingMessage = ' Billing setup failed — start it manually from /billing.'
+    } else {
+      billingMessage =
+        ' Billing not started — add a card from /billing → Start & add card. ' +
+        'To auto-charge future properties, mark a card as the default for ' +
+        'auto-pay during checkout.'
     }
   }
 
@@ -890,9 +897,25 @@ export async function startSubscriptionAction(
   const orgId = String(formData.get('org_id') ?? '')
   if (!orgId) return { error: 'Missing org.' }
 
+  // No card on file → no subscription. The customer must go through
+  // /billing → Start & add card to pick a payment method via Checkout;
+  // we don't create subscriptions an admin can't reasonably explain to
+  // a customer at "your card will be charged".
+  const designatedPmId = await getOrgAutopayDefaultPaymentMethod(orgId)
+  if (!designatedPmId) {
+    return {
+      error:
+        'No auto-pay default card on file for this org. Ask the customer ' +
+        'to add a card from /billing → Start & add card before starting ' +
+        'a subscription from here.',
+    }
+  }
+
   let result: StartSubscriptionForOrgResult
   try {
-    result = await startSubscriptionsForOrg(orgId)
+    result = await startSubscriptionsForOrg(orgId, {
+      defaultPaymentMethodId: designatedPmId,
+    })
   } catch (err) {
     return { error: err instanceof Error ? err.message : String(err) }
   }
@@ -911,7 +934,7 @@ export async function startSubscriptionAction(
     success:
       `Created ${created} subscription${created === 1 ? '' : 's'}` +
       (existing > 0 ? ` (${existing} already existed)` : '') +
-      `. Each property has 14 days to attach a card.`,
+      '. The org\'s auto-pay default card is charged for each first invoice.',
   }
 }
 
