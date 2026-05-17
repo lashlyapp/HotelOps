@@ -25,27 +25,28 @@ export type SamplePost = {
 }
 
 export const SAMPLE_POST: SamplePost = {
-  topicKey: 'weather_mood',
-  topicLabel: 'Weather + vibe',
+  topicKey: 'room_reveal',
+  topicLabel: 'Room reveal',
   topicHint:
-    "Today's weather paired with what the hotel feels like right now — usually our highest-saved angle.",
+    "A room from your catalog, captioned for what's actually in the frame — the light, the linens, the view. Hotels' single most-saved post category.",
   postDateLabel: 'Sample · Tuesday morning',
   weatherPhrase: 'sunny and mild',
   captions: [
-    'Slow morning. Strong coffee.',
-    'Sun on the terrace, the dining room still quiet. The kind of Tuesday you book a trip around.',
-    'Three things that make a Tuesday at our hotel feel like a Saturday: the light at 9am, the second cup of coffee, and the fact that nobody is in a hurry. Come find out.',
+    'Window light, made for taking your time.',
+    'Pendant light overhead, a daybed by the window, and the city quiet enough to read. The kind of Tuesday a hotel room earns its keep.',
+    "Three things that make a Tuesday at our hotel feel like a Saturday: the window light at 9am, the second cup of coffee, and a bed you don't want to leave. Come find out.",
   ],
   hashtagSets: [
-    ['#boutiquehotel', '#slowmorning', '#hotellife'],
-    ['#boutiquehotel', '#terracevibes', '#sundaymood', '#travelvibes'],
+    ['#boutiquehotel', '#hotelroom', '#hotellife'],
+    ['#boutiquehotel', '#suitelife', '#windowlight', '#travelvibes'],
     ['#boutiquehotel', '#independenthotel', '#travelinspiration', '#hospitality', '#staycation'],
   ],
-  // One of the existing marketing stock images, sized for hero use. Cheaper
-  // than commissioning a dedicated sample asset, and the photo style
-  // matches "boutique hotel morning" which is exactly the angle the
-  // sample caption is talking to.
+  // Existing marketing stock — a bedroom interior with a pendant
+  // light, daybed at the window, and a cityscape view. The captions
+  // above are written specifically to that image so the paywall
+  // preview demonstrates the real value proposition: the AI describes
+  // what's literally in the photo, not a generic version of the topic.
   imageSrc: '/AdobeStock_131189921.jpeg',
   imageAlt:
-    'A bright hotel terrace with morning sun — the kind of photo Social Studio would suggest from your media library.',
+    "A bedroom with a pendant light overhead and a daybed by the window — the kind of photo Social Studio would suggest from your media library, with captions written to match what's in the frame.",
 }

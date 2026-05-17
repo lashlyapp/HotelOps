@@ -48,14 +48,22 @@ export type UnsplashPhoto = {
 export type UnsplashQuery = {
   // Free-form search string. Examples:
   //   "santa barbara landmark"
-  //   "hotel terrace sunny"
-  //   "travel airport"
+  //   "linen napkin espresso morning"
+  //   "fog over pine forest"
   query: string
   // Used as part of the cache key + as a stable seed when picking
-  // which of the top-10 results to return, so the same (query,
-  // seed) tuple yields the same photo. The cron passes the post
-  // date so retries within the day are idempotent.
+  // which of the top-N results to return, so the same (query,
+  // seed) tuple yields the same photo when no exclusions are
+  // passed. The cron passes the post date so retries within the
+  // day are idempotent.
   seed: string
+  // Unsplash photo ids to skip when picking — used by the dedupe
+  // path that excludes photos the property used in the last 30
+  // days. When set, results are NOT cached (the exclusion set is
+  // per-property and would balloon the cache key); callers that
+  // don't need dedupe should leave this undefined to get the cache
+  // hit.
+  excludePhotoIds?: string[]
 }
 
 /**
@@ -79,6 +87,12 @@ export async function pickUnsplashPhoto(
   if (!key) return null
 
   try {
+    // When an exclusion list is passed, skip the cache: the
+    // exclusion set is per-property and varies day-to-day, which
+    // makes the cache key unstable. Direct call instead.
+    if (input.excludePhotoIds && input.excludePhotoIds.length > 0) {
+      return await searchUncached(key, input)
+    }
     return await unstable_cache(
       () => searchUncached(key, input),
       ['unsplash-search', input.query, input.seed],
@@ -103,9 +117,11 @@ async function searchUncached(
     // previews and a hotel-vibe shot doesn't typically benefit from a
     // portrait crop. (TikTok's 9:16 frame letterboxes either way.)
     url.searchParams.set('orientation', 'landscape')
-    // Pull the top 10, pick one deterministically by seed so a retry
-    // on the same date doesn't shuffle the suggestion.
-    url.searchParams.set('per_page', '10')
+    // Pull the top 30 so the dedupe path has room to skip up to 30
+    // recently-used photos and still find a fresh result. Without
+    // exclusions we walk from the seed-derived index; with
+    // exclusions we walk until we hit a non-excluded id.
+    url.searchParams.set('per_page', '30')
     url.searchParams.set(
       'content_filter',
       // 'high' filters anything mature/violent. The hotel context
@@ -135,27 +151,45 @@ async function searchUncached(
     const list = json.results ?? []
     if (list.length === 0) return null
 
-    const pick = list[hash(input.seed) % list.length]
-    const url2 = pick.urls?.regular
-    const photographer = pick.user?.name
-    const photographerLink = pick.user?.links?.html
-    const photoPage = pick.links?.html
-    const downloadLocation = pick.links?.download_location
-    if (!url2 || !photographer || !photographerLink || !photoPage || !downloadLocation) {
-      // Missing the fields we need for attribution — skip rather than
-      // render an under-credited photo.
-      return null
+    // Walk the results starting at the seed-derived offset; skip
+    // any photo whose id appears in excludePhotoIds. This is what
+    // prevents the same Unsplash photo from showing up in a
+    // property's feed twice within the dedupe window. Without
+    // exclusions, the loop exits on the first iteration as before.
+    const excluded = new Set(input.excludePhotoIds ?? [])
+    const start = hash(input.seed) % list.length
+    for (let i = 0; i < list.length; i++) {
+      const pick = list[(start + i) % list.length]
+      if (excluded.has(pick.id)) continue
+      const url2 = pick.urls?.regular
+      const photographer = pick.user?.name
+      const photographerLink = pick.user?.links?.html
+      const photoPage = pick.links?.html
+      const downloadLocation = pick.links?.download_location
+      if (
+        !url2 ||
+        !photographer ||
+        !photographerLink ||
+        !photoPage ||
+        !downloadLocation
+      ) {
+        // Missing the fields we need for attribution — skip rather
+        // than render an under-credited photo. Keep walking in case
+        // a later result has the fields populated.
+        continue
+      }
+      return {
+        id: pick.id,
+        url: url2,
+        photographerName: photographer,
+        photographerUrl: appendUtm(photographerLink),
+        unsplashPageUrl: appendUtm(photoPage),
+        trackDownloadUrl: downloadLocation,
+        altDescription: pick.alt_description ?? null,
+      }
     }
-
-    return {
-      id: pick.id,
-      url: url2,
-      photographerName: photographer,
-      photographerUrl: appendUtm(photographerLink),
-      unsplashPageUrl: appendUtm(photoPage),
-      trackDownloadUrl: downloadLocation,
-      altDescription: pick.alt_description ?? null,
-    }
+    // Every candidate was excluded or under-credited.
+    return null
   } finally {
     clearTimeout(timer)
   }
