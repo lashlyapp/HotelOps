@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import type { BlogPostModule } from '../types'
 
 export const meta: BlogPostModule['meta'] = {
@@ -201,15 +200,6 @@ export default function Post() {
         Your hotel has a personality. Your Instagram should
         sound like it. Your account should still be your
         account. And the GM should be home by 6.
-      </p>
-      <p style={{ marginTop: '2.5rem' }}>
-        <em>
-          Social Studio is available as an add-on on every
-          MyHotelOps plan, at $19/property/month. See it on the{' '}
-          <Link href="/pricing">pricing page</Link>, or{' '}
-          <Link href="/signup">start a free trial</Link> to walk
-          through it on your own property.
-        </em>
       </p>
     </>
   )
