@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Fragment } from 'react'
 import { GuideDownloadForm } from '@/components/marketing/guide-download-form'
 import { BRAND } from '@/lib/brand'
 import type { BlogPostModule } from '../types'
@@ -266,10 +267,10 @@ export default function Post() {
 
       <h2 id="faq">Frequently asked questions about modernizing a boutique hotel</h2>
       {FAQ.map((f) => (
-        <div key={f.q}>
+        <Fragment key={f.q}>
           <h3>{f.q}</h3>
           <p>{f.a}</p>
-        </div>
+        </Fragment>
       ))}
 
       <h2 id="further-reading">Further reading</h2>
