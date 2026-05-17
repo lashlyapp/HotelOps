@@ -119,9 +119,16 @@
     --surface-muted:     var(--neutral-700);
     --surface-elevated:  var(--neutral-700);
 
-    --border-subtle:     var(--neutral-800);
-    --border-default:    var(--neutral-700);
-    --border-strong:     var(--neutral-600);
+    /* Borders sit one step lighter than the matching surface so
+       they're visibly distinct. The previous values collapsed
+       border-subtle onto --surface and border-default onto
+       --surface-muted — meaning any `border-border-default` element
+       placed inside a `bg-surface-muted` container had a zero-
+       contrast border (caught on the demo page's "Start the free
+       trial instead" secondary button). */
+    --border-subtle:     var(--neutral-700);
+    --border-default:    var(--neutral-600);
+    --border-strong:     var(--neutral-500);
 
     --fg:                var(--neutral-50);
     --fg-muted:          var(--neutral-300);
