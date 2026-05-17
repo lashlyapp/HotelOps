@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { Fragment } from 'react'
 import { GuideDownloadForm } from '@/components/marketing/guide-download-form'
-import { BRAND } from '@/lib/brand'
 import type { BlogPostModule } from '../types'
 
 export const meta: BlogPostModule['meta'] = {
@@ -10,91 +9,28 @@ export const meta: BlogPostModule['meta'] = {
   description:
     'Closing the gaps against the bigger hotel franchises. A field guide for boutique operators — ten high-leverage moves the chains have used for years, now finally available at boutique scale.',
   publishedAt: '2026-05-15',
-  readingMinutes: 6,
+  readingMinutes: 3,
   topic: 'Field guide',
   heroImage: '/AdobeStock_1896833868.jpeg',
   heroAlt: 'Modern boutique hotel lobby — quiet and well-run',
 }
 
-const ITEMS: { n: string; label: string; tease: string }[] = [
-  {
-    n: '01',
-    label: 'Move maintenance off paper and onto a photo-first ticket.',
-    tease:
-      'Replace the paper logbook with a photo-first ticket system. GMs typically claw back 4–6 hours a week and the maintenance cycle drops from days to hours.',
-  },
-  {
-    n: '02',
-    label: 'Replace the laminated in-room card with a QR arrival page.',
-    tease:
-      'A branded arrival page guests scan with their phone — current Wi-Fi, dining, menus, neighborhood guide. No app install, no account, no friction.',
-  },
-  {
-    n: '03',
-    label: 'Pull Wi-Fi, vendor logins, and equipment records into one source of truth.',
-    tease:
-      'One searchable, role-gated IT hub for credentials, warranties, floor plans, and brand assets. Closes off the “binder behind the front desk” risk.',
-  },
-  {
-    n: '04',
-    label: 'Run every screen at the property from a browser, not a USB stick.',
-    tease:
-      'Any browser-capable TV becomes a managed screen. Replace per-screen SaaS bills with one flat per-property line.',
-  },
-  {
-    n: '05',
-    label: 'Build a vendor directory with last-called dates.',
-    tease:
-      'Plumbers, electricians, suppliers — names, contracts, last-called dates. The hidden value is in the dates; they surface preventive opportunities before emergencies.',
-  },
-  {
-    n: '06',
-    label: 'Take event proposals off Word and onto a tracked pipeline.',
-    tease:
-      'Inquiry → proposal → invoice in one place. The boutiques that move on this recover 20–40% of inquiries they used to lose to slow-response competitors.',
-  },
-  {
-    n: '07',
-    label: 'Set up a one-click emergency broadcast for every screen.',
-    tease:
-      'Pre-built templates for fire, weather, evacuation. The screens are already there; the broadcast capability is a checkbox.',
-  },
-  {
-    n: '08',
-    label: 'Audit your monthly software stack and consolidate.',
-    tease:
-      'Most boutiques run 8–14 subscriptions; 20–40% of the spend is on tools that are no longer used. Consolidation is also a staff-attention dividend.',
-  },
-  {
-    n: '09',
-    label: 'Stop sharing logins. Stand up role-based access.',
-    tease:
-      'The sticky-note password is the single largest operational liability at a boutique. Per-user logins with role-based access fix it in an afternoon.',
-  },
-  {
-    n: '10',
-    label: 'Schedule a monthly “tech walk” of every guest-facing surface.',
-    tease:
-      'Forty-five minutes a month with your phone. Scan every QR. Watch every screen. Note what is broken in the same ticket system you set up in step one.',
-  },
-]
-
 const FAQ: { q: string; a: string }[] = [
   {
     q: 'How much does it cost to modernize a boutique hotel’s back office?',
-    a: 'Most of the ten moves cost nothing to begin and can be started in a single week of focused effort. The full unified back-office stack at a boutique scale (everything in this guide, in one tool) lands at $100–$200 per property per month — substantially less than buying the equivalent surface from four or five standalone vendors. A 40-room boutique buying maintenance ($130), signage ($50–$180), and guest concierge ($84–$168) à la carte already exceeds that envelope and still has no event management or document storage.',
+    a: 'Most of the ten moves in the guide cost nothing to begin and can be started in a single week of focused effort. The full unified back-office stack at a boutique scale (everything in the guide, in one tool) lands at $100–$200 per property per month — substantially less than buying the equivalent surface from four or five standalone vendors. A 40-room boutique buying maintenance ($130), signage ($50–$180), and guest concierge ($84–$168) à la carte already exceeds that envelope and still has no event management or document storage.',
   },
   {
     q: 'How long does it take to modernize a 40-room boutique hotel?',
-    a: 'The first three moves in this guide — maintenance ticketing, the QR arrival page, and the unified IT hub — can be in place inside the first month. The remaining seven items are each roughly a weekend of focused work. Most boutique GMs report meaningful time savings (4–6 hours a week) within the first 30 days of moving maintenance off paper.',
+    a: 'The first three moves in the guide can be in place inside the first month. The remaining seven items are each roughly a weekend of focused work. Most boutique GMs report meaningful time savings (4–6 hours a week) within the first 30 days of moving maintenance off paper.',
   },
   {
     q: 'Do I need to replace my PMS (Mews, Cloudbeds, Opera, Little Hotelier)?',
-    a: 'No. The modernization moves in this guide all sit alongside whatever PMS you already use. Your reservation system continues to own bookings, the folio, and the night audit; the operational layer handles everything the PMS does not — maintenance, events, vendors, signage, guest arrival, document storage. Picking your PMS is a separate decision; modernizing the back office should not force a change there.',
+    a: 'No. The modernization moves in the guide all sit alongside whatever PMS you already use. Your reservation system continues to own bookings, the folio, and the night audit; the operational layer handles everything the PMS does not — maintenance, events, vendors, signage, guest arrival, document storage. Picking your PMS is a separate decision; modernizing the back office should not force a change there.',
   },
   {
     q: 'What is the single highest-impact change for a boutique hotel?',
-    a: 'Moving maintenance ticketing off paper and onto a photo-first system. It returns the largest number of GM hours per week (typically 4–6), it shows up most directly in guest reviews (issues close in hours rather than days), and it surfaces patterns owners cannot see when tickets live in WhatsApp threads.',
+    a: 'The guide opens with it — and it returns the largest number of GM hours per week, shows up most directly in guest reviews, and surfaces patterns owners cannot see when tickets live in WhatsApp threads. Read the PDF for the full breakdown.',
   },
   {
     q: 'How do guests notice that a boutique hotel has modernized?',
@@ -111,40 +47,6 @@ const FAQ: { q: string; a: string }[] = [
 ]
 
 export default function Post() {
-  const slug = '10-ways-to-modernize-your-boutique-hotel'
-  const pageUrl = `https://www.${BRAND.domain}/blog/${slug}`
-
-  // HowTo schema — Google can render this as a step-by-step rich
-  // result for the "10 ways..." query. Each step lists name +
-  // description so the snippet is informative even without a click.
-  const howToJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'HowTo',
-    name: '10 ways to modernize your boutique hotel',
-    description:
-      'A field guide for boutique hotel operators: ten high-leverage moves to close the operational gap against larger hotel chains.',
-    totalTime: 'P7D',
-    estimatedCost: { '@type': 'MonetaryAmount', currency: 'USD', value: '0' },
-    supply: [
-      { '@type': 'HowToSupply', name: 'Front desk phone or tablet' },
-      { '@type': 'HowToSupply', name: 'Existing property TVs (browser-capable)' },
-      { '@type': 'HowToSupply', name: 'A printable QR card per room' },
-    ],
-    tool: [
-      { '@type': 'HowToTool', name: 'Hotel back-office operations software' },
-    ],
-    step: ITEMS.map((item, i) => ({
-      '@type': 'HowToStep',
-      position: i + 1,
-      name: item.label.replace(/\.$/, ''),
-      itemListElement: {
-        '@type': 'HowToDirection',
-        text: item.tease,
-      },
-      url: `${pageUrl}#step-${i + 1}`,
-    })),
-  }
-
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -157,12 +59,6 @@ export default function Post() {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(howToJsonLd).replace(/</g, '\\u003c'),
-        }}
-      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -181,62 +77,64 @@ export default function Post() {
       <p>
         That asymmetry costs the boutique segment real money every
         month — in hours lost, in revenue left on the table, in guests
-        who quietly choose the next-door property instead. This guide
-        is the playbook to close it.
-      </p>
-      <p>
-        Closing the gap in 2026 does not require an enterprise budget.
-        It requires a list. Ten moves, most of which can be started
-        this week, most of which cost nothing to begin, and all of
-        which have been adopted at scale by chain hotels for years.
-        The properties that work through this list run circles around
-        the ones that do not — and they read as “tight” to guests in
-        a way that translates directly into review scores, direct
-        bookings, and rate flexibility.
+        who quietly choose the next-door property instead. The good
+        news in 2026 is that closing the gap no longer requires an
+        enterprise budget. It requires a list.
       </p>
 
-      <h2 id="the-ten">The ten moves, at a glance</h2>
+      <h2 id="whats-in-the-guide">What’s in the guide</h2>
       <p>
-        Each item below is a one-paragraph teaser. The full version of
-        every move — the “what good looks like,” the numbers behind
-        the time savings, the order of operations, and how each one
-        wires into the rest of the stack — lives in the free PDF
-        further down. Skim the list first to see which gaps apply to
-        your property; grab the PDF when you’re ready to act on them.
+        We put together a free 8-page field guide — <strong>10 ways to
+        modernize your boutique hotel without breaking the bank</strong>
+        {' '}— that walks through ten high-leverage moves chain hotels
+        have used for years, now finally available at boutique scale.
+        Most can be started this week. Most cost nothing to begin. All
+        of them compound.
       </p>
-
-      <ul className="not-prose mt-6 grid gap-4">
-        {ITEMS.map((item, i) => (
-          <li
-            key={item.n}
-            id={`step-${i + 1}`}
-            className="rounded-xl border border-border-subtle bg-surface p-5 scroll-mt-24"
-          >
-            <p className="flex items-baseline gap-3">
-              <span className="font-mono text-xs text-subtle">
-                {item.n}
-              </span>
-              <span className="text-base font-semibold text-fg">
-                {item.label}
-              </span>
-            </p>
-            <p className="mt-2 text-sm text-muted leading-relaxed">
-              {item.tease}
-            </p>
-          </li>
-        ))}
+      <p>The guide covers, in order:</p>
+      <ul>
+        <li>
+          <strong>Maintenance & operations.</strong> The single highest-
+          leverage move for clawing back GM hours, plus the
+          vendor-directory habit that keeps your engineering team out
+          of crisis mode.
+        </li>
+        <li>
+          <strong>Guest-facing surfaces.</strong> What replaces the
+          laminated welcome card, how every TV becomes part of the
+          property, and what to do the moment something goes wrong at
+          11 PM.
+        </li>
+        <li>
+          <strong>Sales & events.</strong> Why boutiques lose 20–40% of
+          inquiries to slow response, and the one workflow change that
+          plugs the leak.
+        </li>
+        <li>
+          <strong>The hidden back office.</strong> Where Wi-Fi
+          credentials, vendor logins, and equipment records should
+          actually live, and how to stop a departing GM from taking
+          institutional memory with them.
+        </li>
+        <li>
+          <strong>Operating discipline.</strong> The 45-minute monthly
+          habit that closes the loop on everything above.
+        </li>
       </ul>
-
-      <h2 id="get-the-pdf">Get the full field guide.</h2>
       <p>
-        We wrote this for boutique operators, not casual browsers — and
-        we want to know who is reading it so we can answer follow-up
-        questions and learn what is missing from the playbook. Enter
-        your name, email, and the hotel you run; we will email the PDF
-        to you and you can also download it instantly here. We do not
-        spam. We do not share email addresses with anyone. If the
-        answer to “does MyHotelOps fit your operation” turns out to be
-        no, we will tell you directly.
+        Each move in the guide includes the “what good looks like,” the
+        rough numbers behind the time savings, and the order of
+        operations — so you can pick the two or three that matter most
+        for your property and start this week.
+      </p>
+
+      <h2 id="get-the-pdf">Download the guide</h2>
+      <p>
+        Enter your name, email, and the hotel you run. We email the PDF
+        and you can download it instantly here. We do not spam, we do
+        not share email addresses with anyone, and if “does MyHotelOps
+        fit your operation” turns out to be no, we will tell you
+        directly.
       </p>
 
       <GuideDownloadForm
