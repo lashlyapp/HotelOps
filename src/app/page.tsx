@@ -197,8 +197,12 @@ export default async function HomePage() {
               label={t.features.navLabel}
               items={[
                 { href: '/#work-orders', label: t.nav.workOrders },
+                { href: '/features#operations', label: t.nav.events },
                 { href: '/#signage', label: t.nav.signage },
                 { href: '/#arrival', label: t.nav.arrival },
+                { href: '/features#media', label: t.nav.media },
+                { href: '/features#addons', label: t.nav.social },
+                { href: '/features#operations', label: t.nav.itHub },
                 { href: '/features', label: t.features.allLabel },
               ]}
             />

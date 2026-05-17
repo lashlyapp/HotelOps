@@ -16,11 +16,23 @@ import type { Dictionary } from '@/lib/i18n/dictionaries'
  * flat list overwhelms; categories let a scanner find their
  * concern (operations vs guest-facing vs billing) in two seconds.
  *
- * Five categories × four items each = 20 features. Counts are
- * deliberate — adding a sixth category requires a layout pass
- * (two-up grid stops balancing at five rows). Dictionary copy is
- * the source of truth; this component only renders structure.
+ * Six categories laid out in a 2-column grid (3 rows). Item counts
+ * vary — currently 4 everywhere except Add-ons (3). The grid sizes
+ * categories, not items, so unevenness inside a category doesn't
+ * matter. Dictionary copy is the source of truth; this component
+ * only renders structure. Anchor slugs are positional (CATEGORY_SLUGS)
+ * so the landing-page FeaturesDropdown can deep-link to the same
+ * anchor across locales even though category titles are translated.
  */
+const CATEGORY_SLUGS = [
+  'operations',
+  'guest-facing',
+  'media',
+  'team',
+  'billing',
+  'addons',
+] as const
+
 export function FeatureGrid({
   t,
 }: {
@@ -43,8 +55,12 @@ export function FeatureGrid({
         </div>
 
         <div className="mt-12 grid gap-x-10 gap-y-12 md:grid-cols-2">
-          {t.categories.map((category) => (
-            <div key={category.title}>
+          {t.categories.map((category, i) => (
+            <div
+              key={category.title}
+              id={CATEGORY_SLUGS[i]}
+              className="scroll-mt-24"
+            >
               <h3 className="text-xs font-semibold uppercase tracking-wider text-fg border-b border-border-subtle pb-3">
                 {category.title}
               </h3>

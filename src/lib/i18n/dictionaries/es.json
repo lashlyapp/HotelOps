@@ -78,6 +78,9 @@
     "events": "Eventos y banquetes",
     "signage": "Señalización",
     "arrival": "Bienvenida",
+    "media": "Multimedia",
+    "social": "Social Studio",
+    "itHub": "IT Hub",
     "pricing": "Precios"
   },
   "marketing": {
@@ -253,10 +256,6 @@
           {
             "name": "Menús de Restaurante y Servicio",
             "description": "Menús editables que se publican automáticamente en la página de llegada y señalización. Actualiza una vez, cada superficie se refresca."
-          },
-          {
-            "name": "Social Studio (complemento)",
-            "description": "Una publicación social redactada por IA por propiedad, cada día — texto, hashtags y una foto elegida de este catálogo. Cópiala, descárgala o envíatela por email; tú publicas desde el móvil. Sin integraciones de plataforma."
           }
         ]
       },
@@ -299,6 +298,23 @@
           {
             "name": "Prueba Gratuita de 7 Días",
             "description": "Acceso completo a funciones por 7 días. Sin tarjeta para empezar; tus datos persisten si conviertes y se exportan si no."
+          }
+        ]
+      },
+      {
+        "title": "Complementos",
+        "items": [
+          {
+            "name": "Señalización ilimitada",
+            "description": "Sin el límite de 3 pantallas. Señalización en cada TV de cada propiedad — vestíbulos, restaurantes, salas de reuniones, back-of-house — por un precio fijo de complemento."
+          },
+          {
+            "name": "Experiencia del huésped",
+            "description": "Desbloquea toda la superficie cara al huésped — páginas de bienvenida con marca, reporte de incidencias multiidioma, menús QR en la habitación. Cada punto de contacto con el huésped, con tu marca."
+          },
+          {
+            "name": "Social Studio",
+            "description": "Un post social redactado por IA por propiedad y día — textos, hashtags y una foto elegida de este catálogo. Copia, descarga o envíalo por email; tú publicas desde tu móvil. Sin integraciones de plataforma."
           }
         ]
       }

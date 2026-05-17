@@ -294,11 +294,6 @@ function PropertyRow({
   autopayDefaultPmId: string | null
 }) {
   const hasCard = Boolean(subscription?.default_payment_method_id)
-  const daysLeft = daysUntil(subscription?.payment_method_due_at ?? null)
-  const needsCard =
-    subscription &&
-    !hasCard &&
-    !['canceled', 'incomplete_expired'].includes(subscription.status)
   const isEnded =
     subscription?.status === 'canceled' ||
     subscription?.status === 'incomplete_expired'
@@ -368,9 +363,7 @@ function PropertyRow({
       <td className="px-4 py-3 text-muted">
         {subscription?.current_period_end
           ? formatDate(subscription.current_period_end)
-          : needsCard && subscription?.payment_method_due_at
-            ? `Due in ${daysLeft ?? 0}d`
-            : '—'}
+          : '—'}
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-1">
@@ -565,12 +558,6 @@ function formatDate(iso: string): string {
     month: 'short',
     day: 'numeric',
   })
-}
-
-function daysUntil(iso: string | null): number | null {
-  if (!iso) return null
-  const ms = new Date(iso).getTime() - Date.now()
-  return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)))
 }
 
 function capitalize(s: string | null | undefined): string {

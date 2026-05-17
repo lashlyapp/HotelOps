@@ -78,6 +78,9 @@
     "events": "Events & Catering",
     "signage": "Signage",
     "arrival": "Arrival",
+    "media": "Media",
+    "social": "Social Studio",
+    "itHub": "IT Hub",
     "pricing": "Pricing"
   },
   "marketing": {
@@ -253,10 +256,6 @@
           {
             "name": "Restaurant & Room Service Menus",
             "description": "Editable menus that auto-publish to the arrival page and signage. Update once, every surface refreshes."
-          },
-          {
-            "name": "Social Studio (add-on)",
-            "description": "One AI-drafted social post per property per day — captions, hashtags, and a photo picked from this catalog. Copy, download, or email it to yourself; you publish from your phone. No platform integrations."
           }
         ]
       },
@@ -299,6 +298,23 @@
           {
             "name": "7-day Free Trial",
             "description": "Full feature access for 7 days. No credit card to start; your data persists if you convert and exports if you don't."
+          }
+        ]
+      },
+      {
+        "title": "Add-ons",
+        "items": [
+          {
+            "name": "Signage Unlimited",
+            "description": "Remove the 3-screen cap. Run signage on every TV across every property — lobbies, restaurants, meeting rooms, back-of-house — for one flat add-on price."
+          },
+          {
+            "name": "Guest Experience",
+            "description": "Unlock the full guest-facing surface — branded arrival pages, multi-language guest issue intake, in-room QR menus. Every guest touchpoint runs your brand."
+          },
+          {
+            "name": "Social Studio",
+            "description": "One AI-drafted social post per property per day — captions, hashtags, and a photo picked from this catalog. Copy, download, or email it to yourself; you publish from your phone. No platform integrations."
           }
         ]
       }

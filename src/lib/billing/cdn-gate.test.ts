@@ -11,7 +11,6 @@ function sub(partial: Partial<BillingSubscription>): BillingSubscription {
     stripe_subscription_id: 'sub_test',
     stripe_price_id: 'price_test',
     status: 'active',
-    payment_method_due_at: null,
     past_due_since: null,
     current_period_start: null,
     current_period_end: null,

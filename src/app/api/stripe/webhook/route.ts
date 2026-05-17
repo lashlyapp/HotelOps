@@ -206,10 +206,9 @@ async function setCustomerAutopayDefault(
  *   - Attach the new card to this property's subscription specifically
  *     (NOT to the Customer's invoice_settings by default — each property
  *     keeps its own per-subscription default card).
- *   - Flip the subscription from send_invoice to charge_automatically.
- *   - Pay any open invoice with the new card so the act of "adding a card"
- *     actually settles the outstanding charge instead of letting it slip
- *     into past_due 14 days later.
+ *   - Pay any open invoice with the new card so the act of "adding a
+ *     card" actually settles any outstanding charge (e.g. a past_due
+ *     invoice the customer is now fixing).
  *
  * For BOTH modes, if the customer answered "yes" to the autopay_default
  * custom_field, we promote the card to the Customer.invoice_settings
@@ -290,7 +289,6 @@ async function handleSetupModeCompleted(
   // stays as-is (so it doesn't silently flip out from under other subs).
   await stripe().subscriptions.update(subscriptionId, {
     default_payment_method: paymentMethodId,
-    collection_method: 'charge_automatically',
   })
 
   await payOpenInvoiceForSubscription(subscriptionId, paymentMethodId)
@@ -309,12 +307,7 @@ async function handleSetupModeCompleted(
   // brief "incomplete" badge until the trailing subscription.updated
   // webhook caught up.
   const fresh = await stripe().subscriptions.retrieve(subscriptionId)
-
-  // Card on file → grace period no longer applies. Clear the deadline so the
-  // billing UI stops showing the "X days remaining" countdown.
-  await syncSubscriptionToDb(propertyId, orgId, fresh, {
-    paymentMethodDueAt: null,
-  })
+  await syncSubscriptionToDb(propertyId, orgId, fresh)
 }
 
 /**
