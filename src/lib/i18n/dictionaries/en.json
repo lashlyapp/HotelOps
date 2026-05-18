@@ -149,7 +149,7 @@
     "pricingTeaser": {
       "eyebrow": "Pricing",
       "headline": "One $100/property line item. Three add-ons. That's it.",
-      "body": "A 40-room boutique buying the same features à la carte from Quore, Yodeck, Duve, and a freelance social-media manager pays around $679/month. With us, everything-on costs $207/month per property — and you can drop any add-on with a single click.",
+      "body": "A 40-room boutique buying the same features à la carte from Quore, Yodeck, Duve, and a freelance social-media manager pays around $679/month. With us, everything-on costs $217/month per property — and you can drop any add-on with a single click.",
       "cta": "See the full pricing & comparison →",
       "mini": {
         "baseLabel": "Base",
@@ -440,7 +440,7 @@
         "headline": "Replaced four separate SaaS subscriptions",
         "type": "Two-property design hotel group",
         "region": "Mexico City, Mexico",
-        "body": "Cancelled their maintenance ticketing tool, their event-banquet platform, their digital signage subscription, their guest concierge app, and the freelance social-media manager who wrote their captions. Net spend dropped about $500/property/mo with all the same workflows still running — just consolidated under one $207 line item."
+        "body": "Cancelled their maintenance ticketing tool, their event-banquet platform, their digital signage subscription, their guest concierge app, and the freelance social-media manager who wrote their captions. Net spend dropped about $500/property/mo with all the same workflows still running — just consolidated under one $217 line item."
       },
       {
         "headline": "Onboarded GM in an afternoon, not a week",
@@ -525,7 +525,7 @@
   "pricing": {
     "eyebrow": "Pricing",
     "headline": "Per property. Not per seat. Not per screen. Not per room.",
-    "sub": "One $100/property/month base. Three optional add-ons. That’s the whole price list — and the maximum a single property can possibly cost you is $207/month, regardless of how many screens, rooms, or staff you have.",
+    "sub": "One $100/property/month base. Three optional add-ons. That’s the whole price list — and the maximum a single property can possibly cost you is $217/month, regardless of how many screens, rooms, or staff you have.",
     "midCycleNote": "No contracts. No annual commitments. Add or remove options whenever you want — cancel any time from your account.",
     "cadence": "property / month",
     "tagRequired": "Required",

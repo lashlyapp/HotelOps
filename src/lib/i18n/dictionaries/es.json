@@ -149,7 +149,7 @@
     "pricingTeaser": {
       "eyebrow": "Precios",
       "headline": "Una sola línea de $100/propiedad. Tres complementos. Eso es todo.",
-      "body": "Un hotel boutique de 40 habitaciones que compra las mismas funciones por separado a Quore, Yodeck, Duve y un freelance de redes sociales paga unos $679/mes. Con nosotros, todo activado cuesta $207/mes por propiedad — y puedes eliminar cualquier complemento con un solo clic.",
+      "body": "Un hotel boutique de 40 habitaciones que compra las mismas funciones por separado a Quore, Yodeck, Duve y un freelance de redes sociales paga unos $679/mes. Con nosotros, todo activado cuesta $217/mes por propiedad — y puedes eliminar cualquier complemento con un solo clic.",
       "cta": "Ver precios completos y comparativa →",
       "mini": {
         "baseLabel": "Base",
@@ -440,7 +440,7 @@
         "headline": "Sustituyeron cuatro suscripciones SaaS independientes",
         "type": "Grupo hotelero de diseño con dos propiedades",
         "region": "Ciudad de México, México",
-        "body": "Cancelaron su herramienta de tickets de mantenimiento, su plataforma de eventos y banquetes, su suscripción de señalización digital, su app de conserjería y el freelancer que les escribía los posts en redes. El gasto neto bajó unos $500/propiedad/mes con los mismos flujos de trabajo — todo consolidado en una sola línea de $207."
+        "body": "Cancelaron su herramienta de tickets de mantenimiento, su plataforma de eventos y banquetes, su suscripción de señalización digital, su app de conserjería y el freelancer que les escribía los posts en redes. El gasto neto bajó unos $500/propiedad/mes con los mismos flujos de trabajo — todo consolidado en una sola línea de $217."
       },
       {
         "headline": "Director nuevo operativo en una tarde, no en una semana",
@@ -525,7 +525,7 @@
   "pricing": {
     "eyebrow": "Precios",
     "headline": "Por propiedad. No por usuario. No por pantalla. No por habitación.",
-    "sub": "Una base de $100/propiedad/mes. Tres complementos opcionales. Esa es toda la lista de precios — y el máximo que una sola propiedad puede costarte es $207/mes, sin importar cuántas pantallas, habitaciones o personal tengas.",
+    "sub": "Una base de $100/propiedad/mes. Tres complementos opcionales. Esa es toda la lista de precios — y el máximo que una sola propiedad puede costarte es $217/mes, sin importar cuántas pantallas, habitaciones o personal tengas.",
     "midCycleNote": "Sin contratos. Sin compromisos anuales. Añade o quita opciones cuando quieras — cancela en cualquier momento desde tu cuenta.",
     "cadence": "propiedad / mes",
     "tagRequired": "Obligatorio",

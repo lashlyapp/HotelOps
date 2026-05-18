@@ -149,7 +149,7 @@
     "pricingTeaser": {
       "eyebrow": "Giá",
       "headline": "Một dòng $100/tài sản. Ba tùy chọn bổ sung. Vậy là xong.",
-      "body": "Một boutique 40 phòng mua các tính năng tương tự lẻ từ Quore, Yodeck, Duve và một freelancer quản lý mạng xã hội phải trả khoảng $679/tháng. Với chúng tôi, mọi thứ bật cùng lúc chỉ tốn $207/tháng mỗi tài sản — và bạn có thể bỏ bất kỳ tùy chọn nào chỉ với một cú nhấp.",
+      "body": "Một boutique 40 phòng mua các tính năng tương tự lẻ từ Quore, Yodeck, Duve và một freelancer quản lý mạng xã hội phải trả khoảng $679/tháng. Với chúng tôi, mọi thứ bật cùng lúc chỉ tốn $217/tháng mỗi tài sản — và bạn có thể bỏ bất kỳ tùy chọn nào chỉ với một cú nhấp.",
       "cta": "Xem toàn bộ bảng giá & so sánh →",
       "mini": {
         "baseLabel": "Nền tảng",
@@ -440,7 +440,7 @@
         "headline": "Thay thế bốn gói thuê bao SaaS riêng biệt",
         "type": "Nhóm khách sạn thiết kế hai tài sản",
         "region": "Thành phố Mexico, Mexico",
-        "body": "Hủy công cụ đặt phiếu bảo trì, nền tảng tiệc-sự kiện, gói thuê bao biển hiển thị kỹ thuật số, ứng dụng concierge khách và freelancer viết chú thích mạng xã hội. Chi tiêu ròng giảm khoảng $500/tài sản/tháng với cùng tất cả các quy trình công việc vẫn chạy — chỉ được củng cố dưới một mục dòng $207."
+        "body": "Hủy công cụ đặt phiếu bảo trì, nền tảng tiệc-sự kiện, gói thuê bao biển hiển thị kỹ thuật số, ứng dụng concierge khách và freelancer viết chú thích mạng xã hội. Chi tiêu ròng giảm khoảng $500/tài sản/tháng với cùng tất cả các quy trình công việc vẫn chạy — chỉ được củng cố dưới một mục dòng $217."
       },
       {
         "headline": "Đào tạo GM trong một buổi chiều, không phải một tuần",
@@ -525,7 +525,7 @@
   "pricing": {
     "eyebrow": "Giá",
     "headline": "Theo tài sản. Không phải theo chỗ ngồi. Không theo màn hình. Không theo phòng.",
-    "sub": "Một nền tảng $100/tài sản/tháng. Ba tùy chọn bổ sung. Đó là toàn bộ bảng giá — và tối đa một tài sản có thể tốn cho bạn là $207/tháng, bất kể bạn có bao nhiêu màn hình, phòng hay nhân viên.",
+    "sub": "Một nền tảng $100/tài sản/tháng. Ba tùy chọn bổ sung. Đó là toàn bộ bảng giá — và tối đa một tài sản có thể tốn cho bạn là $217/tháng, bất kể bạn có bao nhiêu màn hình, phòng hay nhân viên.",
     "midCycleNote": "Không hợp đồng. Không cam kết hàng năm. Thêm hoặc loại bỏ tùy chọn bất cứ khi nào bạn muốn — hủy bất cứ lúc nào từ tài khoản của bạn.",
     "cadence": "tài sản / tháng",
     "tagRequired": "Bắt buộc",

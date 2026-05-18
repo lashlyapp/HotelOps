@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     type: 'website',
     title: `Pricing — ${BRAND.name}`,
     description:
-      "Back-office operations for boutique hotels, alongside any PMS. Flat per-property pricing — $100/mo base, $207 with everything on.",
+      "Back-office operations for boutique hotels, alongside any PMS. Flat per-property pricing — $100/mo base, $217 with everything on.",
     url: `https://www.${BRAND.domain}/pricing`,
     siteName: BRAND.name,
   },
@@ -177,7 +177,7 @@ export default async function PricingPage() {
                       ~$679
                     </td>
                     <td className="px-4 py-3 text-right text-fg tabular-nums">
-                      $207
+                      $217
                     </td>
                   </tr>
                   <tr className="bg-success-bg/30 font-semibold">
@@ -188,7 +188,7 @@ export default async function PricingPage() {
                       className="px-4 py-3 text-right text-success-fg tabular-nums"
                       colSpan={2}
                     >
-                      $472 / month (70%)
+                      $462 / month (68%)
                     </td>
                   </tr>
                 </tbody>

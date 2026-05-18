@@ -149,7 +149,7 @@
     "pricingTeaser": {
       "eyebrow": "Tarifs",
       "headline": "Une ligne à $100/établissement. Trois options. C'est tout.",
-      "body": "Un hôtel boutique de 40 chambres qui achète les mêmes fonctionnalités à la carte chez Quore, Yodeck, Duve et un freelance gestionnaire de réseaux sociaux paie environ $679/mois. Chez nous, tout activé coûte $207/mois par établissement — et vous pouvez supprimer n'importe quelle option en un seul clic.",
+      "body": "Un hôtel boutique de 40 chambres qui achète les mêmes fonctionnalités à la carte chez Quore, Yodeck, Duve et un freelance gestionnaire de réseaux sociaux paie environ $679/mois. Chez nous, tout activé coûte $217/mois par établissement — et vous pouvez supprimer n'importe quelle option en un seul clic.",
       "cta": "Voir tous les tarifs et la comparaison →",
       "mini": {
         "baseLabel": "Base",
@@ -440,7 +440,7 @@
         "headline": "Quatre abonnements SaaS distincts remplacés",
         "type": "Groupe hôtelier design de deux propriétés",
         "region": "Mexico, Mexique",
-        "body": "Ils ont résilié leur outil de tickets de maintenance, leur plateforme événements et banquets, leur abonnement d'affichage numérique, leur app de conciergerie et le freelance qui rédigeait leurs posts. La dépense nette a baissé d'environ $500/propriété/mois avec les mêmes workflows — tout consolidé en une seule ligne à $207."
+        "body": "Ils ont résilié leur outil de tickets de maintenance, leur plateforme événements et banquets, leur abonnement d'affichage numérique, leur app de conciergerie et le freelance qui rédigeait leurs posts. La dépense nette a baissé d'environ $500/propriété/mois avec les mêmes workflows — tout consolidé en une seule ligne à $217."
       },
       {
         "headline": "Nouveau directeur opérationnel en une après-midi, pas une semaine",
@@ -525,7 +525,7 @@
   "pricing": {
     "eyebrow": "Tarifs",
     "headline": "Par propriété. Pas par utilisateur. Pas par écran. Pas par chambre.",
-    "sub": "Une base de $100/propriété/mois. Trois options. C'est toute la grille tarifaire — et le maximum qu'une seule propriété peut vous coûter est $207/mois, quel que soit le nombre d'écrans, de chambres ou de personnel.",
+    "sub": "Une base de $100/propriété/mois. Trois options. C'est toute la grille tarifaire — et le maximum qu'une seule propriété peut vous coûter est $217/mois, quel que soit le nombre d'écrans, de chambres ou de personnel.",
     "midCycleNote": "Sans contrat. Sans engagement annuel. Ajoutez ou retirez des options quand vous voulez — annulez à tout moment depuis votre compte.",
     "cadence": "propriété / mois",
     "tagRequired": "Obligatoire",
