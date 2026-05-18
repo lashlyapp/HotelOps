@@ -81,7 +81,8 @@
     "media": "Médias",
     "social": "Social Studio",
     "itHub": "Hub IT",
-    "pricing": "Tarifs"
+    "pricing": "Tarifs",
+    "primaryLabel": "Navigation principale"
   },
   "marketing": {
     "hero": {
@@ -91,15 +92,85 @@
       "personaLine": "Conçu pour les propriétaires, directeurs et managers — pas pour le personnel qui se bat avec votre système de réservation.",
       "trialLine": "Essai gratuit de 7 jours. Sans carte bancaire. 10 Go inclus.",
       "ctaPrimary": "Démarrer l'essai gratuit",
-      "ctaSecondary": "Voir les tarifs"
+      "ctaSecondary": "Voir les tarifs",
+      "imageAlt": "Manager d'hôtel passant en revue les opérations sur une tablette"
     },
     "positioning": {
+      "eyebrow": "Périmètre",
       "title": "La catégorie où nous ne sommes pas : votre PMS.",
       "body": "Nous ne remplacerons jamais Cloudbeds, Mews, Opera ou Little Hotelier. Nous nous plaçons à côté d'eux et gérons chaque surface opérationnelle qu'ils laissent aux tableurs et aux groupes WhatsApp — bons de travail, propositions d'événements, accès fournisseurs, affichage sur chaque téléviseur, la carte d'accueil imprimée de chaque chambre."
     },
+    "workOrders": {
+      "eyebrow": "Module · inclus dans la base",
+      "headline": "Logiciel de maintenance hôtelière, photo en premier.",
+      "body1": "Chaque robinet qui fuit, carrelage fissuré ou ballast vacillant reçoit une photo ou une courte vidéo plutôt qu'un ticket textuel long. Le personnel de la réception photographie, étiquette, transmet ; l'équipe technique clôture avec une photo après intervention. Tableau Kanban sur chaque établissement, dérogation propriétaire pour les complétions, journal d'activité complet.",
+      "body2": "Remplace les outils de maintenance hôtelière comme Quore ($130/mois par établissement) et HotSOS ($200–$500/mois) — et contrairement à eux, il est déjà inclus dans notre base à $100/établissement.",
+      "features": [
+        "Photographier, étiqueter, attribuer — moins de 10 secondes de bout en bout",
+        "Trace de preuves avant / en cours / après",
+        "Numéros de référence par établissement (WO-0042)",
+        "Clôture par dérogation propriétaire avec journal d'audit complet"
+      ],
+      "imageAlt": "Lobby d'hôtel — saisie de bon de travail en contexte"
+    },
+    "signage": {
+      "eyebrow": "Module · +$49/établissement/mois (illimité) · 3 écrans gratuits",
+      "headline": "SaaS d'affichage hôtelier sans la taxe par écran.",
+      "body1": "Téléviseur du lobby, tableau de la salle de pause, bord de la piscine, chaque salle de réunion — pilotez-les tous depuis un seul tableau de bord. Appairez un téléviseur avec un code à 6 chiffres, planifiez des playlists, diffusez un message d'urgence à l'échelle de tout l'établissement en un clic. Gratuit pour vos 3 premiers écrans par établissement ; illimité au-delà pour $49/établissement/mois.",
+      "body2": "Yodeck et OptiSigns facturent $8–$30 par écran et par mois. Un resort de 20 écrans paie $160/mois à Yodeck ; nous paie $49 — même fonctionnalité, moins d'un tiers du coût.",
+      "features": [
+        "Appairez n'importe quel Fire TV, Onn. ou smart TV doté d'un navigateur",
+        "Planifiez les playlists par date et heure de la journée",
+        "Image, vidéo, page web ou carte de texte avec votre marque",
+        "Prise de contrôle d'urgence pour tout l'établissement"
+      ],
+      "imageAlt": "Extérieur de l'hôtel — affichage sur tout l'établissement"
+    },
+    "arrival": {
+      "eyebrow": "Module · +$39/établissement/mois",
+      "headline": "Une conciergerie numérique que les clients savent déjà utiliser.",
+      "body1": "Nous imprimons une carte QR pour chaque chambre. Votre client la scanne avec l'appareil photo déjà présent sur son téléphone — pas d'installation, pas de compte — et arrive sur une page d'accueil à votre marque : Wi-Fi, horaires de restauration, informations sur la salle de sport, carte du room service, activités à proximité. Vous l'éditez en cinq minutes ; nous la mettons en cache pour la rapidité et hébergeons la mise en page imprimable.",
+      "body2": "Duve et Canary facturent $3–$6 par chambre occupée et par mois. Un établissement de 40 chambres paie $160 à Duve ; nous paie $39 — forfaitaire, quel que soit le taux d'occupation.",
+      "features": [
+        "Wi-Fi importé automatiquement depuis votre Hub IT",
+        "Cartes restaurant + room service avec photos et prix",
+        "Carte QR imprimable avec le logo de l'établissement et une URL courte",
+        "Pas de compte client, pas d'application à télécharger"
+      ],
+      "imageAlt": "Chambre d'hôte moderne avec carte QR sur le bureau"
+    },
+    "identityBand": {
+      "eyebrow": "Conçu pour l'hôtellerie",
+      "headline": "Construit autour de votre journée, pas autour d'un modèle générique.",
+      "body": "Chaque partie de {brand} vient de workflows réels que des propriétaires d'hôtels nous ont décrits — le ticket de maintenance de la chambre 312, la demande de mariage, le téléviseur du lobby figé sur un écran noir à 16h le samedi. Pas de surcharge, pas de courbe d'apprentissage. Juste les éléments de votre journée, à un seul endroit.",
+      "cta": "Commencer",
+      "imageAlt": "Comptoir de réception d'hôtel avec sonnette de service en laiton"
+    },
+    "pricingTeaser": {
+      "eyebrow": "Tarifs",
+      "headline": "Une ligne à $100/établissement. Trois options. C'est tout.",
+      "body": "Un hôtel boutique de 40 chambres qui achète les mêmes fonctionnalités à la carte chez Quore, Yodeck, Duve et un freelance gestionnaire de réseaux sociaux paie environ $679/mois. Chez nous, tout activé coûte $207/mois par établissement — et vous pouvez supprimer n'importe quelle option en un seul clic.",
+      "cta": "Voir tous les tarifs et la comparaison →",
+      "mini": {
+        "baseLabel": "Base",
+        "baseSub": "Bons de travail, Événements et traiteur, Hub IT, Médias, 3 écrans d'affichage",
+        "signageLabel": "Affichage illimité",
+        "signageSub": "optionnel · écrans illimités",
+        "guestLabel": "Expérience client",
+        "guestSub": "optionnel · pages d'arrivée + cartes QR",
+        "socialLabel": "Social Studio",
+        "socialSub": "optionnel · publication sociale quotidienne rédigée par IA",
+        "footer": "Par établissement, par mois. Annulez n'importe quelle option en un seul clic."
+      }
+    },
     "footer": {
       "tagline": "La couche d'exploitation pour hôtels boutique.",
-      "rights": "Tous droits réservés."
+      "rights": "Tous droits réservés.",
+      "company": "Entreprise",
+      "support": "Support",
+      "legal": "Mentions légales",
+      "privacyPolicy": "Politique de confidentialité",
+      "termsOfService": "Conditions d'utilisation"
     }
   },
   "signup": {

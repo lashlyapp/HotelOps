@@ -10,8 +10,9 @@ import { SharpHeroImage } from '@/components/marketing/sharp-hero-image'
 import { UseCasesBand } from '@/components/marketing/use-cases-band'
 import { Card, CardBody } from '@/components/ui/card'
 import { BRAND } from '@/lib/brand'
-import { getDictionary } from '@/lib/i18n/dictionaries'
+import { getDictionary, type Dictionary } from '@/lib/i18n/dictionaries'
 import { getLocale } from '@/lib/i18n/get-locale'
+import { interpolate } from '@/lib/i18n/interpolate'
 import { createClient } from '@/lib/supabase/server'
 
 // Public marketing imagery. The originals are large (multi-MB) JPEGs in
@@ -58,11 +59,6 @@ export default async function HomePage() {
     redirect(profile?.role === 'platform_admin' ? '/admin' : '/dashboard')
   }
 
-  // Localized strings for the hero + positioning band. Module-level
-  // sections below (work-orders / signage / arrival cards) stay
-  // English-only for now — we localize the first-touch surface first
-  // and translate the deeper sections in a follow-up once we have
-  // signal that international leads convert.
   const locale = await getLocale()
   const t = getDictionary(locale)
 
@@ -190,7 +186,7 @@ export default async function HomePage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Wordmark size="md" href="/" />
           <nav
-            aria-label="Primary"
+            aria-label={t.nav.primaryLabel}
             className="hidden items-center gap-1 text-sm sm:flex"
           >
             <FeaturesDropdown
@@ -287,7 +283,7 @@ export default async function HomePage() {
             <div className="relative aspect-[4/5] sm:aspect-[5/4] lg:aspect-square overflow-hidden rounded-2xl border border-border-subtle bg-surface-muted">
               <SharpHeroImage
                 src={HERO_IMAGE}
-                alt="Hotel manager reviewing operations on a tablet"
+                alt={t.marketing.hero.imageAlt}
                 priority
                 sizes="(min-width: 1024px) 540px, (min-width: 640px) 90vw, 100vw"
               />
@@ -299,7 +295,7 @@ export default async function HomePage() {
         <section className="border-y border-border-subtle bg-fg/[0.02]">
           <div className="mx-auto max-w-4xl px-6 py-12 lg:py-16 text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Scope
+              {t.marketing.positioning.eyebrow}
             </p>
             <h2 className="mt-3 text-2xl sm:text-3xl font-semibold tracking-tight text-fg">
               {t.marketing.positioning.title}
@@ -328,34 +324,27 @@ export default async function HomePage() {
             <div className="grid gap-12 lg:grid-cols-[1.2fr_1fr] lg:items-center">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  Module · included in base
+                  {t.marketing.workOrders.eyebrow}
                 </p>
                 <h2 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-                  Hotel maintenance software, photo-first.
+                  {t.marketing.workOrders.headline}
                 </h2>
                 <p className="mt-4 text-base text-muted leading-relaxed">
-                  Every dripping faucet, cracked tile, and flickering ballast
-                  gets a photo or short video instead of a long-form text
-                  ticket. Front-desk staff snap, tag, hand off; engineering
-                  closes with an after-photo. Kanban board across every
-                  property, owner-override completions, full activity log.
+                  {t.marketing.workOrders.body1}
                 </p>
                 <p className="mt-4 text-base text-muted leading-relaxed">
-                  Replaces hotel maintenance tools like Quore ($130/mo per
-                  property) and HotSOS ($200–$500/mo) — and unlike either,
-                  it&apos;s already bundled into our $100/property base.
+                  {t.marketing.workOrders.body2}
                 </p>
                 <ul className="mt-6 space-y-2 text-sm text-muted">
-                  <FeatureLi>Snap, tag, assign — under 10 seconds end-to-end</FeatureLi>
-                  <FeatureLi>Before / in-progress / after evidence trail</FeatureLi>
-                  <FeatureLi>Per-property reference numbers (WO-0042)</FeatureLi>
-                  <FeatureLi>Owner-override mark-done with full audit log</FeatureLi>
+                  {t.marketing.workOrders.features.map((f) => (
+                    <FeatureLi key={f}>{f}</FeatureLi>
+                  ))}
                 </ul>
               </div>
               <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-border-subtle bg-surface">
                 <SharpHeroImage
                   src={LOBBY_IMAGE}
-                  alt="Hotel lobby — work order capture in context"
+                  alt={t.marketing.workOrders.imageAlt}
                   sizes="(min-width: 1024px) 480px, 100vw"
                 />
               </div>
@@ -370,34 +359,27 @@ export default async function HomePage() {
               <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-border-subtle bg-surface order-2 lg:order-1">
                 <SharpHeroImage
                   src={EXTERIOR_IMAGE}
-                  alt="Hotel exterior — signage across the property"
+                  alt={t.marketing.signage.imageAlt}
                   sizes="(min-width: 1024px) 480px, 100vw"
                 />
               </div>
               <div className="order-1 lg:order-2">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  Module · +$49/property/mo (unlimited) · 3 screens free
+                  {t.marketing.signage.eyebrow}
                 </p>
                 <h2 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-                  Hotel signage SaaS without the per-screen tax.
+                  {t.marketing.signage.headline}
                 </h2>
                 <p className="mt-4 text-base text-muted leading-relaxed">
-                  Lobby TV, breakroom board, pool deck, every meeting room —
-                  drive them all from one dashboard. Pair a TV with a 6-digit
-                  code, schedule playlists, push a property-wide emergency
-                  message in one click. Free for your first 3 screens per
-                  property; unlimited above that for $49/property/month.
+                  {t.marketing.signage.body1}
                 </p>
                 <p className="mt-4 text-base text-muted leading-relaxed">
-                  Yodeck and OptiSigns charge $8–$30 per screen per month.
-                  A 20-screen resort pays Yodeck $160/mo; pays us $49 — same
-                  feature, less than a third of the cost.
+                  {t.marketing.signage.body2}
                 </p>
                 <ul className="mt-6 space-y-2 text-sm text-muted">
-                  <FeatureLi>Pair any Fire TV, Onn., or smart TV with a browser</FeatureLi>
-                  <FeatureLi>Schedule playlists by date and time-of-day</FeatureLi>
-                  <FeatureLi>Image, video, web page, or branded text card</FeatureLi>
-                  <FeatureLi>Emergency takeover for the whole property</FeatureLi>
+                  {t.marketing.signage.features.map((f) => (
+                    <FeatureLi key={f}>{f}</FeatureLi>
+                  ))}
                 </ul>
               </div>
             </div>
@@ -413,35 +395,27 @@ export default async function HomePage() {
             <div className="grid gap-12 lg:grid-cols-[1.2fr_1fr] lg:items-center">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  Module · +$39/property/mo
+                  {t.marketing.arrival.eyebrow}
                 </p>
                 <h2 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-                  A digital concierge guests already know how to use.
+                  {t.marketing.arrival.headline}
                 </h2>
                 <p className="mt-4 text-base text-muted leading-relaxed">
-                  We print a QR card for each room. Your guest scans with
-                  the camera app already on their phone — no install, no
-                  account — and lands on a branded arrival page: Wi-Fi,
-                  dining hours, gym info, room service menu, things to do
-                  nearby. You edit it in five minutes; we cache it for
-                  speed and host the print layout.
+                  {t.marketing.arrival.body1}
                 </p>
                 <p className="mt-4 text-base text-muted leading-relaxed">
-                  Duve and Canary charge $3–$6 per occupied room per month.
-                  A 40-room property pays Duve $160; pays us $39 — flat,
-                  regardless of occupancy.
+                  {t.marketing.arrival.body2}
                 </p>
                 <ul className="mt-6 space-y-2 text-sm text-muted">
-                  <FeatureLi>Wi-Fi auto-imported from your IT Hub</FeatureLi>
-                  <FeatureLi>Restaurant + room service menus with photos and prices</FeatureLi>
-                  <FeatureLi>Printable QR card with property logo and short URL</FeatureLi>
-                  <FeatureLi>No guest account, no app to download</FeatureLi>
+                  {t.marketing.arrival.features.map((f) => (
+                    <FeatureLi key={f}>{f}</FeatureLi>
+                  ))}
                 </ul>
               </div>
               <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-border-subtle bg-surface">
                 <SharpHeroImage
                   src={GUEST_ROOM_IMAGE}
-                  alt="Modern hotel guest room with QR card on the desk"
+                  alt={t.marketing.arrival.imageAlt}
                   sizes="(min-width: 1024px) 480px, 100vw"
                 />
               </div>
@@ -454,27 +428,23 @@ export default async function HomePage() {
           <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-end">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                Pricing
+                {t.marketing.pricingTeaser.eyebrow}
               </p>
               <h2 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-                One $100/property line item. Three add-ons. That&apos;s it.
+                {t.marketing.pricingTeaser.headline}
               </h2>
               <p className="mt-4 max-w-2xl text-base text-muted leading-relaxed">
-                A 40-room boutique buying the same features à la carte from
-                Quore, Yodeck, Duve, and a freelance social-media manager
-                pays around $679/month. With us, everything-on costs
-                $207/month per property — and you can drop any add-on with
-                a single click.
+                {t.marketing.pricingTeaser.body}
               </p>
             </div>
-            <PricingMini />
+            <PricingMini mini={t.marketing.pricingTeaser.mini} />
           </div>
           <div className="mt-10">
             <Link
               href="/pricing"
               className="focus-ring inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-base font-medium text-primary-fg hover:bg-primary-hover transition-colors"
             >
-              See the full pricing &amp; comparison →
+              {t.marketing.pricingTeaser.cta}
             </Link>
           </div>
         </section>
@@ -483,7 +453,7 @@ export default async function HomePage() {
         <section className="relative isolate overflow-hidden">
           <SharpHeroImage
             src={RECEPTION_IMAGE}
-            alt="Hotel reception desk with brass service bell"
+            alt={t.marketing.identityBand.imageAlt}
             sizes="100vw"
           />
           {/* dark overlay so the headline is readable on top of the photo */}
@@ -491,24 +461,20 @@ export default async function HomePage() {
           <div className="relative mx-auto max-w-6xl px-6 py-24 lg:py-32">
             <div className="max-w-xl">
               <p className="text-xs font-semibold uppercase tracking-wider text-white/70">
-                Built for hospitality
+                {t.marketing.identityBand.eyebrow}
               </p>
               <h2 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-white leading-tight">
-                Built around your day, not a one-size-fits-all template.
+                {t.marketing.identityBand.headline}
               </h2>
               <p className="mt-4 text-base text-white/85 leading-relaxed">
-                Every part of {BRAND.name} comes from real workflows hotel
-                owners walked us through — the maintenance ticket from
-                Room 312, the wedding inquiry, the lobby TV that froze on
-                a black screen at 4pm on Saturday. No bloat, no learning
-                curve. Just the pieces of your day, in one place.
+                {interpolate(t.marketing.identityBand.body, { brand: BRAND.name })}
               </p>
               <div className="mt-8">
                 <Link
                   href="/signup"
                   className="focus-ring inline-flex h-11 items-center justify-center rounded-md bg-white px-6 text-base font-medium text-slate-900 hover:bg-white/90 transition-colors"
                 >
-                  Start now
+                  {t.marketing.identityBand.cta}
                 </Link>
               </div>
             </div>
@@ -533,24 +499,28 @@ function FeatureLi({ children }: { children: React.ReactNode }) {
   )
 }
 
-function PricingMini() {
+function PricingMini({
+  mini,
+}: {
+  mini: Dictionary['marketing']['pricingTeaser']['mini']
+}) {
   return (
     <Card>
       <CardBody className="space-y-3">
-        <Row label="Base" sub="Work Orders, Events & Catering, IT Hub, Media, 3 signage screens">
+        <Row label={mini.baseLabel} sub={mini.baseSub}>
           $100
         </Row>
-        <Row label="Signage Unlimited" sub="optional · unlimited screens">
+        <Row label={mini.signageLabel} sub={mini.signageSub}>
           +$49
         </Row>
-        <Row label="Guest Experience" sub="optional · arrival pages + QR cards">
+        <Row label={mini.guestLabel} sub={mini.guestSub}>
           +$39
         </Row>
-        <Row label="Social Studio" sub="optional · AI-drafted daily social post">
+        <Row label={mini.socialLabel} sub={mini.socialSub}>
           +$19
         </Row>
         <p className="border-t border-border-subtle pt-3 text-xs text-subtle">
-          Per property, per month. Cancel any add-on with one click.
+          {mini.footer}
         </p>
       </CardBody>
     </Card>

@@ -54,7 +54,7 @@ export async function Footer({ variant = 'public' }: { variant?: Variant }) {
             address column. Full address now lives on /about. */}
         <div className="space-y-2 text-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
-            Company
+            {dict.marketing.footer.company}
           </p>
           <ul className="space-y-1">
             <li>
@@ -102,7 +102,7 @@ export async function Footer({ variant = 'public' }: { variant?: Variant }) {
 
         <div className="space-y-2 text-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
-            Support
+            {dict.marketing.footer.support}
           </p>
           <a
             href={`mailto:${BRAND.supportEmail}`}
@@ -114,7 +114,7 @@ export async function Footer({ variant = 'public' }: { variant?: Variant }) {
 
         <div className="space-y-2 text-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
-            Legal
+            {dict.marketing.footer.legal}
           </p>
           <ul className="space-y-1">
             <li>
@@ -122,7 +122,7 @@ export async function Footer({ variant = 'public' }: { variant?: Variant }) {
                 href="/privacy"
                 className="text-muted hover:text-fg focus-ring rounded-sm"
               >
-                Privacy Policy
+                {dict.marketing.footer.privacyPolicy}
               </Link>
             </li>
             <li>
@@ -130,7 +130,7 @@ export async function Footer({ variant = 'public' }: { variant?: Variant }) {
                 href="/terms"
                 className="text-muted hover:text-fg focus-ring rounded-sm"
               >
-                Terms of Service
+                {dict.marketing.footer.termsOfService}
               </Link>
             </li>
           </ul>
@@ -139,7 +139,7 @@ export async function Footer({ variant = 'public' }: { variant?: Variant }) {
 
       <div className="border-t border-border-subtle">
         <div className="mx-auto max-w-6xl px-6 py-4 flex flex-wrap items-center justify-between gap-3 text-xs text-subtle">
-          <span>© {year} {BRAND.legalName}. All rights reserved.</span>
+          <span>© {year} {BRAND.legalName}. {dict.marketing.footer.rights}</span>
           <LocaleSwitcher current={locale} />
         </div>
       </div>

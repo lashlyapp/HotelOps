@@ -81,7 +81,8 @@
     "media": "Multimedia",
     "social": "Social Studio",
     "itHub": "IT Hub",
-    "pricing": "Precios"
+    "pricing": "Precios",
+    "primaryLabel": "Navegación principal"
   },
   "marketing": {
     "hero": {
@@ -91,15 +92,85 @@
       "personaLine": "Diseñado para propietarios, directores y gerentes — no para el personal que lucha con tu sistema de reservas.",
       "trialLine": "Prueba gratuita de 7 días. Sin tarjeta de crédito. 10 GB incluidos.",
       "ctaPrimary": "Empezar prueba gratuita",
-      "ctaSecondary": "Ver precios"
+      "ctaSecondary": "Ver precios",
+      "imageAlt": "Gerente de hotel revisando operaciones en una tableta"
     },
     "positioning": {
+      "eyebrow": "Alcance",
       "title": "La categoría en la que no entramos: tu PMS.",
       "body": "Nunca reemplazaremos a Cloudbeds, Mews, Opera o Little Hotelier. Nos colocamos junto a ellos y gestionamos cada superficie operativa que dejan en hojas de cálculo y chats de grupo — órdenes de trabajo, propuestas de eventos, accesos de proveedores, señalización en cada televisor, la tarjeta de bienvenida impresa de cada habitación."
     },
+    "workOrders": {
+      "eyebrow": "Módulo · incluido en la base",
+      "headline": "Software de mantenimiento hotelero, primero con foto.",
+      "body1": "Cada grifo que gotea, baldosa agrietada y balasto parpadeante recibe una foto o un vídeo corto en lugar de un ticket de texto largo. El personal de recepción saca la foto, etiqueta y entrega; ingeniería cierra con una foto posterior. Tablero Kanban en cada propiedad, anulación de la finalización por parte del propietario, registro de actividad completo.",
+      "body2": "Sustituye herramientas de mantenimiento hotelero como Quore ($130/mes por propiedad) y HotSOS ($200–$500/mes) — y a diferencia de ambas, ya viene incluida en nuestra base de $100/propiedad.",
+      "features": [
+        "Captura, etiqueta y asigna — todo en menos de 10 segundos",
+        "Rastro de pruebas antes / en curso / después",
+        "Números de referencia por propiedad (WO-0042)",
+        "Cierre por anulación del propietario con registro completo de auditoría"
+      ],
+      "imageAlt": "Lobby de hotel — captura de orden de trabajo en contexto"
+    },
+    "signage": {
+      "eyebrow": "Módulo · +$49/propiedad/mes (ilimitado) · 3 pantallas gratis",
+      "headline": "SaaS de señalización hotelera sin el impuesto por pantalla.",
+      "body1": "Televisor del lobby, tablero de la sala de descanso, terraza de la piscina, cada sala de reuniones — gestiónalo todo desde un panel. Empareja un TV con un código de 6 dígitos, programa listas de reproducción, envía un mensaje de emergencia para toda la propiedad en un solo clic. Gratis para las primeras 3 pantallas por propiedad; ilimitado a partir de ahí por $49/propiedad/mes.",
+      "body2": "Yodeck y OptiSigns cobran $8–$30 por pantalla al mes. Un resort de 20 pantallas paga $160/mes a Yodeck; nos paga $49 a nosotros — la misma función, menos de un tercio del coste.",
+      "features": [
+        "Empareja cualquier Fire TV, Onn. o televisor inteligente con navegador",
+        "Programa listas de reproducción por fecha y hora del día",
+        "Imagen, vídeo, página web o tarjeta de texto con marca",
+        "Toma de emergencia para toda la propiedad"
+      ],
+      "imageAlt": "Exterior del hotel — señalización en toda la propiedad"
+    },
+    "arrival": {
+      "eyebrow": "Módulo · +$39/propiedad/mes",
+      "headline": "Un conserje digital que los huéspedes ya saben usar.",
+      "body1": "Imprimimos una tarjeta QR para cada habitación. Tu huésped la escanea con la cámara que ya tiene en el móvil — sin instalación, sin cuenta — y llega a una página de bienvenida con tu marca: Wi-Fi, horarios del comedor, información del gimnasio, carta del servicio de habitaciones, cosas que hacer cerca. La editas en cinco minutos; nosotros la cacheamos para que cargue rápido y alojamos el diseño imprimible.",
+      "body2": "Duve y Canary cobran $3–$6 por habitación ocupada al mes. Una propiedad de 40 habitaciones paga $160 a Duve; nos paga $39 — fijo, sin importar la ocupación.",
+      "features": [
+        "Wi-Fi importado automáticamente desde tu Hub de TI",
+        "Cartas de restaurante y servicio de habitaciones con fotos y precios",
+        "Tarjeta QR imprimible con el logo de la propiedad y una URL corta",
+        "Sin cuenta de huésped, sin app que descargar"
+      ],
+      "imageAlt": "Habitación de huésped moderna con tarjeta QR sobre la mesa"
+    },
+    "identityBand": {
+      "eyebrow": "Construido para la hostelería",
+      "headline": "Construido en torno a tu día, no a una plantilla genérica.",
+      "body": "Cada parte de {brand} sale de flujos de trabajo reales que dueños de hoteles nos explicaron — el ticket de mantenimiento de la Habitación 312, la consulta de boda, el televisor del lobby que se quedó congelado en pantalla negra a las 4pm del sábado. Sin sobrecarga, sin curva de aprendizaje. Solo las piezas de tu día, en un solo lugar.",
+      "cta": "Empezar ahora",
+      "imageAlt": "Mostrador de recepción del hotel con campanilla de servicio en latón"
+    },
+    "pricingTeaser": {
+      "eyebrow": "Precios",
+      "headline": "Una sola línea de $100/propiedad. Tres complementos. Eso es todo.",
+      "body": "Un hotel boutique de 40 habitaciones que compra las mismas funciones por separado a Quore, Yodeck, Duve y un freelance de redes sociales paga unos $679/mes. Con nosotros, todo activado cuesta $207/mes por propiedad — y puedes eliminar cualquier complemento con un solo clic.",
+      "cta": "Ver precios completos y comparativa →",
+      "mini": {
+        "baseLabel": "Base",
+        "baseSub": "Órdenes de trabajo, Eventos y catering, Hub de TI, Medios, 3 pantallas de señalización",
+        "signageLabel": "Señalización Ilimitada",
+        "signageSub": "opcional · pantallas ilimitadas",
+        "guestLabel": "Experiencia del huésped",
+        "guestSub": "opcional · páginas de llegada + tarjetas QR",
+        "socialLabel": "Social Studio",
+        "socialSub": "opcional · publicación social diaria redactada por IA",
+        "footer": "Por propiedad, por mes. Cancela cualquier complemento con un solo clic."
+      }
+    },
     "footer": {
       "tagline": "La capa de operaciones para hoteles boutique.",
-      "rights": "Todos los derechos reservados."
+      "rights": "Todos los derechos reservados.",
+      "company": "Empresa",
+      "support": "Soporte",
+      "legal": "Legal",
+      "privacyPolicy": "Política de privacidad",
+      "termsOfService": "Términos de servicio"
     }
   },
   "signup": {

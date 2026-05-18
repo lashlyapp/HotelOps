@@ -81,7 +81,8 @@
     "media": "Media",
     "social": "Social Studio",
     "itHub": "IT Hub",
-    "pricing": "Pricing"
+    "pricing": "Pricing",
+    "primaryLabel": "Primary"
   },
   "marketing": {
     "hero": {
@@ -91,15 +92,85 @@
       "personaLine": "Built for owners, GMs, and managers — not for line staff fighting your reservation system.",
       "trialLine": "7-day free trial. No credit card. 10 GB included.",
       "ctaPrimary": "Start free trial",
-      "ctaSecondary": "See pricing"
+      "ctaSecondary": "See pricing",
+      "imageAlt": "Hotel manager reviewing operations on a tablet"
     },
     "positioning": {
+      "eyebrow": "Scope",
       "title": "The category we're not in: your PMS.",
       "body": "We will never replace Cloudbeds, Mews, Opera, or Little Hotelier. We sit next to them and handle every operational surface they leave to spreadsheets and group chats — work orders, event proposals, vendor logins, signage on every TV, the printable arrival card in every room."
     },
+    "workOrders": {
+      "eyebrow": "Module · included in base",
+      "headline": "Hotel maintenance software, photo-first.",
+      "body1": "Every dripping faucet, cracked tile, and flickering ballast gets a photo or short video instead of a long-form text ticket. Front-desk staff snap, tag, hand off; engineering closes with an after-photo. Kanban board across every property, owner-override completions, full activity log.",
+      "body2": "Replaces hotel maintenance tools like Quore ($130/mo per property) and HotSOS ($200–$500/mo) — and unlike either, it's already bundled into our $100/property base.",
+      "features": [
+        "Snap, tag, assign — under 10 seconds end-to-end",
+        "Before / in-progress / after evidence trail",
+        "Per-property reference numbers (WO-0042)",
+        "Owner-override mark-done with full audit log"
+      ],
+      "imageAlt": "Hotel lobby — work order capture in context"
+    },
+    "signage": {
+      "eyebrow": "Module · +$49/property/mo (unlimited) · 3 screens free",
+      "headline": "Hotel signage SaaS without the per-screen tax.",
+      "body1": "Lobby TV, breakroom board, pool deck, every meeting room — drive them all from one dashboard. Pair a TV with a 6-digit code, schedule playlists, push a property-wide emergency message in one click. Free for your first 3 screens per property; unlimited above that for $49/property/month.",
+      "body2": "Yodeck and OptiSigns charge $8–$30 per screen per month. A 20-screen resort pays Yodeck $160/mo; pays us $49 — same feature, less than a third of the cost.",
+      "features": [
+        "Pair any Fire TV, Onn., or smart TV with a browser",
+        "Schedule playlists by date and time-of-day",
+        "Image, video, web page, or branded text card",
+        "Emergency takeover for the whole property"
+      ],
+      "imageAlt": "Hotel exterior — signage across the property"
+    },
+    "arrival": {
+      "eyebrow": "Module · +$39/property/mo",
+      "headline": "A digital concierge guests already know how to use.",
+      "body1": "We print a QR card for each room. Your guest scans with the camera app already on their phone — no install, no account — and lands on a branded arrival page: Wi-Fi, dining hours, gym info, room service menu, things to do nearby. You edit it in five minutes; we cache it for speed and host the print layout.",
+      "body2": "Duve and Canary charge $3–$6 per occupied room per month. A 40-room property pays Duve $160; pays us $39 — flat, regardless of occupancy.",
+      "features": [
+        "Wi-Fi auto-imported from your IT Hub",
+        "Restaurant + room service menus with photos and prices",
+        "Printable QR card with property logo and short URL",
+        "No guest account, no app to download"
+      ],
+      "imageAlt": "Modern hotel guest room with QR card on the desk"
+    },
+    "identityBand": {
+      "eyebrow": "Built for hospitality",
+      "headline": "Built around your day, not a one-size-fits-all template.",
+      "body": "Every part of {brand} comes from real workflows hotel owners walked us through — the maintenance ticket from Room 312, the wedding inquiry, the lobby TV that froze on a black screen at 4pm on Saturday. No bloat, no learning curve. Just the pieces of your day, in one place.",
+      "cta": "Start now",
+      "imageAlt": "Hotel reception desk with brass service bell"
+    },
+    "pricingTeaser": {
+      "eyebrow": "Pricing",
+      "headline": "One $100/property line item. Three add-ons. That's it.",
+      "body": "A 40-room boutique buying the same features à la carte from Quore, Yodeck, Duve, and a freelance social-media manager pays around $679/month. With us, everything-on costs $207/month per property — and you can drop any add-on with a single click.",
+      "cta": "See the full pricing & comparison →",
+      "mini": {
+        "baseLabel": "Base",
+        "baseSub": "Work Orders, Events & Catering, IT Hub, Media, 3 signage screens",
+        "signageLabel": "Signage Unlimited",
+        "signageSub": "optional · unlimited screens",
+        "guestLabel": "Guest Experience",
+        "guestSub": "optional · arrival pages + QR cards",
+        "socialLabel": "Social Studio",
+        "socialSub": "optional · AI-drafted daily social post",
+        "footer": "Per property, per month. Cancel any add-on with one click."
+      }
+    },
     "footer": {
       "tagline": "The operations layer for boutique hotels.",
-      "rights": "All rights reserved."
+      "rights": "All rights reserved.",
+      "company": "Company",
+      "support": "Support",
+      "legal": "Legal",
+      "privacyPolicy": "Privacy Policy",
+      "termsOfService": "Terms of Service"
     }
   },
   "signup": {
