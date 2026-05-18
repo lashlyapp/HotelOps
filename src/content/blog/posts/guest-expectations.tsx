@@ -3,7 +3,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'boutique-hotel-guest-expectations-2026',
   title:
-    'What boutique hotel guests now expect — and how independent properties can deliver without enterprise budgets.',
+    'What Boutique Hotel Guests Now Expect — And How Independent Properties Can Deliver Without Enterprise Budgets.',
   description:
     'The 2026 leisure traveler arrives with a clear set of digital expectations: instant Wi-Fi, a useful arrival page, fast issue resolution, signage that does not look like 2008. Boutique hotels can meet all of them without chain-scale tech spend.',
   publishedAt: '2026-04-29',

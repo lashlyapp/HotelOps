@@ -47,11 +47,9 @@ export type Organization = {
   referrer: string | null
   // Optional 1-on-1 onboarding session opt-in — see
   // 20260521020000_org_onboarding_session_optin.sql. When true, the
-  // one-time hotelops_setup_fee line item is attached to the org's
-  // first property subscription; onboarding_fee_invoiced_at then
-  // dedupes across properties so the fee never re-attaches.
+  // $150 hotelops_setup_fee line item is attached to every property's
+  // first invoice (per-property pricing).
   wants_onboarding_session: boolean
-  onboarding_fee_invoiced_at: string | null
 }
 
 export type Profile = {

@@ -3,7 +3,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'boutique-hotel-operations-budget',
   title:
-    'What the boutique hotel operations budget actually looks like — and why most software does not fit.',
+    'What the Boutique Hotel Operations Budget Actually Looks Like — And Why Most Software Does Not Fit.',
   description:
     'The 20-to-60-room boutique runs on a fraction of the tech budget of a 200-room chain hotel. Here is a realistic breakdown of where the money goes, where it does not, and what that means for the tools an operator can actually afford.',
   publishedAt: '2026-05-08',

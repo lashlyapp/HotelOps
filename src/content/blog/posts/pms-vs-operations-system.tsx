@@ -3,7 +3,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'pms-is-not-your-operations-system',
   title:
-    'Your PMS is not your operations system. Here is what is.',
+    'Your PMS Is Not Your Operations System. Here Is What Is.',
   description:
     'Mews, Cloudbeds, Opera, Little Hotelier — every PMS in the boutique segment is excellent at the thing it was built for. None of them are an operations system, and the gap is bigger than most operators realize until they look at it directly.',
   publishedAt: '2026-05-10',

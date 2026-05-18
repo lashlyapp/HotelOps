@@ -4,7 +4,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'boutique-hotel-event-pipeline',
   title:
-    'From event inquiry to signed contract in days, not weeks.',
+    'From Event Inquiry to Signed Contract in Days, Not Weeks.',
   description:
     'Most boutique hotels lose 20–40% of their event inquiries to slow-response competitors. Here is the pipeline shape that closes weddings, corporate offsites, and private dinners on the right side of that statistic — without buying a separate sales tool.',
   publishedAt: '2026-07-24',

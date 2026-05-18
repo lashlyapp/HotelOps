@@ -3,7 +3,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'hotel-digital-signage-cost-2026',
   title:
-    'How much do boutique hotels actually pay for digital signage in 2026?',
+    'How Much Do Boutique Hotels Actually Pay for Digital Signage in 2026?',
   description:
     'A real breakdown of what hotel digital signage costs in 2026 — Yodeck, OptiSigns, Raydiant, and the per-property alternatives. Per-screen pricing punishes boutiques; here is what the math actually looks like.',
   publishedAt: '2026-05-06',

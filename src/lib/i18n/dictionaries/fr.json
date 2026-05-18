@@ -189,8 +189,8 @@
       "consentAnd": " et la ",
       "consentPrivacy": "Politique de confidentialité",
       "consentSuffix": ".",
-      "onboardingLabel": "Réserver une session d'onboarding individuelle d'une heure avec notre équipe.",
-      "onboardingHelp": "Facultatif. La plupart des équipes s'en passent — l'essai gratuit vous guide dans la configuration. Ajoute des frais d'onboarding uniques à votre première facture.",
+      "onboardingLabel": "Onboarding à 150 $ par propriété — configuration individuelle avec notre consultant client.",
+      "onboardingHelp": "Facultatif. Frais uniques de 150 $ par propriété à l'inscription.",
       "ctaSending": "Envoi du code de vérification…",
       "ctaSend": "Envoyer le code de vérification",
       "noCardLine": "Sans carte bancaire. 10 Go de médias inclus."
@@ -254,10 +254,11 @@
   },
   "blog": {
     "navLabel": "Blog",
-    "eyebrow": "Notes du back-office",
+    "eyebrow": "Blog des hôtels boutique",
     "headline": "L'état des opérations dans l'hôtellerie boutique.",
-    "sub": "Notes sur le segment mal servi de la tech hôtelière — budgets d'exploitation réalistes, le retard de modernisation, ce que les clients de 2026 attendent et comment les établissements indépendants peuvent rattraper sans budgets d'entreprise.",
+    "sub": "Guide opérationnel pour propriétaires, directeurs et gérants d'hôtels boutique indépendants — budgets réalistes, le retard de modernisation, ce que les clients de 2026 attendent et comment rattraper sans budgets d'entreprise.",
     "relatedHeading": "À lire ensuite",
+    "share": "Partager",
     "ctaHeadline": "Voyez-le sur votre propre établissement.",
     "ctaSub": "Essai gratuit de 7 jours. Sans carte de crédit. Accès complet à la maintenance, aux événements, à l'affichage et à l'arrivée.",
     "ctaButton": "Démarrer l'essai gratuit"
@@ -596,7 +597,7 @@
       "items": [
         {
           "q": "Y a-t-il des frais de configuration ou d'installation ?",
-          "a": "Uniquement si vous le souhaitez. L'essai gratuit guide votre équipe dans la configuration, donc la plupart des clients n'ont pas besoin d'aide supplémentaire. Si vous préférez réserver une session d'onboarding individuelle d'une heure avec notre équipe à l'inscription, nous ajoutons des frais uniques à la première facture de votre première propriété — jamais refacturés lorsque vous ajoutez des propriétés ou vous réabonnez. Sans cela, aucun frais de configuration."
+          "a": "Uniquement si vous le souhaitez. Ajoutez une configuration individuelle avec notre consultant client à l'inscription — 150 $ par propriété, facturé une seule fois sur votre première facture. Sans cela, aucun frais de configuration."
         },
         {
           "q": "Que se passe-t-il avec mes données si j'annule ?",

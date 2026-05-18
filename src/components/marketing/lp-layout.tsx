@@ -234,20 +234,22 @@ function HowItWorks({ steps }: { steps: [LpStep, LpStep, LpStep] }) {
 function FaqBand({ faq }: { faq: LpFaqItem[] }) {
   return (
     <section className="border-b border-border-subtle">
-      <div className="mx-auto max-w-3xl px-6 py-20">
-        <h2 className="text-3xl font-semibold tracking-tight text-fg">
-          Frequently asked questions
-        </h2>
-        <dl className="mt-8 space-y-8">
-          {faq.map((item) => (
-            <div key={item.q}>
-              <dt className="text-base font-semibold text-fg">{item.q}</dt>
-              <dd className="mt-2 text-base text-muted leading-relaxed">
-                {item.a}
-              </dd>
-            </div>
-          ))}
-        </dl>
+      <div className="mx-auto max-w-6xl px-6 py-20">
+        <div className="max-w-3xl">
+          <h2 className="text-3xl font-semibold tracking-tight text-fg">
+            Frequently asked questions
+          </h2>
+          <dl className="mt-8 space-y-8">
+            {faq.map((item) => (
+              <div key={item.q}>
+                <dt className="text-base font-semibold text-fg">{item.q}</dt>
+                <dd className="mt-2 text-base text-muted leading-relaxed">
+                  {item.a}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       </div>
     </section>
   )

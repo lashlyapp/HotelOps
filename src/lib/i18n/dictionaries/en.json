@@ -189,8 +189,8 @@
       "consentAnd": " and ",
       "consentPrivacy": "Privacy Policy",
       "consentSuffix": ".",
-      "onboardingLabel": "Book a 1-hour 1-on-1 onboarding session with our team.",
-      "onboardingHelp": "Optional. Most teams skip it — the free trial walks you through setup. Adds a one-time onboarding fee to your first invoice.",
+      "onboardingLabel": "$150 onboarding per property — 1-on-1 setup with our client consultant.",
+      "onboardingHelp": "Optional. One-time $150 fee per property at signup.",
       "ctaSending": "Sending verification code…",
       "ctaSend": "Send verification code",
       "noCardLine": "No credit card required. 10 GB of media included."
@@ -254,10 +254,11 @@
   },
   "blog": {
     "navLabel": "Blog",
-    "eyebrow": "Notes from the back office",
+    "eyebrow": "Boutique Hotel Blog",
     "headline": "The state of boutique hotel operations.",
-    "sub": "Notes on the underserved corner of hospitality tech — realistic operations budgets, the modernization gap, what 2026 guests now expect, and how independent properties can catch up without enterprise spend.",
+    "sub": "Operational guidance for owners, GMs, and managers at independent boutique hotels — realistic budgets, the modernization gap, what 2026 guests now expect, and how to catch up without enterprise spend.",
     "relatedHeading": "Keep reading",
+    "share": "Share",
     "ctaHeadline": "See it on your own property.",
     "ctaSub": "7-day free trial. No credit card. Full access to maintenance, events, signage, and arrival.",
     "ctaButton": "Start free trial"
@@ -596,7 +597,7 @@
       "items": [
         {
           "q": "Is there a setup or onboarding fee?",
-          "a": "Only if you want one. The free trial walks your team through setup, so most customers don’t need extra help. If you’d rather book a one-hour 1-on-1 onboarding session with our team at sign-up, we add a one-time fee to the first property’s first invoice — never re-charged when you add properties or resubscribe. Skip it and there’s no setup charge."
+          "a": "Only if you want one. Add 1-on-1 setup with our client consultant at sign-up — $150 per property, billed once on your first invoice. Skip it and there’s no setup charge."
         },
         {
           "q": "What happens to my data if I cancel?",

@@ -261,8 +261,9 @@ See [`docs/design-system.md`](docs/design-system.md). TL;DR: every color in mark
 
 HotelOps uses its own Stripe account (separate from Lashly). Each organization
 maps 1:1 to a Stripe Customer + Subscription. Pricing is **$100/property/month**
-(subscription quantity = property count) plus a one-time **$250 setup fee** on
-the first invoice. Add-ons (Signage Unlimited, Guest Experience, Social Studio)
+(subscription quantity = property count) plus an optional **$150 per
+property onboarding fee** (1-on-1 setup with our client consultant) on
+the first invoice — only charged when the org opts in at signup. Add-ons (Signage Unlimited, Guest Experience, Social Studio)
 are extra subscription items keyed by `Price.lookup_key` so prices can be
 rotated without code changes.
 

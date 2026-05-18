@@ -189,8 +189,8 @@
       "consentAnd": " y la ",
       "consentPrivacy": "Política de Privacidad",
       "consentSuffix": ".",
-      "onboardingLabel": "Reserva una sesión de onboarding 1-a-1 de 1 hora con nuestro equipo.",
-      "onboardingHelp": "Opcional. La mayoría lo omite — la prueba gratuita te guía por la configuración. Añade una tarifa única de onboarding a tu primera factura.",
+      "onboardingLabel": "Onboarding de $150 por propiedad — configuración 1-a-1 con nuestro consultor de clientes.",
+      "onboardingHelp": "Opcional. Tarifa única de $150 por propiedad al registrarte.",
       "ctaSending": "Enviando código de verificación…",
       "ctaSend": "Enviar código de verificación",
       "noCardLine": "Sin tarjeta de crédito. 10 GB de contenido multimedia incluidos."
@@ -254,10 +254,11 @@
   },
   "blog": {
     "navLabel": "Blog",
-    "eyebrow": "Notas desde la trastienda",
+    "eyebrow": "Blog de Hoteles Boutique",
     "headline": "El estado de las operaciones del hotel boutique.",
-    "sub": "Notas sobre el rincón desatendido de la tecnología hotelera — presupuestos operativos realistas, la brecha de modernización, lo que los huéspedes de 2026 esperan y cómo las propiedades independientes pueden ponerse al día sin gastos de empresa.",
+    "sub": "Guía operativa para propietarios, GMs y gerentes de hoteles boutique independientes — presupuestos realistas, la brecha de modernización, lo que los huéspedes de 2026 esperan y cómo ponerse al día sin gastos de empresa.",
     "relatedHeading": "Sigue leyendo",
+    "share": "Compartir",
     "ctaHeadline": "Pruébalo en tu propia propiedad.",
     "ctaSub": "Prueba gratuita de 7 días. Sin tarjeta de crédito. Acceso completo a mantenimiento, eventos, señalización y llegada.",
     "ctaButton": "Empezar prueba gratuita"
@@ -596,7 +597,7 @@
       "items": [
         {
           "q": "¿Hay una tarifa de configuración o incorporación?",
-          "a": "Solo si la quieres. La prueba gratuita guía a tu equipo por la configuración, así que la mayoría de clientes no necesitan ayuda adicional. Si prefieres reservar una sesión de incorporación 1-a-1 de una hora con nuestro equipo al registrarte, añadimos una tarifa única a la primera factura de tu primera propiedad — nunca se vuelve a cobrar cuando añades propiedades o te resuscribes. Si la omites, no hay cargo de configuración."
+          "a": "Solo si la quieres. Añade configuración 1-a-1 con nuestro consultor de clientes al registrarte — $150 por propiedad, cobrado una sola vez en tu primera factura. Si la omites, no hay cargo de configuración."
         },
         {
           "q": "¿Qué pasa con mis datos si cancelo?",

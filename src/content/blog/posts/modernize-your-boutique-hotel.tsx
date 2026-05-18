@@ -5,7 +5,7 @@ import type { BlogPostModule } from '../types'
 
 export const meta: BlogPostModule['meta'] = {
   slug: '10-ways-to-modernize-your-boutique-hotel',
-  title: '10 ways to modernize your boutique hotel.',
+  title: '10 Ways to Modernize Your Boutique Hotel.',
   description:
     'Closing the gaps against the bigger hotel franchises. A field guide for boutique operators — ten high-leverage moves the chains have used for years, now finally available at boutique scale.',
   publishedAt: '2026-05-15',

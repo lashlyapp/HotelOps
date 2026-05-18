@@ -4,7 +4,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'hotel-maintenance-ticket-that-closes',
   title:
-    'The hotel maintenance ticket that actually closes — what the back of the workflow needs to look like.',
+    'The Hotel Maintenance Ticket That Actually Closes — What the Back of the Workflow Needs to Look Like.',
   description:
     'Most boutique hotel maintenance lives in WhatsApp threads, paper logbooks, and the GM’s memory. Here is the workflow shape that moves the median fix from 2–3 days to under 4 hours — without buying enterprise software.',
   publishedAt: '2026-05-29',

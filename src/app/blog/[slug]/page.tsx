@@ -88,6 +88,9 @@ export default async function BlogPostPage({ params }: { params: Params }) {
     },
   }
 
+  const encodedUrl = encodeURIComponent(url)
+  const encodedTitle = encodeURIComponent(meta.title)
+
   return (
     <div className="flex flex-1 flex-col">
       <script
@@ -100,54 +103,132 @@ export default async function BlogPostPage({ params }: { params: Params }) {
       <PublicHeader dict={dict} active="blog" />
 
       <main className="flex-1">
-        <article>
-          <header className="mx-auto max-w-3xl px-6 pt-12 pb-8 lg:pt-20">
-            <div className="flex items-center gap-3 text-xs text-subtle">
-              <Link
-                href="/blog"
-                className="font-semibold uppercase tracking-wider hover:text-fg"
-              >
-                {dict.blog.navLabel}
-              </Link>
-              <span aria-hidden>·</span>
-              <span className="font-semibold uppercase tracking-wider">
-                {meta.topic}
-              </span>
-              <span aria-hidden>·</span>
-              <time dateTime={meta.publishedAt}>
-                {formatDate(meta.publishedAt)}
-              </time>
-              <span aria-hidden>·</span>
-              <span>{meta.readingMinutes} min read</span>
-            </div>
-            <h1 className="mt-5 text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-fg leading-[1.1]">
-              {meta.title}
-            </h1>
-            <p className="mt-6 text-lg text-muted leading-relaxed">
-              {meta.description}
-            </p>
-          </header>
-
-          <div className="mx-auto max-w-5xl px-6">
-            <div className="relative aspect-[5/2] overflow-hidden rounded-2xl border border-border-subtle bg-surface-muted">
-              <SharpHeroImage
-                src={meta.heroImage}
-                alt={meta.heroAlt}
-                priority
-                sizes="(min-width: 1024px) 960px, 100vw"
-              />
-            </div>
+        <article className="mx-auto max-w-6xl px-6 pt-12 pb-16 lg:pt-16">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-subtle">
+            <Link href="/blog" className="hover:text-fg">
+              {dict.blog.navLabel}
+            </Link>
+            <span aria-hidden>/</span>
+            <span className="text-muted">{meta.topic}</span>
           </div>
 
-          <section className="mx-auto max-w-3xl px-6 py-12 lg:py-16">
-            <ArticleProse>
-              <PostBody />
-            </ArticleProse>
-          </section>
+          {/* Two-column layout: article body + sticky sidebar */}
+          <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-14">
+            <div className="min-w-0">
+              <header>
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-fg leading-[1.1]">
+                  {meta.title}
+                </h1>
+                <p className="mt-6 text-lg text-muted leading-relaxed">
+                  {meta.description}
+                </p>
+              </header>
+
+              <div className="relative mt-10 aspect-[5/2] overflow-hidden rounded-2xl border border-border-subtle bg-surface-muted">
+                <SharpHeroImage
+                  src={meta.heroImage}
+                  alt={meta.heroAlt}
+                  priority
+                  sizes="(min-width: 1024px) 720px, 100vw"
+                />
+              </div>
+
+              <div className="mt-10">
+                <ArticleProse>
+                  <PostBody />
+                </ArticleProse>
+              </div>
+            </div>
+
+            <aside className="lg:sticky lg:top-24 lg:self-start">
+              <div className="rounded-2xl border border-border-subtle bg-surface p-6">
+                <dl className="space-y-4 text-sm">
+                  <div className="flex items-start gap-3">
+                    <TagIcon />
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wider text-subtle">
+                        Topic
+                      </dt>
+                      <dd className="mt-0.5 text-fg">{meta.topic}</dd>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CalendarIcon />
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wider text-subtle">
+                        Published
+                      </dt>
+                      <dd className="mt-0.5 text-fg">
+                        <time dateTime={meta.publishedAt}>
+                          {formatDate(meta.publishedAt)}
+                        </time>
+                      </dd>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <ClockIcon />
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wider text-subtle">
+                        Read time
+                      </dt>
+                      <dd className="mt-0.5 text-fg">
+                        {meta.readingMinutes} min read
+                      </dd>
+                    </div>
+                  </div>
+                </dl>
+
+                <div className="mt-6 border-t border-border-subtle pt-6">
+                  <Link
+                    href="/signup"
+                    className="focus-ring inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-fg hover:bg-primary-hover transition-colors"
+                  >
+                    {dict.blog.ctaButton}
+                  </Link>
+                </div>
+
+                <div className="mt-6 border-t border-border-subtle pt-6">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
+                    {dict.blog.share}
+                  </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <a
+                      href={`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Share on X"
+                      className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-md border border-border-subtle text-muted hover:border-border hover:text-fg transition-colors"
+                    >
+                      <XIcon />
+                    </a>
+                    <a
+                      href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Share on LinkedIn"
+                      className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-md border border-border-subtle text-muted hover:border-border hover:text-fg transition-colors"
+                    >
+                      <LinkedInIcon />
+                    </a>
+                    <a
+                      href={`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Share on Facebook"
+                      className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-md border border-border-subtle text-muted hover:border-border hover:text-fg transition-colors"
+                    >
+                      <FacebookIcon />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
         </article>
 
         <section className="border-t border-border-subtle bg-surface-muted/40">
-          <div className="mx-auto max-w-3xl px-6 py-12">
+          <div className="mx-auto max-w-6xl px-6 py-12">
             <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
               {dict.blog.relatedHeading}
             </p>
@@ -200,4 +281,110 @@ function formatDate(iso: string): string {
     month: 'short',
     day: 'numeric',
   })
+}
+
+function TagIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      fill="none"
+      className="mt-0.5 h-4 w-4 shrink-0 text-subtle"
+    >
+      <path
+        d="M3 3h6l8 8-6 6-8-8V3z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="6.5" cy="6.5" r="1.2" fill="currentColor" />
+    </svg>
+  )
+}
+
+function CalendarIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      fill="none"
+      className="mt-0.5 h-4 w-4 shrink-0 text-subtle"
+    >
+      <rect
+        x="3"
+        y="4.5"
+        width="14"
+        height="13"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M3 8.5h14M7 2.5v3M13 2.5v3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function ClockIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      fill="none"
+      className="mt-0.5 h-4 w-4 shrink-0 text-subtle"
+    >
+      <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M10 6v4l2.5 2.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function XIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      className="h-4 w-4"
+    >
+      <path d="M14.3 2.5h2.6l-5.7 6.5 6.7 8.5h-5.2l-4.1-5.3-4.7 5.3H1.3l6.1-7L1 2.5h5.3l3.7 4.9 4.3-4.9zm-.9 13.4h1.4L6.7 3.9H5.2l8.2 12z" />
+    </svg>
+  )
+}
+
+function LinkedInIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      className="h-4 w-4"
+    >
+      <path d="M3.5 7h2.7v9.5H3.5V7zm1.35-4a1.6 1.6 0 110 3.2 1.6 1.6 0 010-3.2zM8 7h2.6v1.3h.04c.36-.68 1.24-1.4 2.56-1.4 2.74 0 3.24 1.8 3.24 4.14V16.5h-2.7v-4.7c0-1.12-.02-2.56-1.56-2.56-1.56 0-1.8 1.22-1.8 2.48v4.78H8V7z" />
+    </svg>
+  )
+}
+
+function FacebookIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      className="h-4 w-4"
+    >
+      <path d="M11.5 18v-7h2.35l.35-2.7H11.5V6.55c0-.78.22-1.32 1.34-1.32h1.43V2.81C13.96 2.78 13.1 2.7 12.1 2.7c-2.08 0-3.5 1.27-3.5 3.6V8.3H6.25V11H8.6v7h2.9z" />
+    </svg>
+  )
 }

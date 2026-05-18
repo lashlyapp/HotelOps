@@ -4,7 +4,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'boutique-hotel-emergency-communications-plan',
   title:
-    'The boutique hotel emergency communications plan that actually works.',
+    'The Boutique Hotel Emergency Communications Plan That Actually Works.',
   description:
     'Fire, flood, weather evacuation, neighborhood incident — these are the moments boutique properties either handle well or improvise badly. Here is the communications plan shape that costs nothing to set up and stays useful for the one day it matters.',
   publishedAt: '2026-09-18',

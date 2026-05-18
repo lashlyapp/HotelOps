@@ -4,7 +4,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'hotel-arrival-page-design-dos-and-donts',
   title:
-    'The hotel arrival page: 5 do’s and 5 don’ts.',
+    'The Hotel Arrival Page: 5 Do’s and 5 Don’ts.',
   description:
     'The branded arrival page is one of the few digital surfaces every guest interacts with directly. Most boutique properties build theirs once and never revisit. Here is what to do, what to never do, and what to actually put on the page.',
   publishedAt: '2026-10-02',

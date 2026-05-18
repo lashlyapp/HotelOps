@@ -4,7 +4,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'what-guests-notice-day-one-boutique-hotel',
   title:
-    'What boutique hotel guests actually notice on day one.',
+    'What Boutique Hotel Guests Actually Notice on Day One.',
   description:
     'The first two hours of a guest stay decide most of the review. Here is what guests actually notice during that window — what reads as “tight” and what reads as “a little chaotic” — and the small operational moves that change the impression.',
   publishedAt: '2026-09-04',

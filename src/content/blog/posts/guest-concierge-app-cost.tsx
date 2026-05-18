@@ -4,7 +4,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'guest-concierge-app-cost-2026',
   title:
-    'The true cost per occupied room of guest concierge apps in 2026.',
+    'The True Cost per Occupied Room of Guest Concierge Apps in 2026.',
   description:
     'Duve, Canary, and the rest of the digital concierge SaaS catalog all price per occupied room — a model that punishes boutiques in their best months. Here is what those bills actually look like at boutique scale, and the per-property alternative.',
   publishedAt: '2026-06-26',

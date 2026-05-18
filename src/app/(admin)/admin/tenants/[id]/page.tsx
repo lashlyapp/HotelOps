@@ -87,7 +87,6 @@ export default async function TenantDetailPage({
       <OnboardingSessionSection
         orgId={organization.id}
         wantsOnboardingSession={organization.wants_onboarding_session}
-        feeInvoicedAt={organization.onboarding_fee_invoiced_at}
       />
 
       <BillingSection

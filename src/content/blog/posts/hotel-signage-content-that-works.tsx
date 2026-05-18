@@ -4,7 +4,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'hotel-signage-content-that-does-not-look-2008',
   title:
-    'Hotel signage content that doesn’t look like 2008.',
+    'Hotel Signage Content That Doesn’t Look Like 2008.',
   description:
     'Most boutique digital signage is technically modern but visually stuck a decade in the past — Comic Sans event posters, rainbow gradient borders, and Word-document menus. Here is what content actually belongs on a hotel screen in 2026, and the small design rules that fix the rest.',
   publishedAt: '2026-10-16',

@@ -4,7 +4,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'boutique-hotel-30-day-operational-audit',
   title:
-    'Inheriting a boutique hotel: the 30-day operational audit.',
+    'Inheriting a Boutique Hotel: The 30-Day Operational Audit.',
   description:
     'New owners of a boutique hotel typically discover the real operational state of the property somewhere in month three — long after the moment when the discovery would have been most useful. Here is the 30-day audit that surfaces it on day one instead.',
   publishedAt: '2026-11-13',

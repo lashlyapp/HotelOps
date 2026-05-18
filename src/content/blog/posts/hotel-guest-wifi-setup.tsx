@@ -4,7 +4,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'hotel-guest-wifi-setup-2026',
   title:
-    'Hotel guest Wi-Fi, set up the right way in 2026.',
+    'Hotel Guest Wi-Fi, Set Up the Right Way in 2026.',
   description:
     'Most boutique properties still run guest Wi-Fi the same way they did in 2014. Here is the modern setup — what to name the networks, how to handle the password, where the captive portal goes wrong, and how to put the credentials on a QR code guests can scan.',
   publishedAt: '2026-06-12',

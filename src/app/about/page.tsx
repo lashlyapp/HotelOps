@@ -62,13 +62,15 @@ export default async function AboutPage() {
 
         {/* ─── Mission ────────────────────────────────────────────────── */}
         <section className="border-y border-border-subtle bg-surface-muted/40">
-          <div className="mx-auto max-w-3xl px-6 py-16">
-            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-fg">
-              {t.missionHeading}
-            </h2>
-            <p className="mt-4 text-base text-muted leading-relaxed">
-              {t.missionBody}
-            </p>
+          <div className="mx-auto max-w-6xl px-6 py-16">
+            <div className="max-w-3xl">
+              <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-fg">
+                {t.missionHeading}
+              </h2>
+              <p className="mt-4 text-base text-muted leading-relaxed">
+                {t.missionBody}
+              </p>
+            </div>
           </div>
         </section>
 
