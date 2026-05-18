@@ -65,7 +65,9 @@ export default async function BlogPostPage({ params }: { params: Params }) {
     headline: meta.title,
     description: meta.description,
     datePublished: meta.publishedAt,
-    image: `https://www.${BRAND.domain}${meta.heroImage}`,
+    image: meta.heroImage.startsWith('http')
+      ? meta.heroImage
+      : `https://www.${BRAND.domain}${meta.heroImage}`,
     author: {
       '@type': 'Organization',
       name: BRAND.legalName,
