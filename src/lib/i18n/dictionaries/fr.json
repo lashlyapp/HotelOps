@@ -97,6 +97,23 @@
       "title": "La catégorie où nous ne sommes pas : votre PMS.",
       "body": "Nous ne remplacerons jamais Cloudbeds, Mews, Opera ou Little Hotelier. Nous nous plaçons à côté d'eux et gérons chaque surface opérationnelle qu'ils laissent aux tableurs et aux groupes WhatsApp — bons de travail, propositions d'événements, accès fournisseurs, affichage sur chaque téléviseur, la carte d'accueil imprimée de chaque chambre."
     },
+    "pricingTeaser": {
+      "eyebrow": "Tarifs",
+      "headline": "Une ligne à $100/établissement. Trois options. C'est tout.",
+      "body": "Un hôtel boutique de 40 chambres qui achète les mêmes fonctionnalités à la carte chez Quore, Yodeck, Duve et un freelance gestionnaire de réseaux sociaux paie environ $679/mois. Chez nous, tout activé coûte $207/mois par établissement — et vous pouvez supprimer n'importe quelle option en un seul clic.",
+      "cta": "Voir tous les tarifs et la comparaison →",
+      "mini": {
+        "baseLabel": "Base",
+        "baseSub": "Bons de travail, Événements et traiteur, Hub IT, Médias, 3 écrans d'affichage",
+        "signageLabel": "Affichage illimité",
+        "signageSub": "optionnel · écrans illimités",
+        "guestLabel": "Expérience client",
+        "guestSub": "optionnel · pages d'arrivée + cartes QR",
+        "socialLabel": "Social Studio",
+        "socialSub": "optionnel · publication sociale quotidienne rédigée par IA",
+        "footer": "Par établissement, par mois. Annulez n'importe quelle option en un seul clic."
+      }
+    },
     "footer": {
       "tagline": "La couche d'exploitation pour hôtels boutique.",
       "rights": "Tous droits réservés."

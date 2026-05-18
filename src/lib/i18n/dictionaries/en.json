@@ -97,6 +97,23 @@
       "title": "The category we're not in: your PMS.",
       "body": "We will never replace Cloudbeds, Mews, Opera, or Little Hotelier. We sit next to them and handle every operational surface they leave to spreadsheets and group chats — work orders, event proposals, vendor logins, signage on every TV, the printable arrival card in every room."
     },
+    "pricingTeaser": {
+      "eyebrow": "Pricing",
+      "headline": "One $100/property line item. Three add-ons. That's it.",
+      "body": "A 40-room boutique buying the same features à la carte from Quore, Yodeck, Duve, and a freelance social-media manager pays around $679/month. With us, everything-on costs $207/month per property — and you can drop any add-on with a single click.",
+      "cta": "See the full pricing & comparison →",
+      "mini": {
+        "baseLabel": "Base",
+        "baseSub": "Work Orders, Events & Catering, IT Hub, Media, 3 signage screens",
+        "signageLabel": "Signage Unlimited",
+        "signageSub": "optional · unlimited screens",
+        "guestLabel": "Guest Experience",
+        "guestSub": "optional · arrival pages + QR cards",
+        "socialLabel": "Social Studio",
+        "socialSub": "optional · AI-drafted daily social post",
+        "footer": "Per property, per month. Cancel any add-on with one click."
+      }
+    },
     "footer": {
       "tagline": "The operations layer for boutique hotels.",
       "rights": "All rights reserved."

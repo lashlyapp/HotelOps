@@ -10,7 +10,7 @@ import { SharpHeroImage } from '@/components/marketing/sharp-hero-image'
 import { UseCasesBand } from '@/components/marketing/use-cases-band'
 import { Card, CardBody } from '@/components/ui/card'
 import { BRAND } from '@/lib/brand'
-import { getDictionary } from '@/lib/i18n/dictionaries'
+import { getDictionary, type Dictionary } from '@/lib/i18n/dictionaries'
 import { getLocale } from '@/lib/i18n/get-locale'
 import { createClient } from '@/lib/supabase/server'
 
@@ -454,27 +454,23 @@ export default async function HomePage() {
           <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-end">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                Pricing
+                {t.marketing.pricingTeaser.eyebrow}
               </p>
               <h2 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
-                One $100/property line item. Three add-ons. That&apos;s it.
+                {t.marketing.pricingTeaser.headline}
               </h2>
               <p className="mt-4 max-w-2xl text-base text-muted leading-relaxed">
-                A 40-room boutique buying the same features à la carte from
-                Quore, Yodeck, Duve, and a freelance social-media manager
-                pays around $679/month. With us, everything-on costs
-                $207/month per property — and you can drop any add-on with
-                a single click.
+                {t.marketing.pricingTeaser.body}
               </p>
             </div>
-            <PricingMini />
+            <PricingMini mini={t.marketing.pricingTeaser.mini} />
           </div>
           <div className="mt-10">
             <Link
               href="/pricing"
               className="focus-ring inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-base font-medium text-primary-fg hover:bg-primary-hover transition-colors"
             >
-              See the full pricing &amp; comparison →
+              {t.marketing.pricingTeaser.cta}
             </Link>
           </div>
         </section>
@@ -533,24 +529,28 @@ function FeatureLi({ children }: { children: React.ReactNode }) {
   )
 }
 
-function PricingMini() {
+function PricingMini({
+  mini,
+}: {
+  mini: Dictionary['marketing']['pricingTeaser']['mini']
+}) {
   return (
     <Card>
       <CardBody className="space-y-3">
-        <Row label="Base" sub="Work Orders, Events & Catering, IT Hub, Media, 3 signage screens">
+        <Row label={mini.baseLabel} sub={mini.baseSub}>
           $100
         </Row>
-        <Row label="Signage Unlimited" sub="optional · unlimited screens">
+        <Row label={mini.signageLabel} sub={mini.signageSub}>
           +$49
         </Row>
-        <Row label="Guest Experience" sub="optional · arrival pages + QR cards">
+        <Row label={mini.guestLabel} sub={mini.guestSub}>
           +$39
         </Row>
-        <Row label="Social Studio" sub="optional · AI-drafted daily social post">
+        <Row label={mini.socialLabel} sub={mini.socialSub}>
           +$19
         </Row>
         <p className="border-t border-border-subtle pt-3 text-xs text-subtle">
-          Per property, per month. Cancel any add-on with one click.
+          {mini.footer}
         </p>
       </CardBody>
     </Card>

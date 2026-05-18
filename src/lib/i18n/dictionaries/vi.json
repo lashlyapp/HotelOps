@@ -97,6 +97,23 @@
       "title": "Danh mục mà chúng tôi không thuộc về: PMS của bạn.",
       "body": "Chúng tôi sẽ không bao giờ thay thế Cloudbeds, Mews, Opera hay Little Hotelier. Chúng tôi ngồi bên cạnh chúng và xử lý mọi bề mặt vận hành mà chúng để lại cho bảng tính và chat nhóm — phiếu công việc, đề xuất sự kiện, đăng nhập nhà cung cấp, biển hiển thị trên mọi TV, thẻ đón khách in được trong mọi phòng."
     },
+    "pricingTeaser": {
+      "eyebrow": "Giá",
+      "headline": "Một dòng $100/tài sản. Ba tùy chọn bổ sung. Vậy là xong.",
+      "body": "Một boutique 40 phòng mua các tính năng tương tự lẻ từ Quore, Yodeck, Duve và một freelancer quản lý mạng xã hội phải trả khoảng $679/tháng. Với chúng tôi, mọi thứ bật cùng lúc chỉ tốn $207/tháng mỗi tài sản — và bạn có thể bỏ bất kỳ tùy chọn nào chỉ với một cú nhấp.",
+      "cta": "Xem toàn bộ bảng giá & so sánh →",
+      "mini": {
+        "baseLabel": "Nền tảng",
+        "baseSub": "Phiếu công việc, Sự kiện & Tiệc, Hub IT, Phương tiện, 3 màn hình biển hiển thị",
+        "signageLabel": "Biển hiển thị không giới hạn",
+        "signageSub": "tùy chọn · màn hình không giới hạn",
+        "guestLabel": "Trải nghiệm khách",
+        "guestSub": "tùy chọn · trang đón khách + thẻ QR",
+        "socialLabel": "Social Studio",
+        "socialSub": "tùy chọn · bài đăng mạng xã hội hàng ngày do AI soạn",
+        "footer": "Theo tài sản, theo tháng. Hủy bất kỳ tùy chọn nào chỉ với một cú nhấp."
+      }
+    },
     "footer": {
       "tagline": "Lớp vận hành cho khách sạn boutique.",
       "rights": "All rights reserved."

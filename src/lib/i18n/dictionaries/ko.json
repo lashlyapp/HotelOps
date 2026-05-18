@@ -97,6 +97,23 @@
       "title": "우리가 속하지 않는 카테고리: 당신의 PMS.",
       "body": "Cloudbeds, Mews, Opera, Little Hotelier를 절대 대체하지 않습니다. 우리는 그 옆에 자리잡고 스프레드시트와 그룹 채팅에 맡겨진 모든 운영 영역 — 작업 지시서, 이벤트 제안, 벤더 로그인, 모든 TV의 사이니지, 모든 객실의 인쇄용 어라이벌 카드 — 을 처리합니다."
     },
+    "pricingTeaser": {
+      "eyebrow": "가격",
+      "headline": "객실당 월 $100 한 줄. 부가 옵션 3개. 그게 전부입니다.",
+      "body": "Quore, Yodeck, Duve, 프리랜서 소셜 미디어 매니저에게서 동일한 기능을 별도로 구매하는 40실 부티크 호텔은 월 약 $679를 지불합니다. 저희와 함께라면 모든 기능을 켜도 객실당 월 $207 — 그리고 어떤 부가 옵션이든 클릭 한 번으로 해지할 수 있습니다.",
+      "cta": "전체 가격 및 비교 보기 →",
+      "mini": {
+        "baseLabel": "기본",
+        "baseSub": "작업 지시, 이벤트 및 케이터링, IT 허브, 미디어, 사이니지 화면 3개",
+        "signageLabel": "사이니지 무제한",
+        "signageSub": "옵션 · 무제한 화면",
+        "guestLabel": "게스트 경험",
+        "guestSub": "옵션 · 도착 페이지 + QR 카드",
+        "socialLabel": "Social Studio",
+        "socialSub": "옵션 · AI가 작성한 매일 소셜 게시물",
+        "footer": "객실당, 월간. 어떤 부가 옵션이든 클릭 한 번으로 취소할 수 있습니다."
+      }
+    },
     "footer": {
       "tagline": "부티크 호텔을 위한 운영 레이어.",
       "rights": "All rights reserved."
