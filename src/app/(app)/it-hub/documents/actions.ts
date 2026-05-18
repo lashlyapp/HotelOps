@@ -4,9 +4,13 @@ import { randomBytes } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { requireOrgUser } from '@/lib/auth/session'
 import {
+  r2AbortMultipartUpload,
+  r2CompleteMultipartUpload,
+  r2CreateMultipartUpload,
   r2DeleteObject,
   r2ObjectExists,
   r2PresignDownloadUrl,
+  r2PresignParts,
   r2PresignPutUrl,
 } from '@/lib/r2/upload'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -60,6 +64,13 @@ const MAX_TITLE_LENGTH = 200
 const MAX_NOTES_LENGTH = 1000
 const MAX_FOLDER_NAME_LENGTH = 80
 
+// Multipart sizing — mirrors the media uploader. 8 MB per part is the
+// sweet spot for R2/S3; the part URLs are valid an hour (vs. the single
+// PUT's 5-minute window), so a slow connection or a queued file can't
+// expire its URL mid-upload.
+const PART_SIZE = 8 * 1024 * 1024
+const MAX_PARTS = 10_000
+
 const PRESIGN_LIMIT = { limit: 30, windowMs: 60_000 } as const
 
 export type PresignResult =
@@ -105,6 +116,99 @@ export async function presignDocumentUploadAction(args: {
   const key = await uniqueKey(`${scopePrefix}${DOCS_SUBPREFIX}`, safe)
   const url = await r2PresignPutUrl(key, args.contentType)
   return { ok: true, key, url }
+}
+
+// ----------------------------------------------------------------------------
+// Multipart upload — for large documents. The single-PUT URL is only valid
+// for 5 minutes, which an 80 MB pptx on a queued slot can blow through; part
+// URLs are valid an hour and each chunk is independently retriable.
+// ----------------------------------------------------------------------------
+
+export type InitDocumentMultipartResult =
+  | {
+      ok: true
+      key: string
+      uploadId: string
+      partUrls: string[]
+      partSize: number
+    }
+  | { ok: false; error: string }
+
+export async function initDocumentMultipartUploadAction(args: {
+  propertyId: string | null
+  filename: string
+  contentType: string
+  size: number
+}): Promise<InitDocumentMultipartResult> {
+  const session = await requireOrgUser()
+
+  const rl = checkRateLimit(`it-doc-presign:${session.userId}`, PRESIGN_LIMIT)
+  if (!rl.ok) {
+    return { ok: false, error: 'Too many uploads — slow down a moment.' }
+  }
+
+  if (!ALLOWED_MIME.has(args.contentType)) {
+    return {
+      ok: false,
+      error:
+        "That file type isn't allowed. Try PDF, Word, Excel, PowerPoint, or an image.",
+    }
+  }
+  if (args.size <= 0) return { ok: false, error: 'Empty file.' }
+  if (args.size > MAX_DOCUMENT_BYTES) {
+    return { ok: false, error: 'File exceeds 100 MB limit.' }
+  }
+
+  const safe = sanitizeFilename(args.filename)
+  if (!safe) return { ok: false, error: 'Invalid filename.' }
+
+  const scopePrefix = await resolveScopePrefix(session, args.propertyId)
+  if (!scopePrefix) return { ok: false, error: 'Property not found.' }
+
+  const partCount = Math.ceil(args.size / PART_SIZE)
+  if (partCount > MAX_PARTS) {
+    return { ok: false, error: 'File has too many parts.' }
+  }
+
+  const key = await uniqueKey(`${scopePrefix}${DOCS_SUBPREFIX}`, safe)
+  const uploadId = await r2CreateMultipartUpload(key, args.contentType)
+  const partUrls = await r2PresignParts(key, uploadId, partCount)
+  return { ok: true, key, uploadId, partUrls, partSize: PART_SIZE }
+}
+
+export async function completeDocumentMultipartUploadAction(args: {
+  propertyId: string | null
+  key: string
+  uploadId: string
+  parts: Array<{ partNumber: number; etag: string }>
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await requireOrgUser()
+  const scopePrefix = await resolveScopePrefix(session, args.propertyId)
+  if (!scopePrefix) return { ok: false, error: 'Property not found.' }
+  const expectedPrefix = `${scopePrefix}${DOCS_SUBPREFIX}`
+  if (!args.key.startsWith(expectedPrefix)) {
+    return { ok: false, error: 'Upload key does not match scope.' }
+  }
+  try {
+    await r2CompleteMultipartUpload(args.key, args.uploadId, args.parts)
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Complete failed'
+    return { ok: false, error: message }
+  }
+}
+
+export async function abortDocumentMultipartUploadAction(args: {
+  propertyId: string | null
+  key: string
+  uploadId: string
+}): Promise<void> {
+  const session = await requireOrgUser()
+  const scopePrefix = await resolveScopePrefix(session, args.propertyId)
+  if (!scopePrefix) return
+  const expectedPrefix = `${scopePrefix}${DOCS_SUBPREFIX}`
+  if (!args.key.startsWith(expectedPrefix)) return
+  await r2AbortMultipartUpload(args.key, args.uploadId)
 }
 
 /**
