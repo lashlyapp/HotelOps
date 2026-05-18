@@ -10,8 +10,8 @@ export const meta: BlogPostModule['meta'] = {
   readingMinutes: 8,
   topic: 'Operations',
   heroImage:
-    'https://images.unsplash.com/photo-1706726822784-caac278d687e?w=1200&q=80&auto=format&fit=crop',
-  heroAlt: 'Boutique hotel building lit up after sunset',
+    'https://images.unsplash.com/photo-1775210563405-3ce7aa5aa37d?w=1200&q=80&auto=format&fit=crop',
+  heroAlt: 'Boutique hotel facade with balconies and flower boxes',
 }
 
 export default function Post() {
