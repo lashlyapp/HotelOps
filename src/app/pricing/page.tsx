@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
+import { PublicHeader } from '@/components/marketing/public-header'
 import { Card, CardBody } from '@/components/ui/card'
 import { BRAND } from '@/lib/brand'
-import { type Dictionary, getDictionary } from '@/lib/i18n/dictionaries'
+import { getDictionary } from '@/lib/i18n/dictionaries'
 import { getLocale } from '@/lib/i18n/get-locale'
 
 export const metadata: Metadata = {
@@ -29,7 +29,7 @@ export default async function PricingPage() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <PublicHeader t={dict} />
+      <PublicHeader dict={dict} active="pricing" />
 
       <main className="flex-1">
         <section className="mx-auto max-w-6xl px-6 pt-16 pb-12 lg:pt-24 text-center">
@@ -74,7 +74,7 @@ export default async function PricingPage() {
             />
             <PlanCard
               label={t.plans.social.label}
-              price="+$19"
+              price="+$29"
               cadence={t.cadence}
               tag={t.tagOptional}
               body={t.plans.social.body}
@@ -164,7 +164,7 @@ export default async function PricingPage() {
                     need="Daily social posts"
                     competitor="Freelancer / Hootsuite + ChatGPT"
                     competitorCost="$99–$199"
-                    hotelopsCost="$19"
+                    hotelopsCost="$29"
                   />
                   <tr className="bg-surface-muted/60 font-medium">
                     <td className="px-4 py-3 text-fg">
@@ -236,83 +236,6 @@ export default async function PricingPage() {
 
       <Footer variant="public" />
     </div>
-  )
-}
-
-function PublicHeader({ t }: { t: Dictionary }) {
-  return (
-    <header className="border-b border-border-subtle">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <Wordmark size="md" href="/" />
-        <nav
-          aria-label="Primary"
-          className="hidden items-center gap-1 text-sm sm:flex"
-        >
-          <Link
-            href="/#work-orders"
-            className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
-          >
-            {t.nav.workOrders}
-          </Link>
-          <Link
-            href="/#signage"
-            className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
-          >
-            {t.nav.signage}
-          </Link>
-          <Link
-            href="/#arrival"
-            className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
-          >
-            {t.nav.arrival}
-          </Link>
-          <Link
-            href="/features"
-            className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
-          >
-            {t.features.navLabel}
-          </Link>
-          <Link
-            href="/pricing"
-            className="focus-ring rounded-md px-3 py-1.5 font-medium text-fg"
-          >
-            {t.nav.pricing}
-          </Link>
-          <Link
-            href="/blog"
-            className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
-          >
-            {t.blog.navLabel}
-          </Link>
-          <Link
-            href="/about"
-            className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
-          >
-            {t.about.navLabel}
-          </Link>
-          <Link
-            href="/demo"
-            className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
-          >
-            {t.demo.navLabel}
-          </Link>
-        </nav>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/login"
-            className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
-          >
-            {t.common.logIn}
-          </Link>
-          <Link
-            href="/signup"
-            className="focus-ring inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-fg hover:bg-primary-hover transition-colors"
-          >
-            {t.common.signUp}
-          </Link>
-        </div>
-      </div>
-    </header>
   )
 }
 
