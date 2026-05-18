@@ -16,14 +16,13 @@ import type { Dictionary } from '@/lib/i18n/dictionaries'
  * flat list overwhelms; categories let a scanner find their
  * concern (operations vs guest-facing vs billing) in two seconds.
  *
- * Single column so that anchor links land cleanly — in a 2-column
- * layout the target anchor sits next to a sibling category at the
- * same scroll position, which makes the deep-link from the navbar
- * dropdown feel imprecise. Dictionary copy is the source of truth;
- * this component only renders structure. Anchor slugs are positional
- * (CATEGORY_SLUGS) so the landing-page FeaturesDropdown can deep-link
- * to the same anchor across locales even though category titles are
- * translated.
+ * The outer container matches the rest of the marketing pages at
+ * max-w-6xl. Category headings span full-width so anchor deep-links
+ * from the navbar FeaturesDropdown still land cleanly at the top of
+ * each section. Items inside a category go 2-up on desktop to fill
+ * the gutter without compromising readability — the dictionary copy
+ * stays the source of truth and anchor slugs (CATEGORY_SLUGS) are
+ * positional so cross-locale links work.
  */
 const CATEGORY_SLUGS = [
   'operations',
@@ -44,8 +43,8 @@ export function FeatureGrid({
       id="features"
       className="border-y border-border-subtle bg-surface"
     >
-      <div className="mx-auto max-w-3xl px-6 py-20">
-        <div>
+      <div className="mx-auto max-w-6xl px-6 py-20">
+        <div className="max-w-3xl">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted">
             {t.eyebrow}
           </p>
@@ -65,7 +64,7 @@ export function FeatureGrid({
               <h3 className="text-xs font-semibold uppercase tracking-wider text-fg border-b border-border-subtle pb-3">
                 {category.title}
               </h3>
-              <dl className="mt-5 space-y-5">
+              <dl className="mt-5 grid gap-x-10 gap-y-5 md:grid-cols-2">
                 {category.items.map((item) => (
                   <div key={item.name}>
                     <dt className="text-sm font-semibold text-fg">

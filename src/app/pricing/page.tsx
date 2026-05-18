@@ -203,20 +203,22 @@ export default async function PricingPage() {
 
         {/* ─── FAQ (SEO long-tail) ───────────────────────────────────── */}
         <section className="border-t border-border-subtle bg-surface-muted/40">
-          <div className="mx-auto max-w-3xl px-6 py-20">
-            <h2 className="text-3xl font-semibold tracking-tight text-fg">
-              {t.faq.heading}
-            </h2>
-            <div className="mt-8 space-y-6">
-              {t.faq.items.map((item) => (
-                <Faq key={item.q} q={item.q} a={item.a} />
-              ))}
+          <div className="mx-auto max-w-6xl px-6 py-20">
+            <div className="max-w-3xl">
+              <h2 className="text-3xl font-semibold tracking-tight text-fg">
+                {t.faq.heading}
+              </h2>
+              <div className="mt-8 space-y-6">
+                {t.faq.items.map((item) => (
+                  <Faq key={item.q} q={item.q} a={item.a} />
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
         {/* ─── CTA ───────────────────────────────────────────────────── */}
-        <section className="mx-auto max-w-6xl px-6 py-20 text-center">
+        <section className="mx-auto max-w-4xl px-6 py-20 text-center">
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
             {t.cta.headline}
           </h2>
