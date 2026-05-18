@@ -190,7 +190,7 @@
       "consentPrivacy": "Privacy Policy",
       "consentSuffix": ".",
       "onboardingLabel": "$150 onboarding — 1-on-1 setup with our client consultant.",
-      "onboardingHelp": "Optional. One-time fee on your first property’s first invoice. Never re-charged when you add properties or resubscribe.",
+      "onboardingHelp": "Optional. One-time fee on your first invoice. Never re-charged when you add properties or resubscribe.",
       "ctaSending": "Sending verification code…",
       "ctaSend": "Send verification code",
       "noCardLine": "No credit card required. 10 GB of media included."
@@ -597,7 +597,7 @@
       "items": [
         {
           "q": "Is there a setup or onboarding fee?",
-          "a": "Only if you want one. Add 1-on-1 setup with our client consultant at sign-up for $150 — billed once on your first property’s first invoice, never re-charged when you add properties or resubscribe. Skip it and there’s no setup charge."
+          "a": "Only if you want one. Add 1-on-1 setup with our client consultant at sign-up for $150 — billed once on your first invoice, never re-charged when you add properties or resubscribe. Skip it and there’s no setup charge."
         },
         {
           "q": "What happens to my data if I cancel?",

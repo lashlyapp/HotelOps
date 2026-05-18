@@ -190,7 +190,7 @@
       "consentPrivacy": "Politique de confidentialité",
       "consentSuffix": ".",
       "onboardingLabel": "Onboarding à 150 $ — configuration individuelle avec notre consultant client.",
-      "onboardingHelp": "Facultatif. Frais uniques sur la première facture de votre première propriété. Jamais refacturés lorsque vous ajoutez des propriétés ou vous réabonnez.",
+      "onboardingHelp": "Facultatif. Frais uniques sur votre première facture. Jamais refacturés lorsque vous ajoutez des propriétés ou vous réabonnez.",
       "ctaSending": "Envoi du code de vérification…",
       "ctaSend": "Envoyer le code de vérification",
       "noCardLine": "Sans carte bancaire. 10 Go de médias inclus."
@@ -597,7 +597,7 @@
       "items": [
         {
           "q": "Y a-t-il des frais de configuration ou d'installation ?",
-          "a": "Uniquement si vous le souhaitez. Ajoutez une configuration individuelle avec notre consultant client à l'inscription pour 150 $ — facturée une seule fois sur la première facture de votre première propriété, jamais refacturée lorsque vous ajoutez des propriétés ou vous réabonnez. Sans cela, aucun frais de configuration."
+          "a": "Uniquement si vous le souhaitez. Ajoutez une configuration individuelle avec notre consultant client à l'inscription pour 150 $ — facturée une seule fois sur votre première facture, jamais refacturée lorsque vous ajoutez des propriétés ou vous réabonnez. Sans cela, aucun frais de configuration."
         },
         {
           "q": "Que se passe-t-il avec mes données si j'annule ?",
