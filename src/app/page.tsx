@@ -186,7 +186,7 @@ export default async function HomePage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Wordmark size="md" href="/" />
           <nav
-            aria-label="Primary"
+            aria-label={t.nav.primaryLabel}
             className="hidden items-center gap-1 text-sm sm:flex"
           >
             <FeaturesDropdown
@@ -283,7 +283,7 @@ export default async function HomePage() {
             <div className="relative aspect-[4/5] sm:aspect-[5/4] lg:aspect-square overflow-hidden rounded-2xl border border-border-subtle bg-surface-muted">
               <SharpHeroImage
                 src={HERO_IMAGE}
-                alt="Hotel manager reviewing operations on a tablet"
+                alt={t.marketing.hero.imageAlt}
                 priority
                 sizes="(min-width: 1024px) 540px, (min-width: 640px) 90vw, 100vw"
               />
@@ -344,7 +344,7 @@ export default async function HomePage() {
               <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-border-subtle bg-surface">
                 <SharpHeroImage
                   src={LOBBY_IMAGE}
-                  alt="Hotel lobby — work order capture in context"
+                  alt={t.marketing.workOrders.imageAlt}
                   sizes="(min-width: 1024px) 480px, 100vw"
                 />
               </div>
@@ -359,7 +359,7 @@ export default async function HomePage() {
               <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-border-subtle bg-surface order-2 lg:order-1">
                 <SharpHeroImage
                   src={EXTERIOR_IMAGE}
-                  alt="Hotel exterior — signage across the property"
+                  alt={t.marketing.signage.imageAlt}
                   sizes="(min-width: 1024px) 480px, 100vw"
                 />
               </div>
@@ -415,7 +415,7 @@ export default async function HomePage() {
               <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-border-subtle bg-surface">
                 <SharpHeroImage
                   src={GUEST_ROOM_IMAGE}
-                  alt="Modern hotel guest room with QR card on the desk"
+                  alt={t.marketing.arrival.imageAlt}
                   sizes="(min-width: 1024px) 480px, 100vw"
                 />
               </div>
@@ -453,7 +453,7 @@ export default async function HomePage() {
         <section className="relative isolate overflow-hidden">
           <SharpHeroImage
             src={RECEPTION_IMAGE}
-            alt="Hotel reception desk with brass service bell"
+            alt={t.marketing.identityBand.imageAlt}
             sizes="100vw"
           />
           {/* dark overlay so the headline is readable on top of the photo */}

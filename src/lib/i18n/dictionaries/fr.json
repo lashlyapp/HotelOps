@@ -81,7 +81,8 @@
     "media": "Médias",
     "social": "Social Studio",
     "itHub": "Hub IT",
-    "pricing": "Tarifs"
+    "pricing": "Tarifs",
+    "primaryLabel": "Navigation principale"
   },
   "marketing": {
     "hero": {
@@ -91,7 +92,8 @@
       "personaLine": "Conçu pour les propriétaires, directeurs et managers — pas pour le personnel qui se bat avec votre système de réservation.",
       "trialLine": "Essai gratuit de 7 jours. Sans carte bancaire. 10 Go inclus.",
       "ctaPrimary": "Démarrer l'essai gratuit",
-      "ctaSecondary": "Voir les tarifs"
+      "ctaSecondary": "Voir les tarifs",
+      "imageAlt": "Manager d'hôtel passant en revue les opérations sur une tablette"
     },
     "positioning": {
       "eyebrow": "Périmètre",
@@ -108,7 +110,8 @@
         "Trace de preuves avant / en cours / après",
         "Numéros de référence par établissement (WO-0042)",
         "Clôture par dérogation propriétaire avec journal d'audit complet"
-      ]
+      ],
+      "imageAlt": "Lobby d'hôtel — saisie de bon de travail en contexte"
     },
     "signage": {
       "eyebrow": "Module · +$49/établissement/mois (illimité) · 3 écrans gratuits",
@@ -120,7 +123,8 @@
         "Planifiez les playlists par date et heure de la journée",
         "Image, vidéo, page web ou carte de texte avec votre marque",
         "Prise de contrôle d'urgence pour tout l'établissement"
-      ]
+      ],
+      "imageAlt": "Extérieur de l'hôtel — affichage sur tout l'établissement"
     },
     "arrival": {
       "eyebrow": "Module · +$39/établissement/mois",
@@ -132,13 +136,15 @@
         "Cartes restaurant + room service avec photos et prix",
         "Carte QR imprimable avec le logo de l'établissement et une URL courte",
         "Pas de compte client, pas d'application à télécharger"
-      ]
+      ],
+      "imageAlt": "Chambre d'hôte moderne avec carte QR sur le bureau"
     },
     "identityBand": {
       "eyebrow": "Conçu pour l'hôtellerie",
       "headline": "Construit autour de votre journée, pas autour d'un modèle générique.",
       "body": "Chaque partie de {brand} vient de workflows réels que des propriétaires d'hôtels nous ont décrits — le ticket de maintenance de la chambre 312, la demande de mariage, le téléviseur du lobby figé sur un écran noir à 16h le samedi. Pas de surcharge, pas de courbe d'apprentissage. Juste les éléments de votre journée, à un seul endroit.",
-      "cta": "Commencer"
+      "cta": "Commencer",
+      "imageAlt": "Comptoir de réception d'hôtel avec sonnette de service en laiton"
     },
     "pricingTeaser": {
       "eyebrow": "Tarifs",

@@ -81,7 +81,8 @@
     "media": "Media",
     "social": "Social Studio",
     "itHub": "IT Hub",
-    "pricing": "Pricing"
+    "pricing": "Pricing",
+    "primaryLabel": "Primary"
   },
   "marketing": {
     "hero": {
@@ -91,7 +92,8 @@
       "personaLine": "Built for owners, GMs, and managers — not for line staff fighting your reservation system.",
       "trialLine": "7-day free trial. No credit card. 10 GB included.",
       "ctaPrimary": "Start free trial",
-      "ctaSecondary": "See pricing"
+      "ctaSecondary": "See pricing",
+      "imageAlt": "Hotel manager reviewing operations on a tablet"
     },
     "positioning": {
       "eyebrow": "Scope",
@@ -108,7 +110,8 @@
         "Before / in-progress / after evidence trail",
         "Per-property reference numbers (WO-0042)",
         "Owner-override mark-done with full audit log"
-      ]
+      ],
+      "imageAlt": "Hotel lobby — work order capture in context"
     },
     "signage": {
       "eyebrow": "Module · +$49/property/mo (unlimited) · 3 screens free",
@@ -120,7 +123,8 @@
         "Schedule playlists by date and time-of-day",
         "Image, video, web page, or branded text card",
         "Emergency takeover for the whole property"
-      ]
+      ],
+      "imageAlt": "Hotel exterior — signage across the property"
     },
     "arrival": {
       "eyebrow": "Module · +$39/property/mo",
@@ -132,13 +136,15 @@
         "Restaurant + room service menus with photos and prices",
         "Printable QR card with property logo and short URL",
         "No guest account, no app to download"
-      ]
+      ],
+      "imageAlt": "Modern hotel guest room with QR card on the desk"
     },
     "identityBand": {
       "eyebrow": "Built for hospitality",
       "headline": "Built around your day, not a one-size-fits-all template.",
       "body": "Every part of {brand} comes from real workflows hotel owners walked us through — the maintenance ticket from Room 312, the wedding inquiry, the lobby TV that froze on a black screen at 4pm on Saturday. No bloat, no learning curve. Just the pieces of your day, in one place.",
-      "cta": "Start now"
+      "cta": "Start now",
+      "imageAlt": "Hotel reception desk with brass service bell"
     },
     "pricingTeaser": {
       "eyebrow": "Pricing",

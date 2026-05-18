@@ -81,7 +81,8 @@
     "media": "Multimedia",
     "social": "Social Studio",
     "itHub": "IT Hub",
-    "pricing": "Precios"
+    "pricing": "Precios",
+    "primaryLabel": "Navegación principal"
   },
   "marketing": {
     "hero": {
@@ -91,7 +92,8 @@
       "personaLine": "Diseñado para propietarios, directores y gerentes — no para el personal que lucha con tu sistema de reservas.",
       "trialLine": "Prueba gratuita de 7 días. Sin tarjeta de crédito. 10 GB incluidos.",
       "ctaPrimary": "Empezar prueba gratuita",
-      "ctaSecondary": "Ver precios"
+      "ctaSecondary": "Ver precios",
+      "imageAlt": "Gerente de hotel revisando operaciones en una tableta"
     },
     "positioning": {
       "eyebrow": "Alcance",
@@ -108,7 +110,8 @@
         "Rastro de pruebas antes / en curso / después",
         "Números de referencia por propiedad (WO-0042)",
         "Cierre por anulación del propietario con registro completo de auditoría"
-      ]
+      ],
+      "imageAlt": "Lobby de hotel — captura de orden de trabajo en contexto"
     },
     "signage": {
       "eyebrow": "Módulo · +$49/propiedad/mes (ilimitado) · 3 pantallas gratis",
@@ -120,7 +123,8 @@
         "Programa listas de reproducción por fecha y hora del día",
         "Imagen, vídeo, página web o tarjeta de texto con marca",
         "Toma de emergencia para toda la propiedad"
-      ]
+      ],
+      "imageAlt": "Exterior del hotel — señalización en toda la propiedad"
     },
     "arrival": {
       "eyebrow": "Módulo · +$39/propiedad/mes",
@@ -132,13 +136,15 @@
         "Cartas de restaurante y servicio de habitaciones con fotos y precios",
         "Tarjeta QR imprimible con el logo de la propiedad y una URL corta",
         "Sin cuenta de huésped, sin app que descargar"
-      ]
+      ],
+      "imageAlt": "Habitación de huésped moderna con tarjeta QR sobre la mesa"
     },
     "identityBand": {
       "eyebrow": "Construido para la hostelería",
       "headline": "Construido en torno a tu día, no a una plantilla genérica.",
       "body": "Cada parte de {brand} sale de flujos de trabajo reales que dueños de hoteles nos explicaron — el ticket de mantenimiento de la Habitación 312, la consulta de boda, el televisor del lobby que se quedó congelado en pantalla negra a las 4pm del sábado. Sin sobrecarga, sin curva de aprendizaje. Solo las piezas de tu día, en un solo lugar.",
-      "cta": "Empezar ahora"
+      "cta": "Empezar ahora",
+      "imageAlt": "Mostrador de recepción del hotel con campanilla de servicio en latón"
     },
     "pricingTeaser": {
       "eyebrow": "Precios",

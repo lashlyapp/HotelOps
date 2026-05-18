@@ -81,7 +81,8 @@
     "media": "Phương tiện",
     "social": "Social Studio",
     "itHub": "Hub IT",
-    "pricing": "Giá"
+    "pricing": "Giá",
+    "primaryLabel": "Điều hướng chính"
   },
   "marketing": {
     "hero": {
@@ -91,7 +92,8 @@
       "personaLine": "Được xây dựng cho chủ sở hữu, GM và quản lý — không phải cho nhân viên tuyến đầu vật lộn với hệ thống đặt phòng.",
       "trialLine": "Dùng thử miễn phí 7 ngày. Không cần thẻ tín dụng. Bao gồm 10 GB.",
       "ctaPrimary": "Bắt đầu dùng thử miễn phí",
-      "ctaSecondary": "Xem giá"
+      "ctaSecondary": "Xem giá",
+      "imageAlt": "Quản lý khách sạn xem xét hoạt động trên máy tính bảng"
     },
     "positioning": {
       "eyebrow": "Phạm vi",
@@ -108,7 +110,8 @@
         "Dấu vết bằng chứng trước / đang xử lý / sau",
         "Số tham chiếu theo từng tài sản (WO-0042)",
         "Chủ sở hữu có thể đánh dấu hoàn thành với nhật ký kiểm toán đầy đủ"
-      ]
+      ],
+      "imageAlt": "Sảnh khách sạn — chụp phiếu công việc tại chỗ"
     },
     "signage": {
       "eyebrow": "Mô-đun · +$49/tài sản/tháng (không giới hạn) · 3 màn hình miễn phí",
@@ -120,7 +123,8 @@
         "Lập lịch playlist theo ngày và giờ trong ngày",
         "Hình ảnh, video, trang web hoặc thẻ văn bản có thương hiệu",
         "Tiếp quản khẩn cấp cho toàn bộ tài sản"
-      ]
+      ],
+      "imageAlt": "Mặt ngoài khách sạn — biển hiển thị trên toàn tài sản"
     },
     "arrival": {
       "eyebrow": "Mô-đun · +$39/tài sản/tháng",
@@ -132,13 +136,15 @@
         "Thực đơn nhà hàng + dịch vụ phòng với ảnh và giá",
         "Thẻ QR in được với logo tài sản và URL ngắn",
         "Không tài khoản khách, không ứng dụng để tải"
-      ]
+      ],
+      "imageAlt": "Phòng khách hiện đại với thẻ QR trên bàn"
     },
     "identityBand": {
       "eyebrow": "Được xây dựng cho ngành khách sạn",
       "headline": "Được xây dựng quanh ngày làm việc của bạn, không phải một mẫu chung.",
       "body": "Mọi phần của {brand} đến từ các quy trình thực tế mà chủ khách sạn đã hướng dẫn chúng tôi — phiếu bảo trì từ Phòng 312, yêu cầu đặt tiệc cưới, TV sảnh bị đóng băng trên màn hình đen vào 4 giờ chiều thứ Bảy. Không phình to, không cần học. Chỉ là các mảnh ghép trong ngày của bạn, ở một nơi.",
-      "cta": "Bắt đầu ngay"
+      "cta": "Bắt đầu ngay",
+      "imageAlt": "Quầy lễ tân khách sạn với chuông phục vụ bằng đồng thau"
     },
     "pricingTeaser": {
       "eyebrow": "Giá",
