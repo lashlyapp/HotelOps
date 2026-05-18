@@ -48,6 +48,15 @@ export type SlotDay = {
 /** PT clock hours offered to visitors (skips noon for lunch). */
 const SLOT_HOURS_PT = [9, 10, 11, 13, 14, 15, 16] as const
 
+/** Minimum lead time, in calendar days, before the first selectable
+ *  slot. Three days gives the founder a working buffer to prep, and
+ *  filters out "ASAP" tire-kickers. */
+const MIN_LEAD_DAYS = 3
+
+/** How many business days the grid shows. Picked to comfortably fill
+ *  the card on desktop without forcing the user to scroll. */
+const SLOT_DAYS_COUNT = 10
+
 /** Deterministic FNV-1a-ish hash. Stable across page reloads so
  *  the same visitor doesn't see availability flicker between
  *  refreshes. */
@@ -60,11 +69,21 @@ function hashKey(key: string): number {
   return h
 }
 
-/** Return the next N business days as ISO date strings. */
-function nextBusinessDays(count: number, from: Date): string[] {
+/** Return the next N business days as ISO date strings, skipping the
+ *  first `leadDays` calendar days from `from` so the earliest slot
+ *  the visitor sees is at least that many days out. */
+function nextBusinessDays(
+  count: number,
+  from: Date,
+  leadDays: number,
+): string[] {
   const out: string[] = []
   const cursor = new Date(from)
   cursor.setUTCHours(0, 0, 0, 0)
+  // Skip the lead-time window. The loop below increments before each
+  // weekday check, so pre-advance by (leadDays - 1) here to land on
+  // `from + leadDays` on the first iteration.
+  cursor.setUTCDate(cursor.getUTCDate() + (leadDays - 1))
   while (out.length < count) {
     cursor.setUTCDate(cursor.getUTCDate() + 1)
     const day = cursor.getUTCDay()
@@ -125,7 +144,7 @@ function formatDayLabel(isoDate: string): string {
 }
 
 export function buildDemoSlotDays(now: Date = new Date()): SlotDay[] {
-  const days = nextBusinessDays(5, now)
+  const days = nextBusinessDays(SLOT_DAYS_COUNT, now, MIN_LEAD_DAYS)
   return days.map((date) => {
     const raw = SLOT_HOURS_PT.map((hour) => ({
       hour,
@@ -142,6 +161,23 @@ export function buildDemoSlotDays(now: Date = new Date()): SlotDay[] {
       })),
     }
   })
+}
+
+/**
+ * Server-side enforcement of the lead-time rule. The UI hides
+ * sub-lead-time dates, but the slot_id is just a form value — a
+ * crafted submission could try to book inside the window. Booking
+ * actions call this to reject those before sending the OTP email.
+ */
+export function isSlotWithinLeadTime(
+  parsedDate: string,
+  now: Date = new Date(),
+): boolean {
+  const cursor = new Date(now)
+  cursor.setUTCHours(0, 0, 0, 0)
+  cursor.setUTCDate(cursor.getUTCDate() + MIN_LEAD_DAYS)
+  const minIso = cursor.toISOString().slice(0, 10)
+  return parsedDate >= minIso
 }
 
 /**

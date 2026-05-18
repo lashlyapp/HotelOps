@@ -18,7 +18,7 @@ import {
 import { getDictionary } from '@/lib/i18n/dictionaries'
 import { getLocale } from '@/lib/i18n/get-locale'
 import { interpolate } from '@/lib/i18n/interpolate'
-import { parseSlotId } from '@/lib/marketing/demo-slots'
+import { isSlotWithinLeadTime, parseSlotId } from '@/lib/marketing/demo-slots'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
@@ -94,6 +94,9 @@ export async function requestDemoBookingOtp(
   }
   const parsed = parseSlotId(slotId)
   if (!parsed) {
+    return { error: e.errorSlot }
+  }
+  if (!isSlotWithinLeadTime(parsed.date)) {
     return { error: e.errorSlot }
   }
   if (visitorName.length > 200 || hotelName.length > 200) {

@@ -15,12 +15,14 @@ import { SlotPicker } from './_components/slot-picker'
  * higher-intent buyers (multi-property groups, switchers, EU prospects
  * who want a human first) — books a 30-minute call.
  *
- * The page renders a 5-business-day calendar grid in US Eastern with
- * a deterministic mix of available + taken slots so it never reads
- * as either dead or desperate. Selecting a slot opens an inline
- * booking form; the bookDemoSlot server action emails the founder
- * and confirms back to the visitor. Founder follows up by replying
- * to the notification with a Google Meet calendar invite.
+ * The page renders a 10-business-day calendar grid in US Pacific
+ * (PT), opening 3 calendar days out so the founder has prep time
+ * and ASAP tire-kickers self-deselect. Slots are a deterministic
+ * mix of available + taken so the grid never reads as either dead
+ * or desperate. Selecting a slot opens an inline booking form; the
+ * bookDemoSlot server action emails the founder and confirms back
+ * to the visitor. Founder follows up by replying to the
+ * notification with a Google Meet calendar invite.
  */
 export const metadata: Metadata = {
   title: `Talk to us — ${BRAND.name}`,
