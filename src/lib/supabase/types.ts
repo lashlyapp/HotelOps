@@ -49,10 +49,7 @@ export type Organization = {
   // 20260521020000_org_onboarding_session_optin.sql. When true, the
   // $150 hotelops_setup_fee line item is attached to every property's
   // first invoice (per-property pricing).
-  // onboarding_fee_invoiced_at is retained as legacy history from the
-  // earlier org-level dedup model; no code reads or writes it now.
   wants_onboarding_session: boolean
-  onboarding_fee_invoiced_at: string | null
 }
 
 export type Profile = {
