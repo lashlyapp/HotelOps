@@ -4,7 +4,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'boutique-hotel-housekeeping-handoff-front-desk',
   title:
-    'The housekeeping → front desk handoff that doesn’t drop tickets.',
+    'The Housekeeping → Front Desk Handoff That Doesn’t Drop Tickets.',
   description:
     'The room status handoff between housekeeping and the front desk is the operational seam where boutique properties leak the most time and the most guest impressions. Here is the workflow shape that closes the seam without buying expensive software.',
   publishedAt: '2026-10-30',

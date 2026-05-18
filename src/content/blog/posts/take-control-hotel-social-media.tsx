@@ -3,7 +3,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'take-control-hotel-social-media',
   title:
-    'Take control of your hotel’s social presence.',
+    'Take Control of Your Hotel’s Social Presence.',
   description:
     'The daily social channel you stopped showing up on is the cheapest direct-booking engine a boutique hotel has. Here is why most independents have given it away, what that actually costs, and how to take it back.',
   publishedAt: '2026-05-17',

@@ -4,7 +4,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'running-a-3-property-boutique-group',
   title:
-    'Running a 3-property boutique group: what changes versus running one.',
+    'Running a 3-Property Boutique Group: What Changes Versus Running One.',
   description:
     'The jump from one boutique to three is not three times the work — it is a different job. Here is what actually shifts operationally when an owner scales from one property to a small group, and what stops working that used to be fine.',
   publishedAt: '2026-07-10',

@@ -4,7 +4,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'boutique-hotel-owner-monthly-report',
   title:
-    'The boutique hotel owner’s monthly report: what belongs in it, what doesn’t.',
+    'The Boutique Hotel Owner’s Monthly Report: What Belongs in It, What Doesn’t.',
   description:
     'Most boutique hotel monthly reports either drown the owner in numbers they cannot act on or hide the things they actually need to see. Here is the template that works — concise, action-oriented, and built around the questions a real owner has at the start of every month.',
   publishedAt: '2026-08-21',

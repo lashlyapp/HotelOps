@@ -4,7 +4,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'onboarding-new-gm-boutique-hotel-week-one',
   title:
-    'Onboarding a new GM at a boutique hotel: a week-one playbook.',
+    'Onboarding a New GM at a Boutique Hotel: A Week-One Playbook.',
   description:
     'New general managers at boutique hotels typically take 60–90 days to reach full operational fluency. Most of that time is spent rediscovering what the previous GM already knew. Here is the week-one playbook that cuts the ramp in half.',
   publishedAt: '2026-08-07',

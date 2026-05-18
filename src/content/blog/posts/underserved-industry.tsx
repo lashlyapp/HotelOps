@@ -2,7 +2,7 @@ import type { BlogPostModule } from '../types'
 
 export const meta: BlogPostModule['meta'] = {
   slug: 'boutique-hotels-underserved-by-software',
-  title: "Hospitality tech's boutique blind spot",
+  title: "Hospitality Tech's Boutique Blind Spot",
   description:
     'Hospitality software was built for the big chains. The 20-to-60-room boutique market — the fastest-growing segment of leisure travel — has been treated as a footnote for two decades. Here is why the gap exists and why it is now starting to close.',
   publishedAt: '2026-05-12',

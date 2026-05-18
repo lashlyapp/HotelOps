@@ -3,7 +3,7 @@ import type { BlogPostModule } from '../types'
 export const meta: BlogPostModule['meta'] = {
   slug: 'boutique-hotel-tech-modernization-gap',
   title:
-    'The boutique hotel tech modernization gap — and what it costs every property that lets it widen.',
+    'The Boutique Hotel Tech Modernization Gap — And What It Costs Every Property That Lets It Widen.',
   description:
     'The independent and small-group hotel segment is roughly a decade behind the chains on operational tooling. The gap is not about novelty — it is about losing hours, losing revenue, and losing guests to properties that have caught up.',
   publishedAt: '2026-05-04',
