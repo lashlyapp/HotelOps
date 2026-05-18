@@ -284,7 +284,7 @@ export function UploadDocumentForm({
           </Button>
         </div>
         <p className="mt-2 text-xs text-subtle">
-          PDF, Word, Excel, PowerPoint, or image. Up to 100 MB each. Add notes
+          PDF, Word, Excel, PowerPoint, or image. Up to 300 MB each. Add notes
           and expiry per document after upload.
         </p>
         <input

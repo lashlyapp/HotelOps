@@ -59,7 +59,7 @@ const ALLOWED_MIME = new Set([
   'image/svg+xml',
 ])
 
-const MAX_DOCUMENT_BYTES = 100 * 1024 * 1024 // 100 MB
+const MAX_DOCUMENT_BYTES = 300 * 1024 * 1024 // 300 MB
 const MAX_TITLE_LENGTH = 200
 const MAX_NOTES_LENGTH = 1000
 const MAX_FOLDER_NAME_LENGTH = 80
@@ -104,7 +104,7 @@ export async function presignDocumentUploadAction(args: {
   }
   if (args.size <= 0) return { ok: false, error: 'Empty file.' }
   if (args.size > MAX_DOCUMENT_BYTES) {
-    return { ok: false, error: 'File exceeds 100 MB limit.' }
+    return { ok: false, error: 'File exceeds 300 MB limit.' }
   }
 
   const safe = sanitizeFilename(args.filename)
@@ -156,7 +156,7 @@ export async function initDocumentMultipartUploadAction(args: {
   }
   if (args.size <= 0) return { ok: false, error: 'Empty file.' }
   if (args.size > MAX_DOCUMENT_BYTES) {
-    return { ok: false, error: 'File exceeds 100 MB limit.' }
+    return { ok: false, error: 'File exceeds 300 MB limit.' }
   }
 
   const safe = sanitizeFilename(args.filename)
