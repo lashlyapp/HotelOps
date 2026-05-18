@@ -118,6 +118,8 @@
       "consentAnd": " and ",
       "consentPrivacy": "Privacy Policy",
       "consentSuffix": ".",
+      "onboardingLabel": "Book a 1-hour 1-on-1 onboarding session with our team.",
+      "onboardingHelp": "Optional. Most teams skip it — the free trial walks you through setup. Adds a one-time onboarding fee to your first invoice.",
       "ctaSending": "Sending verification code…",
       "ctaSend": "Send verification code",
       "noCardLine": "No credit card required. 10 GB of media included."
@@ -527,7 +529,7 @@
       "items": [
         {
           "q": "Is there a setup or onboarding fee?",
-          "a": "One-time per tenant when you start with us — we apply it on the first property’s first invoice and never re-charge if you add more properties or resubscribe. We onboard your team personally; no DIY wizard."
+          "a": "Only if you want one. The free trial walks your team through setup, so most customers don’t need extra help. If you’d rather book a one-hour 1-on-1 onboarding session with our team at sign-up, we add a one-time fee to the first property’s first invoice — never re-charged when you add properties or resubscribe. Skip it and there’s no setup charge."
         },
         {
           "q": "What happens to my data if I cancel?",

@@ -21,11 +21,13 @@ import { syncGateToCdn } from './cdn-gate'
  *    Customers, so the tenant isn't dunned for stale balances. Paid /
  *    void / uncollectible invoices are immutable history and are left
  *    alone.
- *  - Delete the org's billing_subscriptions rows. Because the
- *    "first-time vs resubscribe" decision for the setup fee keys off
- *    whether ANY billing_subscriptions row exists for the property,
- *    wiping the rows means the next property subscription correctly
- *    re-charges setup as if onboarding for the first time.
+ *  - Delete the org's billing_subscriptions rows. The next property
+ *    subscription created after a reset starts from a clean slate;
+ *    the one-time onboarding fee remains gated by
+ *    organizations.wants_onboarding_session + the
+ *    onboarding_fee_invoiced_at dedupe (cleared below) so the fee
+ *    only re-attaches if the customer still has the session opt-in
+ *    and the dedupe was cleared.
  *  - hard=true also deletes the Stripe Customer and clears
  *    organizations.stripe_customer_id. Default (hard=false) preserves
  *    the Customer so saved cards / billing address / tax id survive
@@ -187,6 +189,15 @@ export async function executeTenantBillingReset(
     .eq('org_id', orgId)
   if (delErr) throw delErr
   const dbRowsDeleted = subRows.length
+
+  // Clear the onboarding-fee dedupe so the next subscription start can
+  // re-attach the fee if the customer still has the session opt-in.
+  // Reset clears all prior billing artifacts; the optional-session
+  // bookkeeping starts fresh alongside billing_subscriptions.
+  await admin
+    .from('organizations')
+    .update({ onboarding_fee_invoiced_at: null })
+    .eq('id', orgId)
 
   if (hard) {
     for (const customerId of customerIds) {

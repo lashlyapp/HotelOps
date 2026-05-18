@@ -45,6 +45,13 @@ export type Organization = {
   utm_content: string | null
   utm_term: string | null
   referrer: string | null
+  // Optional 1-on-1 onboarding session opt-in — see
+  // 20260521020000_org_onboarding_session_optin.sql. When true, the
+  // one-time hotelops_setup_fee line item is attached to the org's
+  // first property subscription; onboarding_fee_invoiced_at then
+  // dedupes across properties so the fee never re-attaches.
+  wants_onboarding_session: boolean
+  onboarding_fee_invoiced_at: string | null
 }
 
 export type Profile = {
@@ -444,6 +451,10 @@ export type SignupPending = {
   utm_content: string | null
   utm_term: string | null
   referrer: string | null
+  // Optional 1-on-1 onboarding session opt-in. Mirrors the checkbox
+  // on the /signup form and is copied onto organizations on OTP
+  // verify. See 20260521020000_org_onboarding_session_optin.sql.
+  wants_onboarding_session: boolean
   created_at: string
 }
 
@@ -772,6 +783,11 @@ export type SocialPostLog = {
   // Full https URL when the photo came from outside (Unsplash today).
   // Mutually exclusive with media_key.
   external_media_url: string | null
+  // Stable id from the external source (Unsplash photo id). Lets the
+  // next day's generator skip photos used in the last 30 days for
+  // this property so the same stock shot doesn't cycle weekly. Null
+  // for catalog posts and for pre-2026-05 rows.
+  external_media_id: string | null
   // Required attribution when external_media_url is set; null otherwise.
   external_media_credit: SocialMediaCredit | null
   marked_used_at: string | null

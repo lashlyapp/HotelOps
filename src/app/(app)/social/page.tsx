@@ -30,7 +30,7 @@ export default async function SocialPage({
   if (session.properties.length === 0) {
     return (
       <div className="p-4 sm:p-8 max-w-3xl">
-        <PageHeader title="Social posts" />
+        <PageHeader title="Social Studio" />
         <p className="mt-4 text-sm text-muted">
           No properties yet. Contact your admin to add one.
         </p>
@@ -103,7 +103,7 @@ export default async function SocialPage({
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <PageHeader
-        title="Social posts"
+        title="Social Studio"
         subtitle="A post a day, ready to publish. Pick a caption, grab the image, paste it into your hotel's social — we never touch the platforms ourselves."
       />
 

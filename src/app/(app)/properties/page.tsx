@@ -21,6 +21,13 @@ export default async function PropertiesPage() {
   // for a billing CTA when no sub is on file.
   const subscriptionRequired = session.gate.status === 'no_subscription'
 
+  // Setup fee shown in the CTA copy only when the customer opted in
+  // to a 1-on-1 onboarding session at signup. Default tenants don't
+  // see the line item, matching what their first invoice will look
+  // like (per organizations.wants_onboarding_session).
+  const showSetupFee =
+    subscriptionRequired && session.organization.wants_onboarding_session
+
   const stripeClient = stripe()
   const [rows, monthlyPrice, setupFeePrice] = await Promise.all([
     Promise.all(
@@ -36,7 +43,7 @@ export default async function PropertiesPage() {
           session.organization.currency as Currency,
         )
       : Promise.resolve(null),
-    subscriptionRequired
+    showSetupFee
       ? resolvePriceSnapshotByLookupKey(
           stripeClient,
           HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
@@ -122,12 +129,21 @@ export default async function PropertiesPage() {
                 <strong className="text-fg">
                   {formatRecurringPrice(monthlyPrice)}
                 </strong>{' '}
-                per property plus a one-time{' '}
-                <strong className="text-fg">
-                  {formatOneTimePrice(setupFeePrice)} setup fee
-                </strong>{' '}
-                charged on each property&apos;s first invoice. We&apos;ll add
-                your card and your first property in one step.
+                per property
+                {setupFeePrice ? (
+                  <>
+                    {' '}plus a one-time{' '}
+                    <strong className="text-fg">
+                      {formatOneTimePrice(setupFeePrice)} onboarding fee
+                    </strong>{' '}
+                    on your first invoice (you opted in to a 1-on-1
+                    onboarding session at signup).
+                  </>
+                ) : (
+                  <>.</>
+                )}
+                {' '}We&apos;ll add your card and your first property in one
+                step.
               </p>
               <Link
                 href="/billing"

@@ -316,34 +316,72 @@ export function pickTopic(inputs: PickInputs): Topic {
 }
 
 /**
- * Pick the best media file for a given topic. Prefers tag matches in
- * the order listed; falls back to any image, then to null. Videos
- * aren't suggested — GMs would post stills, not reels, through the
- * download flow.
+ * Pick the best media file for a given topic.
+ *
+ * Scoring sources (highest signal first):
+ *   1. Vision tags (auto-applied by the upload pass) — describe
+ *      what's literally in the frame. Substring match against the
+ *      topic's preferredTags.
+ *   2. User-applied tags — the GM's intentional categorization,
+ *      same substring matching.
+ *   3. Vision description text — token match against preferredTags
+ *      catches photos whose tag list is thin but whose description
+ *      includes the keyword.
+ *
+ * The `excludeKeys` set skips files used recently for the same
+ * property (caller passes the last-30-days catalog keys from
+ * social_post_log) so the feed doesn't recycle the same room shot
+ * week-over-week.
+ *
+ * Falls back to any non-excluded image if no tag/description
+ * match, then to a non-excluded image with no signal at all. Only
+ * returns null when the catalog is empty or every file is on the
+ * exclusion list.
  */
 export function pickMediaForTopic(
   topic: Topic,
   media: MediaFile[],
   seed: string,
+  excludeKeys?: Set<string>,
 ): MediaFile | null {
-  const images = media.filter((f) =>
-    (f.contentType ?? '').startsWith('image/'),
+  const images = media.filter(
+    (f) => (f.contentType ?? '').startsWith('image/'),
   )
   if (images.length === 0) return null
+  const candidates = excludeKeys
+    ? images.filter((f) => !excludeKeys.has(f.key))
+    : images
+  if (candidates.length === 0) {
+    // Everything in the catalog has been used recently — fall back
+    // to the full set rather than returning null, so the feed
+    // doesn't degrade to "no photo." Better a repeat than a blank.
+    return images[hash(seed) % images.length]
+  }
 
   for (const tag of topic.preferredTags) {
-    const matching = images.filter((f) =>
-      f.tags.some((t) => t.toLowerCase().includes(tag)),
-    )
+    const matching = candidates.filter((f) => fileMatchesTag(f, tag))
     if (matching.length > 0) {
-      // Deterministic pick within the matching set so the same day
-      // doesn't shuffle the suggestion on every render.
       return matching[hash(seed) % matching.length]
     }
   }
 
-  // No tag match — pick any image deterministically.
-  return images[hash(seed) % images.length]
+  return candidates[hash(seed) % candidates.length]
+}
+
+function fileMatchesTag(file: MediaFile, tag: string): boolean {
+  const needle = tag.toLowerCase()
+  // Vision tags first — auto-applied so they're consistent across
+  // the catalog and don't depend on the GM remembering to tag.
+  for (const t of file.visionTags) {
+    if (t.toLowerCase().includes(needle)) return true
+  }
+  // User-applied tags
+  for (const t of file.tags) {
+    if (t.toLowerCase().includes(needle)) return true
+  }
+  // Description text (vision-produced literal description)
+  if (file.visionDescription?.toLowerCase().includes(needle)) return true
+  return false
 }
 
 /**

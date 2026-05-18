@@ -17,23 +17,17 @@ export default function Post() {
   return (
     <>
       <p>
-        Digital signage at a boutique hotel is one of those line
-        items operators rarely sit down to price out cleanly — and
-        almost always overpay for as a result. The major vendors
-        all price per screen per month, which sounds simple until
-        you actually count the screens at your property and do
-        the multiplication. By the time you have added the lobby
-        board, the breakroom display, the meeting room screens,
-        the pool deck, the spa, and a TV or two in the corridor,
-        the monthly bill has tripled from what you remember
-        signing up for.
+        Major signage vendors price per screen per month. Count the
+        screens at your property — lobby board, breakroom display,
+        meeting room screens, pool deck, spa, a TV or two in the
+        corridor — and the monthly bill has tripled from what you
+        remember signing up for.
       </p>
       <p>
-        This is a real cost breakdown for 2026, based on the
-        publicly listed pricing from the three vendors most
-        boutique operators end up evaluating — Yodeck, OptiSigns,
-        and Raydiant — alongside what the per-property alternative
-        looks like.
+        Below is a 2026 cost breakdown using the publicly listed
+        pricing from the three vendors most boutique operators
+        end up evaluating — Yodeck, OptiSigns, and Raydiant —
+        alongside what the per-property alternative looks like.
       </p>
 
       <h2>The vendors and their pricing</h2>

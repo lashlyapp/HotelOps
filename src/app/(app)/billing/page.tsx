@@ -101,7 +101,11 @@ export default async function BillingPage() {
       {rows.length === 0 ? (
         <NoPropertiesCard
           monthlyPrice={monthlyPrice}
-          setupFeePrice={setupFeePrice}
+          setupFeePrice={
+            session.organization.wants_onboarding_session
+              ? setupFeePrice
+              : null
+          }
         />
       ) : (
         <PropertyBillingTable
@@ -196,6 +200,9 @@ function NoPropertiesCard({
   monthlyPrice: PriceSnapshot | null
   setupFeePrice: PriceSnapshot | null
 }) {
+  // setupFeePrice is non-null only when the org opted in to a 1-on-1
+  // onboarding session at signup; default tenants never see the fee
+  // mentioned in the breakdown.
   return (
     <Card>
       <div className="p-5 space-y-3">
@@ -204,14 +211,21 @@ function NoPropertiesCard({
           {BRAND.name} bills{' '}
           <strong className="text-fg">
             {formatRecurringPrice(monthlyPrice)} per property
-          </strong>{' '}
-          plus a one-time{' '}
-          <strong className="text-fg">
-            {formatOneTimePrice(setupFeePrice)} setup fee
-          </strong>{' '}
-          on each property&apos;s first invoice. Add your first property from
-          the Properties page; each property gets its own subscription with
-          its own credit card.
+          </strong>
+          {setupFeePrice ? (
+            <>
+              {' '}plus a one-time{' '}
+              <strong className="text-fg">
+                {formatOneTimePrice(setupFeePrice)} onboarding fee
+              </strong>{' '}
+              on your first property&apos;s first invoice (you opted in to a
+              1-on-1 onboarding session at signup).
+            </>
+          ) : (
+            <>.</>
+          )}
+          {' '}Add your first property from the Properties page; each property
+          gets its own subscription with its own credit card.
         </p>
       </div>
     </Card>

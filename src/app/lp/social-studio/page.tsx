@@ -7,7 +7,7 @@ import {
 
 const content: LpContent = {
   slug: 'social-studio',
-  metaTitle: 'Social posts for boutique hotels — one AI-drafted post per day | MyHotelOps',
+  metaTitle: 'Hotel social media posts — one AI-drafted post per day | MyHotelOps',
   metaDescription:
     'One AI-drafted social post per property, every morning — caption, hashtags, and a photo picked from your own media library. Copy, download, or email to yourself; you publish from your phone. No platform integrations, no OAuth, your accounts stay yours.',
   eyebrow: 'Social Studio',

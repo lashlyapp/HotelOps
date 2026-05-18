@@ -64,7 +64,7 @@ function SidebarBody({ session }: { session: Session }) {
         <NavLink href="/signage">Signage</NavLink>
         <NavLink href="/arrival">Arrival</NavLink>
         <NavLink href="/media">Media catalog</NavLink>
-        <NavLink href="/social">Social posts</NavLink>
+        <NavLink href="/social">Social Studio</NavLink>
         <NavLink href="/it-hub">IT Hub</NavLink>
 
         {/* Visual break between operational features (above) and

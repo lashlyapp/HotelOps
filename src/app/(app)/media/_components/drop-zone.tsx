@@ -11,6 +11,7 @@ import {
   presignPosterUploadAction,
   presignUploadAction,
   revalidateAfterUploadAction,
+  scheduleMediaVisionTagAction,
   setVideoPosterAction,
 } from '@/lib/media/actions'
 
@@ -158,6 +159,21 @@ export function DropZone({
           console.warn('[upload] default poster capture failed', err)
           onPosterFailure(videoKey)
         })
+    }
+    if (result.ok && contentType.startsWith('image/')) {
+      // Fire-and-forget: tells the server to run the OpenAI vision pass
+      // on this image and persist the description + tags to
+      // media_metadata. The Social Studio generator uses both to pick
+      // photos that fit today's topic and to write captions about
+      // what's actually in the frame. Failure is swallowed inside
+      // tagUploadedImage; the upload itself is unaffected.
+      void scheduleMediaVisionTagAction({
+        propertyId,
+        key: result.key,
+        contentType,
+      }).catch((err) => {
+        console.warn('[upload] vision tag schedule failed', err)
+      })
     }
     return result.ok
   }

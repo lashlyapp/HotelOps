@@ -17,6 +17,7 @@ import type {
 import { AddMemberSection } from './_components/add-member-section'
 import { AddPropertySection } from './_components/add-property-section'
 import { DeleteTenantSection } from './_components/delete-tenant-section'
+import { OnboardingSessionSection } from './_components/onboarding-session-section'
 import { OrgNameSection } from './_components/org-name-section'
 import { RemovePropertyButton } from './_components/remove-property-button'
 import { RemoveMemberButton } from './_components/remove-member-button'
@@ -82,6 +83,12 @@ export default async function TenantDetailPage({
       <OrgNameSection orgId={organization.id} initialName={organization.name} />
 
       <TrialInfoCard org={organization} />
+
+      <OnboardingSessionSection
+        orgId={organization.id}
+        wantsOnboardingSession={organization.wants_onboarding_session}
+        feeInvoicedAt={organization.onboarding_fee_invoiced_at}
+      />
 
       <BillingSection
         orgId={organization.id}

@@ -11,7 +11,10 @@ import {
   requirePriceIdByLookupKey,
   resolvePriceIdByLookupKey,
 } from './prices'
-import { propertyHasBeenSubscribed } from './subscriptions'
+import {
+  markOnboardingFeeInvoiced,
+  shouldAttachOnboardingFee,
+} from './subscriptions'
 
 /**
  * Resolve the Stripe Price ids for every add-on the org currently has
@@ -61,13 +64,14 @@ export async function resolveActiveOrgAddonPriceIds(
 export type StartSubscriptionOptions = {
   priceId?: string
   /** Override the setup-fee Price id (otherwise resolved from the
-   *  hotelops_setup_fee lookup key). The fee is only charged when this
-   *  property has no prior subscription history — a resubscribe after
-   *  cancellation is NOT a new property. */
+   *  hotelops_setup_fee lookup key). The fee is only attached when the
+   *  org opted in to a 1-on-1 onboarding session at signup
+   *  (organizations.wants_onboarding_session) AND the fee hasn't
+   *  already been invoiced for this org. */
   setupFeePriceId?: string
-  /** Suppress the setup fee for this specific call even if a Price is
-   *  configured. Useful for ops/migration scripts that re-create a sub
-   *  for a property that's already paid setup historically. */
+  /** Suppress the setup fee for this specific call even if the org
+   *  opted in. Useful for ops/migration scripts that re-create a sub
+   *  for a property whose org has already paid setup historically. */
   skipSetupFee?: boolean
   /** Required. The payment method to charge the first (and subsequent)
    *  invoices against. Every subscription is created on
@@ -178,25 +182,22 @@ export async function startSubscriptionForProperty(
       currency,
     ))
 
-  // Charge the one-time setup fee on the property's FIRST subscription
-  // only. A resubscribe (after cancel) on a property that already has
-  // billing_subscriptions history doesn't re-charge. To waive setup
-  // fees entirely (e.g. as a promotion), deactivate the
-  // hotelops_setup_fee Price in Stripe — resolvePriceIdByLookupKey
-  // returns null and the fee is silently omitted. Resolved per-currency
-  // for the org so EUR / GBP / MXN customers pay in their currency.
+  // Attach the one-time onboarding-session fee only when the org
+  // opted in at signup (wants_onboarding_session=true) AND we haven't
+  // already attached it to a previous property's sub for this org.
+  // The free trial walks most teams through setup, so the default
+  // path is no fee. See shouldAttachOnboardingFee for the gate.
+  // Resolved per-currency for the org so EUR / GBP / MXN customers
+  // pay in their own currency.
   let setupFeePriceId: string | null = null
-  if (!opts.skipSetupFee) {
-    const alreadySubscribed = await propertyHasBeenSubscribed(property.id)
-    if (!alreadySubscribed) {
-      setupFeePriceId =
-        opts.setupFeePriceId ??
-        (await resolvePriceIdByLookupKey(
-          s,
-          HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
-          currency,
-        ))
-    }
+  if (!opts.skipSetupFee && (await shouldAttachOnboardingFee(org.id))) {
+    setupFeePriceId =
+      opts.setupFeePriceId ??
+      (await resolvePriceIdByLookupKey(
+        s,
+        HOTELOPS_PRICE_LOOKUP_KEYS.setupFee,
+        currency,
+      ))
   }
 
   const ownerEmail = await findOwnerEmail(admin, org.id)
@@ -264,6 +265,15 @@ export async function startSubscriptionForProperty(
   })
 
   await syncToDb(admin, property.id, org.id, customerId, subscription)
+
+  // Dedupe future calls: once we've attached the onboarding fee to
+  // this org's first invoiced sub, never attach it again — not on a
+  // second property, not on a resubscribe after cancel. Stamped
+  // post-create so a failed Stripe call doesn't leave the org marked
+  // as "fee invoiced" when nothing actually went to Stripe.
+  if (setupFeePriceId) {
+    await markOnboardingFeeInvoiced(org.id)
+  }
 
   // Trial → paid conversion: the signup flow created this property with
   // a 10 GB cap (TRIAL_STORAGE_BYTES); the base plan includes 25 GB. Lift

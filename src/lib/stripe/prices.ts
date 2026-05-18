@@ -23,7 +23,9 @@ import {
 export const HOTELOPS_PRICE_LOOKUP_KEYS = {
   // Base — $100 / property / month. Required for every active tenant.
   perPropertyMonthly: 'hotelops_per_property_monthly',
-  // One-time onboarding fee, configured per tenant when needed.
+  // One-time onboarding-session fee. Only attached when the org opted
+  // in at signup (organizations.wants_onboarding_session). Gated +
+  // deduped in code — see shouldAttachOnboardingFee.
   setupFee: 'hotelops_setup_fee',
   // Add-on: unlimited signage screens beyond the 3 included in the base.
   // $49 / property / month. See docs/pricing.md.

@@ -18,22 +18,16 @@ export default function Post() {
   return (
     <>
       <p>
-        Most boutique hotels have upgraded their digital
-        signage hardware in the last few years and never
-        upgraded the content that runs on it. The screens are
-        new; the content is what was on the printed
-        bulletin board in 2008. Rainbow gradient borders.
-        Word-document menus with mismatched fonts. Event
-        posters in Comic Sans. The result is a property that
-        spent real money on modern hardware to display visibly
-        dated content — and guests, who notice everything,
-        register the inconsistency.
+        The screens are new; the content is what was on the
+        printed bulletin board in 2008. Rainbow gradient borders.
+        Word-document menus with mismatched fonts. Event posters
+        in Comic Sans. The hardware refresh landed at most
+        boutiques in the last few years — the content didn’t, and
+        guests register the inconsistency.
       </p>
       <p>
-        This is the small set of content and design rules that
-        bring the screens up to the level of the property
-        around them. None of these require expensive design
-        software or a hired agency. Most are a single
+        The rules below close the gap. None require expensive
+        design software or a hired agency. Most are a single
         afternoon of work.
       </p>
 

@@ -99,14 +99,17 @@ export async function GET(request: NextRequest) {
           today,
         })
 
-        // Split the chosen media into its three persistence fields.
+        // Split the chosen media into its four persistence fields.
         // media_key + external_media_url are mutually exclusive (DB
         // comment makes that explicit); external_media_credit is set
-        // exactly when external_media_url is.
+        // exactly when external_media_url is; external_media_id is
+        // the stable Unsplash photo id used by the next day's dedupe.
         const mediaKey =
           post.media?.source === 'catalog' ? post.media.file.key : null
         const externalUrl =
           post.media?.source === 'unsplash' ? post.media.photo.url : null
+        const externalId =
+          post.media?.source === 'unsplash' ? post.media.photo.id : null
         const externalCredit =
           post.media?.source === 'unsplash'
             ? {
@@ -129,6 +132,7 @@ export async function GET(request: NextRequest) {
               hashtag_sets: post.hashtagSets,
               media_key: mediaKey,
               external_media_url: externalUrl,
+              external_media_id: externalId,
               external_media_credit: externalCredit,
             },
             { onConflict: 'property_id,post_date' },

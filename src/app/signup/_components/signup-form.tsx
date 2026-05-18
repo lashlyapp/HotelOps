@@ -113,6 +113,19 @@ export function SignupForm({
       <label className="flex items-start gap-3 text-xs text-muted leading-relaxed">
         <input
           type="checkbox"
+          name="wants_onboarding_session"
+          value="yes"
+          className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-border-default text-fg focus-ring"
+        />
+        <span>
+          <span className="text-fg">{t.form.onboardingLabel}</span>
+          <span className="block">{t.form.onboardingHelp}</span>
+        </span>
+      </label>
+
+      <label className="flex items-start gap-3 text-xs text-muted leading-relaxed">
+        <input
+          type="checkbox"
           name="consent"
           value="yes"
           required

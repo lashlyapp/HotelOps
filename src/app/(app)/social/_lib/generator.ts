@@ -23,6 +23,7 @@ import {
   pickUnsplashPhoto,
   type UnsplashPhoto,
 } from './unsplash'
+import { generateUnsplashQuery, seasonForDate } from './unsplash-query'
 import { getWeatherForProperty, type WeatherSummary } from './weather'
 
 export type GeneratedMedia =
@@ -81,15 +82,22 @@ export async function generatePost(input: GenerateInput): Promise<GeneratedPost>
       .select('*')
       .eq('property_id', input.property.id)
       .maybeSingle(),
-    // Pull the last few posts for two reasons:
+    // Pull recent posts for three reasons:
     //   1. topic rotation (avoid repeating yesterday's angle)
-    //   2. "every fifth post uses Unsplash" — see decideMediaSource
+    //   2. day-of-week source rotation (catalog vs Unsplash mix)
+    //   3. recent-use dedupe — skip catalog keys + Unsplash photo
+    //      ids used in the last 30 days so the feed doesn't recycle
+    //      the same shot week-over-week
     admin
       .from('social_post_log')
-      .select('topic, external_media_url, created_at')
+      .select('topic, media_key, external_media_url, external_media_id, created_at')
       .eq('property_id', input.property.id)
+      .gte(
+        'created_at',
+        new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      )
       .order('created_at', { ascending: false })
-      .limit(5),
+      .limit(60),
     admin
       .from('events')
       .select('*')
@@ -123,16 +131,27 @@ export async function generatePost(input: GenerateInput): Promise<GeneratedPost>
   })
 
   const seed = `${input.today}#${input.property.id}`
-  const recentRows = (recentLog ?? []) as Array<
-    Pick<SocialPostLog, 'topic' | 'external_media_url' | 'created_at'>
+  type RecentRow = Pick<
+    SocialPostLog,
+    'topic' | 'media_key' | 'external_media_url' | 'external_media_id' | 'created_at'
   >
+  const recentRows = (recentLog ?? []) as RecentRow[]
+  const recentCatalogKeys = new Set(
+    recentRows.map((r) => r.media_key).filter((k): k is string => Boolean(k)),
+  )
+  const recentUnsplashIds = recentRows
+    .map((r) => r.external_media_id)
+    .filter((k): k is string => Boolean(k))
+
   const photo = await pickPhoto({
     topic,
     property: input.property,
     weather,
     catalog: media,
     seed,
-    recent: recentRows,
+    today: input.today,
+    recentCatalogKeys,
+    recentUnsplashIds,
   })
 
   const voice = (typedSettings?.brand_voice ?? 'warm') as BrandVoice
@@ -213,26 +232,31 @@ function padHashtagSets(sets: string[][], length: number): string[][] {
 // ---------------------------------------------------------------------------
 
 /**
- * Pick the photo for today's post. Drives off `topic.mediaPolicy`:
+ * Pick the photo for today's post. The topic's mediaPolicy still
+ * pins the two extremes:
  *
- *   external_only   — always try Unsplash. Used for topics like
- *                     "nearby landmarks" where the catalog can't
- *                     reasonably cover the angle.
+ *   external_only   — Unsplash only. "Nearby landmarks" can't
+ *                     reasonably come from the catalog.
  *
- *   external_first  — Unsplash first, catalog fallback. Used for
- *                     travel-style topics (local moments, weather
- *                     vibes) where stock photography typically beats
- *                     whatever's in the catalog. The bulk of "more
- *                     topics use Unsplash" lives here.
+ *   catalog_only    — Catalog only. Real events, real staff;
+ *                     stock photography would feel dishonest.
  *
- *   catalog_first   — catalog first, Unsplash fallback only when the
- *                     5th-post cadence hits or the catalog is empty
- *                     for this topic.
+ * For every other topic, the source rotates by day-of-week:
  *
- *   catalog_only    — never substitute. Real events, real staff.
+ *   Mon/Wed/Fri     — catalog-first. The property's own photos lead,
+ *                     Unsplash steps in only when nothing in the
+ *                     catalog matches today's topic.
  *
- * Any Unsplash failure (no key, no results, network blip) cleanly
- * falls through to the catalog, then to no image at all.
+ *   Tue/Thu/Sat/Sun — Unsplash-first. A fresh outside angle so the
+ *                     feed doesn't read as "tour of our property"
+ *                     for seven straight days. AI-generated search
+ *                     query per (topic, weather, season, property)
+ *                     ensures the photo is fresh, not stock-cliché.
+ *
+ * Both sides honor dedupe: catalog files used in the last 30 days
+ * for this property are skipped; Unsplash photo ids used in the
+ * same window are skipped. Either path falls through to the other
+ * when its preferred source returns nothing.
  */
 async function pickPhoto(args: {
   topic: Topic
@@ -240,17 +264,43 @@ async function pickPhoto(args: {
   weather: WeatherSummary
   catalog: MediaFile[]
   seed: string
-  recent: Array<Pick<SocialPostLog, 'topic' | 'external_media_url' | 'created_at'>>
+  today: string
+  recentCatalogKeys: Set<string>
+  recentUnsplashIds: string[]
 }): Promise<GeneratedMedia | null> {
   const tryUnsplash = async (): Promise<GeneratedMedia | null> => {
-    const query = buildUnsplashQuery(args.topic, args.property, args.weather)
+    // AI-generated query first — produces fresh, property-aware
+    // queries per day. Falls back to the topic template when the
+    // model is unavailable.
+    const aiQuery = await generateUnsplashQuery({
+      topicLabel: args.topic.label,
+      topicHint: args.topic.hint,
+      weatherPhrase: args.weather.phrase,
+      property: {
+        city: args.property.city,
+        country: args.property.country,
+      },
+      season: seasonForDate(args.today),
+      today: args.today,
+    })
+    const query =
+      aiQuery ?? buildUnsplashQuery(args.topic, args.property, args.weather)
     if (!query) return null
-    const photo = await pickUnsplashPhoto({ query, seed: args.seed })
+    const photo = await pickUnsplashPhoto({
+      query,
+      seed: args.seed,
+      excludePhotoIds: args.recentUnsplashIds,
+    })
     if (!photo) return null
     return { source: 'unsplash', photo }
   }
   const pickCatalog = (): GeneratedMedia | null => {
-    const file = pickMediaForTopic(args.topic, args.catalog, args.seed)
+    const file = pickMediaForTopic(
+      args.topic,
+      args.catalog,
+      args.seed,
+      args.recentCatalogKeys,
+    )
     return file ? { source: 'catalog', file } : null
   }
 
@@ -258,39 +308,38 @@ async function pickPhoto(args: {
     case 'external_only':
       return (await tryUnsplash()) ?? pickCatalog()
 
-    case 'external_first':
-      return (await tryUnsplash()) ?? pickCatalog()
-
-    case 'catalog_first': {
-      // Cadence: if the last few posts all came from the catalog,
-      // bump this one to Unsplash. Keeps a thin catalog from cycling
-      // the same ten images day after day.
-      if (shouldUseUnsplashByCadence(args.recent)) {
-        return (await tryUnsplash()) ?? pickCatalog()
-      }
-      // Otherwise catalog-first, with Unsplash as a last-resort
-      // fallback when the catalog has nothing fitting (small media
-      // library, brand-new property).
-      return pickCatalog() ?? (await tryUnsplash())
-    }
-
     case 'catalog_only':
       return pickCatalog()
+
+    // The legacy 'external_first' and 'catalog_first' policies are
+    // both folded into the day-of-week rotation below. The literal
+    // mediaPolicy field is preserved on Topic so a future override
+    // (e.g. a marketing campaign that wants a topic locked to
+    // catalog or Unsplash) can land without rewiring the rotation.
+    case 'external_first':
+    case 'catalog_first': {
+      if (prefersUnsplashOnDay(args.today)) {
+        return (await tryUnsplash()) ?? pickCatalog()
+      }
+      return pickCatalog() ?? (await tryUnsplash())
+    }
   }
 }
 
-const UNSPLASH_CADENCE = 5
-
-function shouldUseUnsplashByCadence(
-  recent: Array<Pick<SocialPostLog, 'external_media_url'>>,
-): boolean {
-  // Count how many of the last (CADENCE - 1) posts came from the
-  // catalog. If they all did, this one goes Unsplash. Less arithmetic
-  // than tracking an integer counter and naturally resyncs if a row
-  // ever gets deleted.
-  const window = recent.slice(0, UNSPLASH_CADENCE - 1)
-  if (window.length < UNSPLASH_CADENCE - 1) return false
-  return window.every((r) => !r.external_media_url)
+/**
+ * Day-of-week source preference. Returns true on Tue/Thu/Sat/Sun
+ * (Unsplash-first), false on Mon/Wed/Fri (catalog-first). The
+ * specific split is 4:3 in Unsplash's favor because the AI-query
+ * upgrade made Unsplash days actually deliver fresh ideas — keeping
+ * roughly half the week on each source means the GM's feed mixes
+ * "your property" and "destination inspiration" instead of looking
+ * like a brochure or a stock-photo carousel.
+ */
+function prefersUnsplashOnDay(isoDate: string): boolean {
+  // JS getDay: 0=Sun, 1=Mon, ..., 6=Sat. We want Tue(2), Thu(4),
+  // Sat(6), Sun(0) → Unsplash-first.
+  const day = new Date(`${isoDate}T12:00:00Z`).getUTCDay()
+  return day === 0 || day === 2 || day === 4 || day === 6
 }
 
 // ---------------------------------------------------------------------------
@@ -365,15 +414,26 @@ function buildPrompt(p: PromptInput): ChatMessage[] {
   if (p.photo) {
     if (p.photo.source === 'catalog') {
       const f = p.photo.file
-      const desc = f.description?.trim()
-      const tags = f.tags.join(', ')
+      // Prefer the vision description if we have it — that's a
+      // literal "what is in the frame" sentence written by a vision
+      // model that has actually seen the photo. The user's own
+      // description and the filename are weaker signals and the
+      // tags collectively miss subjects vision-tagging would catch
+      // (light direction, composition, props).
+      const visualDescriptor =
+        f.visionDescription?.trim() ||
+        f.description?.trim() ||
+        f.displayName
+      const allTags = Array.from(
+        new Set([...f.visionTags, ...f.tags]),
+      ).join(', ')
       lines.push(
-        `The post will pair with a photo from the hotel's own catalog: ${f.displayName}${desc ? ` — ${desc}` : ''}${tags ? ` (tags: ${tags})` : ''}. Write captions that complement what's likely in the frame.`,
+        `The post pairs with this photo from the hotel's own catalog: ${visualDescriptor}${allTags ? ` (tags: ${allTags})` : ''}. Write captions that describe or reference what is literally in this photo — not a generic version of the topic.`,
       )
     } else {
       const alt = p.photo.photo.altDescription?.trim()
       lines.push(
-        `The post will pair with a stock photo${alt ? ` showing ${alt}` : ''} sourced from Unsplash. The captions should evoke the destination / travel feeling, not claim it as a photo of the hotel itself.`,
+        `The post pairs with this photo (from Unsplash, not the hotel's own): ${alt || '[no caption available]'}. Write captions about what is literally in this photo. The captions should evoke the destination or moment, not claim the photo as the hotel's own.`,
       )
     }
   }
