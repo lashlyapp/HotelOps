@@ -12,6 +12,9 @@ import type {
   Property,
 } from '@/lib/supabase/types'
 import {
+  abortDocumentMultipartUploadAction,
+  completeDocumentMultipartUploadAction,
+  initDocumentMultipartUploadAction,
   presignDocumentUploadAction,
   saveDocumentAction,
 } from '../actions'
@@ -22,6 +25,11 @@ import {
 import { flattenFolderOptions } from '../_lib/folder-options'
 
 const FILES_IN_FLIGHT = 3
+// Above this size we switch to a multipart upload. Single PUT URLs are only
+// valid 5 minutes, which an 80 MB pptx on a slow uplink can outrun; parts
+// are presigned for an hour and each chunk is independently retriable.
+const SINGLE_PUT_THRESHOLD = 10 * 1024 * 1024
+const PARTS_IN_FLIGHT_PER_FILE = 3
 
 type ItemStatus =
   | { kind: 'pending' }
@@ -106,24 +114,27 @@ export function UploadDocumentForm({
 
     updateItem(item.id, { status: { kind: 'uploading', pct: 0 } })
     const contentType = item.file.type || 'application/octet-stream'
-    const presign = await presignDocumentUploadAction({
-      propertyId: propertyId || null,
-      filename: item.file.name,
-      contentType,
-      size: item.file.size,
-    })
-    if (!presign.ok) {
-      updateItem(item.id, { status: { kind: 'error', message: presign.error } })
-      return false
-    }
+    const onProgress = (pct: number) =>
+      updateItem(item.id, { status: { kind: 'uploading', pct } })
 
-    try {
-      await putWithProgress(presign.url, item.file, contentType, (pct) =>
-        updateItem(item.id, { status: { kind: 'uploading', pct } }),
-      )
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Upload failed.'
-      updateItem(item.id, { status: { kind: 'error', message } })
+    const uploaded =
+      item.file.size <= SINGLE_PUT_THRESHOLD
+        ? await uploadSingle(
+            item.file,
+            contentType,
+            propertyId || null,
+            onProgress,
+          )
+        : await uploadMultipart(
+            item.file,
+            contentType,
+            propertyId || null,
+            onProgress,
+          )
+    if (!uploaded.ok) {
+      updateItem(item.id, {
+        status: { kind: 'error', message: uploaded.error },
+      })
       return false
     }
 
@@ -131,7 +142,7 @@ export function UploadDocumentForm({
     const save = await saveDocumentAction({
       propertyId: propertyId || null,
       folderId: folderId || null,
-      key: presign.key,
+      key: uploaded.key,
       fileName: item.file.name,
       contentType,
       size: item.file.size,
@@ -273,7 +284,7 @@ export function UploadDocumentForm({
           </Button>
         </div>
         <p className="mt-2 text-xs text-subtle">
-          PDF, Word, Excel, PowerPoint, or image. Up to 100 MB each. Add notes
+          PDF, Word, Excel, PowerPoint, or image. Up to 300 MB each. Add notes
           and expiry per document after upload.
         </p>
         <input
@@ -425,9 +436,113 @@ function formatBytes(n: number): string {
   return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`
 }
 
-function putWithProgress(
-  url: string,
+type UploadOutcome =
+  | { ok: true; key: string }
+  | { ok: false; error: string }
+
+async function uploadSingle(
   file: File,
+  contentType: string,
+  propertyId: string | null,
+  onProgress: (pct: number) => void,
+): Promise<UploadOutcome> {
+  const presign = await presignDocumentUploadAction({
+    propertyId,
+    filename: file.name,
+    contentType,
+    size: file.size,
+  })
+  if (!presign.ok) return { ok: false, error: presign.error }
+  try {
+    await xhrPut(presign.url, file, contentType, onProgress)
+    return { ok: true, key: presign.key }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Upload failed.'
+    return { ok: false, error: message }
+  }
+}
+
+async function uploadMultipart(
+  file: File,
+  contentType: string,
+  propertyId: string | null,
+  onProgress: (pct: number) => void,
+): Promise<UploadOutcome> {
+  const init = await initDocumentMultipartUploadAction({
+    propertyId,
+    filename: file.name,
+    contentType,
+    size: file.size,
+  })
+  if (!init.ok) return { ok: false, error: init.error }
+
+  const partCount = init.partUrls.length
+  const partProgress = new Array<number>(partCount).fill(0)
+  const partSizes = Array.from({ length: partCount }, (_, i) => {
+    const start = i * init.partSize
+    const end = Math.min(start + init.partSize, file.size)
+    return end - start
+  })
+
+  function recomputeOverall() {
+    const totalUploaded = partProgress.reduce((a, b) => a + b, 0)
+    const pct = Math.round((totalUploaded / file.size) * 100)
+    onProgress(Math.min(pct, 99))
+  }
+
+  try {
+    const parts = await runWithLimit(
+      Array.from({ length: partCount }, (_, i) => i),
+      PARTS_IN_FLIGHT_PER_FILE,
+      async (i) => {
+        const start = i * init.partSize
+        const end = start + partSizes[i]
+        const blob = file.slice(start, end)
+        const etag = await xhrPutBlob(
+          init.partUrls[i],
+          blob,
+          contentType,
+          (loaded) => {
+            partProgress[i] = loaded
+            recomputeOverall()
+          },
+        )
+        partProgress[i] = partSizes[i]
+        recomputeOverall()
+        return { partNumber: i + 1, etag }
+      },
+    )
+
+    const complete = await completeDocumentMultipartUploadAction({
+      propertyId,
+      key: init.key,
+      uploadId: init.uploadId,
+      parts,
+    })
+    if (!complete.ok) {
+      await abortDocumentMultipartUploadAction({
+        propertyId,
+        key: init.key,
+        uploadId: init.uploadId,
+      })
+      return { ok: false, error: complete.error }
+    }
+    onProgress(100)
+    return { ok: true, key: init.key }
+  } catch (err) {
+    await abortDocumentMultipartUploadAction({
+      propertyId,
+      key: init.key,
+      uploadId: init.uploadId,
+    })
+    const message = err instanceof Error ? err.message : 'Upload failed.'
+    return { ok: false, error: message }
+  }
+}
+
+function xhrPut(
+  url: string,
+  body: Blob,
   contentType: string,
   onProgress: (pct: number) => void,
 ): Promise<void> {
@@ -443,7 +558,42 @@ function putWithProgress(
       else reject(new Error(`Upload failed (${xhr.status}).`))
     }
     xhr.onerror = () => reject(new Error('Upload failed.'))
-    xhr.send(file)
+    xhr.send(body)
+  })
+}
+
+function xhrPutBlob(
+  url: string,
+  body: Blob,
+  contentType: string,
+  onProgress: (loadedBytes: number) => void,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('PUT', url)
+    xhr.setRequestHeader('Content-Type', contentType)
+    xhr.upload.onprogress = (evt) => {
+      if (evt.lengthComputable) onProgress(evt.loaded)
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const etag =
+          xhr.getResponseHeader('etag') || xhr.getResponseHeader('ETag')
+        if (!etag) {
+          reject(
+            new Error(
+              'Cannot read ETag — set R2 bucket CORS to expose the ETag header.',
+            ),
+          )
+          return
+        }
+        resolve(etag.replace(/"/g, ''))
+      } else {
+        reject(new Error(`Part upload failed (${xhr.status}).`))
+      }
+    }
+    xhr.onerror = () => reject(new Error('Upload failed.'))
+    xhr.send(body)
   })
 }
 
