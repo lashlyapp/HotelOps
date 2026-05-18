@@ -189,8 +189,8 @@
       "consentAnd": " et la ",
       "consentPrivacy": "Politique de confidentialité",
       "consentSuffix": ".",
-      "onboardingLabel": "Réserver une session d'onboarding individuelle d'une heure avec notre équipe.",
-      "onboardingHelp": "Facultatif. La plupart des équipes s'en passent — l'essai gratuit vous guide dans la configuration. Ajoute des frais d'onboarding uniques à votre première facture.",
+      "onboardingLabel": "Onboarding à 150 $ — configuration individuelle avec notre consultant client.",
+      "onboardingHelp": "Facultatif. Frais uniques sur la première facture de votre première propriété. Jamais refacturés lorsque vous ajoutez des propriétés ou vous réabonnez.",
       "ctaSending": "Envoi du code de vérification…",
       "ctaSend": "Envoyer le code de vérification",
       "noCardLine": "Sans carte bancaire. 10 Go de médias inclus."
@@ -597,7 +597,7 @@
       "items": [
         {
           "q": "Y a-t-il des frais de configuration ou d'installation ?",
-          "a": "Uniquement si vous le souhaitez. L'essai gratuit guide votre équipe dans la configuration, donc la plupart des clients n'ont pas besoin d'aide supplémentaire. Si vous préférez réserver une session d'onboarding individuelle d'une heure avec notre équipe à l'inscription, nous ajoutons des frais uniques à la première facture de votre première propriété — jamais refacturés lorsque vous ajoutez des propriétés ou vous réabonnez. Sans cela, aucun frais de configuration."
+          "a": "Uniquement si vous le souhaitez. Ajoutez une configuration individuelle avec notre consultant client à l'inscription pour 150 $ — facturée une seule fois sur la première facture de votre première propriété, jamais refacturée lorsque vous ajoutez des propriétés ou vous réabonnez. Sans cela, aucun frais de configuration."
         },
         {
           "q": "Que se passe-t-il avec mes données si j'annule ?",

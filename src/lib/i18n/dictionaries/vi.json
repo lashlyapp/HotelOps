@@ -189,8 +189,8 @@
       "consentAnd": " và ",
       "consentPrivacy": "Chính sách bảo mật",
       "consentSuffix": ".",
-      "onboardingLabel": "Đặt buổi onboarding 1-1 dài 1 giờ với đội ngũ của chúng tôi.",
-      "onboardingHelp": "Tùy chọn. Hầu hết các đội bỏ qua — bản dùng thử miễn phí sẽ hướng dẫn bạn thiết lập. Thêm một khoản phí onboarding một lần vào hóa đơn đầu tiên của bạn.",
+      "onboardingLabel": "Onboarding $150 — thiết lập 1-1 với chuyên viên tư vấn khách hàng.",
+      "onboardingHelp": "Tùy chọn. Khoản phí một lần trên hóa đơn đầu tiên của tài sản đầu tiên. Không bao giờ tính lại khi bạn thêm tài sản hoặc đăng ký lại.",
       "ctaSending": "Đang gửi mã xác minh…",
       "ctaSend": "Gửi mã xác minh",
       "noCardLine": "Không cần thẻ tín dụng. Bao gồm 10 GB phương tiện."
@@ -597,7 +597,7 @@
       "items": [
         {
           "q": "Có phí cài đặt hoặc onboarding không?",
-          "a": "Chỉ khi bạn muốn. Bản dùng thử miễn phí sẽ hướng dẫn nhóm của bạn thiết lập, nên hầu hết khách hàng không cần thêm trợ giúp. Nếu bạn muốn đặt một buổi onboarding 1-1 dài một tiếng với đội ngũ của chúng tôi khi đăng ký, chúng tôi sẽ thêm một khoản phí một lần vào hóa đơn đầu tiên của tài sản đầu tiên — không bao giờ tính lại khi bạn thêm tài sản hoặc đăng ký lại. Bỏ qua nó và không có phí cài đặt nào."
+          "a": "Chỉ khi bạn muốn. Thêm buổi thiết lập 1-1 với chuyên viên tư vấn khách hàng của chúng tôi khi đăng ký với giá $150 — tính một lần trên hóa đơn đầu tiên của tài sản đầu tiên, không bao giờ tính lại khi bạn thêm tài sản hoặc đăng ký lại. Bỏ qua nó và không có phí cài đặt nào."
         },
         {
           "q": "Dữ liệu của tôi sẽ ra sao nếu tôi hủy?",

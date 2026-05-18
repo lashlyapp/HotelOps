@@ -189,8 +189,8 @@
       "consentAnd": " y la ",
       "consentPrivacy": "Política de Privacidad",
       "consentSuffix": ".",
-      "onboardingLabel": "Reserva una sesión de onboarding 1-a-1 de 1 hora con nuestro equipo.",
-      "onboardingHelp": "Opcional. La mayoría lo omite — la prueba gratuita te guía por la configuración. Añade una tarifa única de onboarding a tu primera factura.",
+      "onboardingLabel": "Onboarding de $150 — configuración 1-a-1 con nuestro consultor de clientes.",
+      "onboardingHelp": "Opcional. Tarifa única en la primera factura de tu primera propiedad. Nunca se vuelve a cobrar cuando añades propiedades o te resuscribes.",
       "ctaSending": "Enviando código de verificación…",
       "ctaSend": "Enviar código de verificación",
       "noCardLine": "Sin tarjeta de crédito. 10 GB de contenido multimedia incluidos."
@@ -597,7 +597,7 @@
       "items": [
         {
           "q": "¿Hay una tarifa de configuración o incorporación?",
-          "a": "Solo si la quieres. La prueba gratuita guía a tu equipo por la configuración, así que la mayoría de clientes no necesitan ayuda adicional. Si prefieres reservar una sesión de incorporación 1-a-1 de una hora con nuestro equipo al registrarte, añadimos una tarifa única a la primera factura de tu primera propiedad — nunca se vuelve a cobrar cuando añades propiedades o te resuscribes. Si la omites, no hay cargo de configuración."
+          "a": "Solo si la quieres. Añade configuración 1-a-1 con nuestro consultor de clientes al registrarte por $150 — se cobra una sola vez en la primera factura de tu primera propiedad, nunca se vuelve a cobrar cuando añades propiedades o te resuscribes. Si la omites, no hay cargo de configuración."
         },
         {
           "q": "¿Qué pasa con mis datos si cancelo?",
