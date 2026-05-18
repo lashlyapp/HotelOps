@@ -11,7 +11,11 @@ import type {
   SignagePlaylist,
   SignageScreen,
 } from '@/lib/supabase/types'
-import { ITEM_KINDS, SIGNAGE_BASE_SCREEN_LIMIT } from './_lib/labels'
+import {
+  ITEM_KINDS,
+  SIGNAGE_BASE_SCREEN_LIMIT,
+  isBaseItemKind,
+} from './_lib/labels'
 
 export type ActionResult = { error?: string; success?: string }
 
@@ -77,10 +81,11 @@ export async function startScreenPairingAction(
     return { error: 'Property not found.' }
   }
 
-  // Soft gate: the base plan includes 3 screens per property. Beyond
-  // that requires Signage Unlimited at the org level. We enforce on the
-  // server too — the UI hides the pair form when at cap, but a stale
-  // tab or hand-crafted request should hit the same wall.
+  // Soft gate: the base plan includes one screen per property (image +
+  // text card content only). Additional screens require Signage
+  // Unlimited at the org level. We enforce on the server too — the UI
+  // hides the pair form when at cap, but a stale tab or hand-crafted
+  // request should hit the same wall.
   if (!hasAddon(session.organization, 'signage_unlimited')) {
     const admin = createAdminClient()
     const { count } = await admin
@@ -88,8 +93,10 @@ export async function startScreenPairingAction(
       .select('id', { count: 'exact', head: true })
       .eq('property_id', propertyId)
     if ((count ?? 0) >= SIGNAGE_BASE_SCREEN_LIMIT) {
+      const screensLabel =
+        SIGNAGE_BASE_SCREEN_LIMIT === 1 ? 'screen' : 'screens'
       return {
-        error: `Your base plan includes ${SIGNAGE_BASE_SCREEN_LIMIT} screens per property. Enable Signage Unlimited from /billing to add more.`,
+        error: `Your base plan includes ${SIGNAGE_BASE_SCREEN_LIMIT} ${screensLabel} per property. Enable Signage Unlimited from /billing to add more.`,
       }
     }
   }
@@ -302,6 +309,19 @@ export async function addItemAction(
   if (!(ITEM_KINDS as string[]).includes(kind)) {
     return { error: 'Pick an item type.' }
   }
+  // Base plan covers image + text card only. Video and web pages are
+  // part of Signage Unlimited so the base lobby-TV experience stays
+  // genuinely "basic" and there's a real upgrade trigger the moment an
+  // operator wants to loop a brand video or pin a web dashboard.
+  if (
+    !isBaseItemKind(kind) &&
+    !hasAddon(session.organization, 'signage_unlimited')
+  ) {
+    return {
+      error:
+        'Video and web playlist items require Signage Unlimited. Add an image or text card, or enable the add-on from /billing.',
+    }
+  }
   const duration = Math.min(Math.max(intOrDefault(formData.get('duration_seconds'), 8), 2), 600)
   const admin = createAdminClient()
 
@@ -445,6 +465,21 @@ export async function saveScheduleAction(
   const startTime = trimOrNull(formData.get('start_time'))
   const endTime = trimOrNull(formData.get('end_time'))
   const priority = intOrDefault(formData.get('priority'), 0)
+
+  // Date + time-of-day scheduling is a Signage Unlimited feature. The
+  // base plan can still assign a single default playlist per screen,
+  // it just can't add date-windowed or hour-windowed overrides.
+  const wantsScheduling =
+    Boolean(startsOn || endsOn || startTime || endTime) || priority !== 0
+  if (
+    wantsScheduling &&
+    !hasAddon(session.organization, 'signage_unlimited')
+  ) {
+    return {
+      error:
+        'Date and time-of-day scheduling require Signage Unlimited. Set the playlist as your screen default, or enable the add-on from /billing.',
+    }
+  }
 
   const admin = createAdminClient()
   // Sanity check screen + playlist are in the same org.

@@ -53,8 +53,10 @@ export default async function NewScreenPage() {
           {!hasUnlimited ? (
             <>
               {' '}
-              Your base plan includes {SIGNAGE_BASE_SCREEN_LIMIT} screens per
-              property.
+              Your base plan includes {SIGNAGE_BASE_SCREEN_LIMIT}{' '}
+              {SIGNAGE_BASE_SCREEN_LIMIT === 1 ? 'screen' : 'screens'} per
+              property — image and text card content only. Signage Unlimited
+              unlocks additional screens, video, web pages, and scheduling.
             </>
           ) : null}
         </p>
@@ -65,7 +67,7 @@ export default async function NewScreenPage() {
           addonKey="signage_unlimited"
           propertyCount={session.properties.length}
           isOwner={isOwner}
-          reason={`${atCapProperties.map((p) => p.name).join(', ')} ${atCapProperties.length === 1 ? 'has' : 'have'} already hit the ${SIGNAGE_BASE_SCREEN_LIMIT}-screen cap. Enable Signage Unlimited to keep adding screens at every property.`}
+          reason={`${atCapProperties.map((p) => p.name).join(', ')} ${atCapProperties.length === 1 ? 'has' : 'have'} already hit the base-plan ${SIGNAGE_BASE_SCREEN_LIMIT}-${SIGNAGE_BASE_SCREEN_LIMIT === 1 ? 'screen' : 'screens'} limit. Enable Signage Unlimited to keep adding screens at every property — plus video, web pages, and scheduling.`}
         />
       ) : null}
 

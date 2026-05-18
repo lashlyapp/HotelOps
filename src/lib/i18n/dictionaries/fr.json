@@ -114,9 +114,9 @@
       "imageAlt": "Lobby d'hôtel — saisie de bon de travail en contexte"
     },
     "signage": {
-      "eyebrow": "Module · +$49/établissement/mois (illimité) · 3 écrans gratuits",
+      "eyebrow": "Module · +$49/établissement/mois · TV du lobby inclus",
       "headline": "SaaS d'affichage hôtelier sans la taxe par écran.",
-      "body1": "Téléviseur du lobby, tableau de la salle de pause, bord de la piscine, chaque salle de réunion — pilotez-les tous depuis un seul tableau de bord. Appairez un téléviseur avec un code à 6 chiffres, planifiez des playlists, diffusez un message d'urgence à l'échelle de tout l'établissement en un clic. Gratuit pour vos 3 premiers écrans par établissement ; illimité au-delà pour $49/établissement/mois.",
+      "body1": "Téléviseur du lobby, tableau de la salle de pause, bord de la piscine, chaque salle de réunion — pilotez-les tous depuis un seul tableau de bord. Appairez un téléviseur avec un code à 6 chiffres, planifiez des playlists, diffusez un message d'urgence à l'échelle de tout l'établissement en un clic. Votre TV du lobby est inclus dans le forfait de base (image + carte de texte) ; vidéo, pages web, planification et chaque écran supplémentaire se débloquent avec Affichage Illimité à $49/établissement/mois.",
       "body2": "Yodeck et OptiSigns facturent $8–$30 par écran et par mois. Un resort de 20 écrans paie $160/mois à Yodeck ; nous paie $49 — même fonctionnalité, moins d'un tiers du coût.",
       "features": [
         "Appairez n'importe quel Fire TV, Onn. ou smart TV doté d'un navigateur",
@@ -153,7 +153,7 @@
       "cta": "Voir tous les tarifs et la comparaison →",
       "mini": {
         "baseLabel": "Base",
-        "baseSub": "Bons de travail, Événements et traiteur, Hub IT, Médias, 3 écrans d'affichage",
+        "baseSub": "Bons de travail, Événements et traiteur, Hub IT, Médias, écran du lobby",
         "signageLabel": "Affichage illimité",
         "signageSub": "optionnel · écrans illimités",
         "guestLabel": "Expérience client",
@@ -379,7 +379,7 @@
         "items": [
           {
             "name": "Affichage illimité",
-            "description": "Supprime la limite de 3 écrans. Affichage sur chaque TV dans chaque établissement — halls, restaurants, salles de réunion, back-office — pour un tarif fixe."
+            "description": "Chaque TV dans chaque établissement, plus vidéo, pages web et planification par date et heure. Halls, restaurants, salles de réunion, back-office — un tarif fixe d'extension."
           },
           {
             "name": "Expérience client",
@@ -533,25 +533,25 @@
     "plans": {
       "base": {
         "label": "Base",
-        "body": "Tout ce dont chaque propriété a besoin dès le premier jour — bons de travail de maintenance, propositions d'événements, registres IT, bibliothèque média et 3 écrans d'affichage.",
+        "body": "Tout ce dont chaque propriété a besoin dès le premier jour — bons de travail de maintenance, propositions d'événements, registres IT, bibliothèque média et un écran d'affichage pour le lobby.",
         "features": [
           "Bons de travail (Kanban avec preuve photo/vidéo)",
           "Événements & banquets (demande → proposition → facture)",
           "IT Hub (Wi-Fi, accès fournisseurs, équipement)",
           "Catalogue média avec CDN global",
-          "3 écrans d'affichage inclus",
+          "1 écran d'affichage du lobby (image + carte texte)",
+          "Alerte d'urgence pour toute la propriété",
           "Membres d'équipe illimités"
         ]
       },
       "signage": {
         "label": "Affichage Illimité",
-        "body": "Supprime la limite de 3 écrans. Téléviseurs illimités dans chaque propriété — réception, salle du personnel, salles de réunion, bord de piscine. Même planificateur, même alerte d'urgence.",
+        "body": "Le TV du lobby est inclus gratuitement dans le forfait de base. Cela débloque tous les autres écrans dans chaque établissement — bar, salle du personnel, salles de réunion, bord de piscine — plus la vidéo, les pages web et la programmation par date et heure.",
         "features": [
           "Écrans illimités par propriété",
-          "Alerte d'urgence pour toute la propriété",
+          "Éléments vidéo et pages web",
           "Programmation par date et plage horaire",
           "Appairez n'importe quel TV avec navigateur",
-          "Image, vidéo, web ou carte texte avec marque",
           "Activé pour toute l'organisation en un clic"
         ]
       },
@@ -612,7 +612,7 @@
         },
         {
           "q": "Et si je ne veux que la maintenance, ou seulement l'affichage ?",
-          "a": "Vous pouvez. L'abonnement de base inclut les bons de travail de maintenance, les événements & banquets, IT Hub, les médias et trois écrans d'affichage à $100/propriété. Ajoutez Affichage Illimité, Expérience Client ou Social Studio uniquement si vous le souhaitez — bascule sur /billing, facturé au prorata."
+          "a": "Vous pouvez. L'abonnement de base inclut les bons de travail de maintenance, les événements & banquets, IT Hub, les médias et un écran d'affichage pour le lobby (image + carte texte) à $100/propriété. Ajoutez Affichage Illimité, Expérience Client ou Social Studio uniquement si vous le souhaitez — bascule sur /billing, facturé au prorata."
         },
         {
           "q": "En quoi l'option d'affichage diffère-t-elle de Yodeck ou OptiSigns ?",

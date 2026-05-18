@@ -63,10 +63,14 @@ export function NewScreenForm({
           >
             {properties.map((p) => {
               const capped = atCap.has(p.id)
+              const limitLabel =
+                baseLimit === 1
+                  ? 'lobby screen used'
+                  : `${baseLimit}-screen limit reached`
               return (
                 <option key={p.id} value={p.id} disabled={capped}>
                   {p.name}
-                  {capped ? ` — ${baseLimit}-screen limit reached` : ''}
+                  {capped ? ` — ${limitLabel}` : ''}
                 </option>
               )
             })}

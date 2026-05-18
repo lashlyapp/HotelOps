@@ -64,7 +64,7 @@ const content: LpContent = {
     },
     {
       q: 'How much does it cost?',
-      a: 'A flat $100 per property per month — no per-seat charge, no per-ticket charge, no per-screen charge. Includes maintenance work orders, events, IT hub, media library, three signage screens, and arrival pages. Full pricing on the /pricing page.',
+      a: 'A flat $100 per property per month — no per-seat charge, no per-ticket charge, no per-screen charge. Includes maintenance work orders, events, IT hub, media library, a lobby signage screen, and arrival pages. Full pricing on the /pricing page.',
     },
     {
       q: 'How long does it take to set up?',

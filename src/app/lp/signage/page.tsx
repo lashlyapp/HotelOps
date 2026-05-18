@@ -13,7 +13,7 @@ const content: LpContent = {
   eyebrow: 'Digital signage',
   heroHeadline: 'Every TV in your hotel, run from one browser.',
   heroSub:
-    'Any browser-capable TV becomes a managed screen. Schedule content by day, hour, or zone. Take over every screen in an emergency with one click. Three screens included in the base plan; unlimited via the Signage Unlimited add-on — never per-screen, never per-room.',
+    'Any browser-capable TV becomes a managed screen. Schedule content by day, hour, or zone. Take over every screen in an emergency with one click. Your lobby TV is included in the base plan with image and text card content; video, web pages, scheduling, and every additional screen unlock via the Signage Unlimited add-on — flat per-property, never per-screen.',
   heroImage: '/AdobeStock_131189921.jpeg',
   heroAlt: 'Modern guest room with a wall-mounted TV',
   problemBullets: [
@@ -64,7 +64,7 @@ const content: LpContent = {
     },
     {
       q: 'How is this priced?',
-      a: 'Three screens per property are included in the $100/property/month base. Beyond that, turn on the Signage Unlimited add-on for one flat monthly fee per property — every additional screen is included. Never per-screen, never per-room.',
+      a: 'Your lobby TV is included in the $100/property/month base with image and text card content — perfect for a welcome screen with your logo and a daily message. The Signage Unlimited add-on at $49/property/month unlocks every other screen at the property, plus video, web pages, and date + time-of-day scheduling. Flat per property, never per-screen.',
     },
     {
       q: 'Does it handle emergency broadcast?',

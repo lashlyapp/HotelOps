@@ -20,7 +20,17 @@ export const HEARTBEAT_ONLINE_WINDOW_MS = 90 * 1000
 
 // Screens included in the base $100/property/mo plan. Beyond this
 // requires the Signage Unlimited add-on (see docs/pricing.md).
-export const SIGNAGE_BASE_SCREEN_LIMIT = 3
+export const SIGNAGE_BASE_SCREEN_LIMIT = 1
+
+// Content kinds available on the base plan. Video and web pages are
+// gated behind Signage Unlimited so the base "lobby TV" experience is
+// genuinely basic (a logo + a welcome message) and operators with
+// multimedia or web-driven content have an upgrade reason.
+export const SIGNAGE_BASE_ITEM_KINDS = ['image', 'text'] as const
+
+export function isBaseItemKind(kind: string): boolean {
+  return (SIGNAGE_BASE_ITEM_KINDS as readonly string[]).includes(kind)
+}
 
 export function isScreenOnline(lastHeartbeatAt: string | null): boolean {
   if (!lastHeartbeatAt) return false

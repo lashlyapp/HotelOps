@@ -114,9 +114,9 @@
       "imageAlt": "Hotel lobby — work order capture in context"
     },
     "signage": {
-      "eyebrow": "Module · +$49/property/mo (unlimited) · 3 screens free",
+      "eyebrow": "Module · +$49/property/mo · Lobby TV included",
       "headline": "Hotel signage SaaS without the per-screen tax.",
-      "body1": "Lobby TV, breakroom board, pool deck, every meeting room — drive them all from one dashboard. Pair a TV with a 6-digit code, schedule playlists, push a property-wide emergency message in one click. Free for your first 3 screens per property; unlimited above that for $49/property/month.",
+      "body1": "Lobby TV, breakroom board, pool deck, every meeting room — drive them all from one dashboard. Pair a TV with a 6-digit code, schedule playlists, push a property-wide emergency message in one click. Your lobby TV is included in the base plan (image + text card); video, web pages, scheduling, and every additional screen unlock with Signage Unlimited at $49/property/month.",
       "body2": "Yodeck and OptiSigns charge $8–$30 per screen per month. A 20-screen resort pays Yodeck $160/mo; pays us $49 — same feature, less than a third of the cost.",
       "features": [
         "Pair any Fire TV, Onn., or smart TV with a browser",
@@ -153,7 +153,7 @@
       "cta": "See the full pricing & comparison →",
       "mini": {
         "baseLabel": "Base",
-        "baseSub": "Work Orders, Events & Catering, IT Hub, Media, 3 signage screens",
+        "baseSub": "Work Orders, Events & Catering, IT Hub, Media, lobby signage screen",
         "signageLabel": "Signage Unlimited",
         "signageSub": "optional · unlimited screens",
         "guestLabel": "Guest Experience",
@@ -299,7 +299,7 @@
           },
           {
             "name": "Digital Signage",
-            "description": "Any browser-capable TV becomes a display. Schedule by day, hour, or zone. Three screens included; unlimited via the add-on."
+            "description": "Any browser-capable TV becomes a display. Lobby screen with image + text included; video, web, scheduling, and unlimited screens via the add-on."
           },
           {
             "name": "Emergency Broadcast",
@@ -379,7 +379,7 @@
         "items": [
           {
             "name": "Signage Unlimited",
-            "description": "Remove the 3-screen cap. Run signage on every TV across every property — lobbies, restaurants, meeting rooms, back-of-house — for one flat add-on price."
+            "description": "Unlock every TV at every property, plus video, web pages, and date + time-of-day scheduling. Lobbies, restaurants, meeting rooms, back-of-house — one flat add-on price."
           },
           {
             "name": "Guest Experience",
@@ -533,25 +533,25 @@
     "plans": {
       "base": {
         "label": "Base",
-        "body": "Everything every property needs on day one — maintenance work orders, event proposals, IT records, media library, and 3 signage screens.",
+        "body": "Everything every property needs on day one — maintenance work orders, event proposals, IT records, media library, and a lobby signage screen.",
         "features": [
           "Work Orders (Kanban with photo/video evidence)",
           "Events & Catering (inquiry → proposal → invoice)",
           "IT Hub (Wi-Fi, vendor logins, equipment)",
           "Media catalog with global CDN",
-          "3 signage screens included",
+          "1 lobby signage screen (image + text card)",
+          "Property-wide emergency broadcast",
           "Unlimited team members"
         ]
       },
       "signage": {
         "label": "Signage Unlimited",
-        "body": "Lifts the 3-screen cap. Unlimited TVs at every property — lobby, breakroom, meeting rooms, pool deck. Same scheduler, same emergency broadcast.",
+        "body": "Lobby TV is included free in the base plan. This unlocks every other screen at every property — bar, breakroom, meeting rooms, pool deck — plus video, web pages, and date + time-of-day scheduling.",
         "features": [
           "Unlimited screens per property",
-          "Per-property emergency takeover",
+          "Video and web page playlist items",
           "Date + time-of-day scheduling",
           "Pair any browser-capable TV",
-          "Image, video, web, or branded text card",
           "Activated org-wide with one click"
         ]
       },
@@ -612,7 +612,7 @@
         },
         {
           "q": "What if I only want maintenance, or only signage?",
-          "a": "You can. The base subscription includes maintenance work orders, events & catering, IT Hub, media, and three signage screens at $100/property. Add Signage Unlimited, Guest Experience, or Social Studio only if you want them — toggle on /billing, billed prorated."
+          "a": "You can. The base subscription includes maintenance work orders, events & catering, IT Hub, media, and one lobby signage screen (image + text card) at $100/property. Add Signage Unlimited, Guest Experience, or Social Studio only if you want them — toggle on /billing, billed prorated."
         },
         {
           "q": "How is the signage add-on different from Yodeck or OptiSigns?",

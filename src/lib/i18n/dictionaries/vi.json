@@ -114,9 +114,9 @@
       "imageAlt": "Sảnh khách sạn — chụp phiếu công việc tại chỗ"
     },
     "signage": {
-      "eyebrow": "Mô-đun · +$49/tài sản/tháng (không giới hạn) · 3 màn hình miễn phí",
+      "eyebrow": "Mô-đun · +$49/tài sản/tháng · TV sảnh đã bao gồm",
       "headline": "SaaS biển hiển thị khách sạn không có thuế theo màn hình.",
-      "body1": "TV sảnh, bảng phòng nghỉ, sàn hồ bơi, mọi phòng họp — điều khiển tất cả từ một bảng điều khiển. Ghép cặp TV bằng mã 6 chữ số, lập lịch playlist, đẩy thông báo khẩn cấp toàn tài sản chỉ với một cú nhấp. Miễn phí 3 màn hình đầu tiên mỗi tài sản; không giới hạn trên đó với $49/tài sản/tháng.",
+      "body1": "TV sảnh, bảng phòng nghỉ, sàn hồ bơi, mọi phòng họp — điều khiển tất cả từ một bảng điều khiển. Ghép cặp TV bằng mã 6 chữ số, lập lịch playlist, đẩy thông báo khẩn cấp toàn tài sản chỉ với một cú nhấp. TV sảnh đã được bao gồm trong gói cơ bản (hình ảnh + thẻ văn bản); video, trang web, lập lịch và mọi màn hình bổ sung được mở khóa với Biển Hiển Thị Không Giới Hạn ở mức $49/tài sản/tháng.",
       "body2": "Yodeck và OptiSigns tính $8–$30 mỗi màn hình mỗi tháng. Một resort 20 màn hình trả Yodeck $160/tháng; trả chúng tôi $49 — cùng tính năng, ít hơn một phần ba chi phí.",
       "features": [
         "Ghép cặp với bất kỳ Fire TV, Onn., hoặc smart TV nào có trình duyệt",
@@ -153,7 +153,7 @@
       "cta": "Xem toàn bộ bảng giá & so sánh →",
       "mini": {
         "baseLabel": "Nền tảng",
-        "baseSub": "Phiếu công việc, Sự kiện & Tiệc, Hub IT, Phương tiện, 3 màn hình biển hiển thị",
+        "baseSub": "Phiếu công việc, Sự kiện & Tiệc, Hub IT, Phương tiện, màn hình sảnh",
         "signageLabel": "Biển hiển thị không giới hạn",
         "signageSub": "tùy chọn · màn hình không giới hạn",
         "guestLabel": "Trải nghiệm khách",
@@ -379,7 +379,7 @@
         "items": [
           {
             "name": "Biển hiển thị không giới hạn",
-            "description": "Bỏ giới hạn 3 màn hình. Chạy biển hiển thị trên mọi TV ở mọi tài sản — sảnh, nhà hàng, phòng họp, hậu trường — với một mức phí cố định."
+            "description": "Mọi TV ở mọi tài sản, cộng thêm video, trang web và lập lịch theo ngày & giờ. Sảnh, nhà hàng, phòng họp, hậu trường — một mức phí cố định."
           },
           {
             "name": "Trải nghiệm khách",
@@ -533,25 +533,25 @@
     "plans": {
       "base": {
         "label": "Nền tảng",
-        "body": "Mọi thứ mọi tài sản cần từ ngày đầu — phiếu công việc bảo trì, đề xuất sự kiện, hồ sơ IT, thư viện phương tiện và 3 màn hình biển hiển thị.",
+        "body": "Mọi thứ mọi tài sản cần từ ngày đầu — phiếu công việc bảo trì, đề xuất sự kiện, hồ sơ IT, thư viện phương tiện và một màn hình biển hiển thị cho sảnh.",
         "features": [
           "Phiếu công việc (Kanban với bằng chứng ảnh/video)",
           "Sự kiện & Tiệc (yêu cầu → đề xuất → hóa đơn)",
           "Hub IT (Wi-Fi, đăng nhập nhà cung cấp, thiết bị)",
           "Danh mục phương tiện với CDN toàn cầu",
-          "Bao gồm 3 màn hình biển hiển thị",
+          "1 màn hình biển hiển thị cho sảnh (hình ảnh + thẻ văn bản)",
+          "Phát sóng khẩn cấp toàn tài sản",
           "Thành viên nhóm không giới hạn"
         ]
       },
       "signage": {
         "label": "Biển hiển thị không giới hạn",
-        "body": "Nâng giới hạn 3 màn hình. TV không giới hạn ở mọi tài sản — sảnh, phòng nghỉ, phòng họp, sàn hồ bơi. Cùng bộ lập lịch, cùng phát sóng khẩn cấp.",
+        "body": "TV sảnh đã được bao gồm miễn phí trong gói cơ bản. Tính năng này mở khóa mọi màn hình khác ở mọi tài sản — quầy bar, phòng nghỉ, phòng họp, sàn hồ bơi — cộng thêm video, trang web và lập lịch theo ngày + giờ trong ngày.",
         "features": [
           "Màn hình không giới hạn theo tài sản",
-          "Tiếp quản khẩn cấp theo từng tài sản",
+          "Mục video và trang web trong playlist",
           "Lập lịch theo ngày + giờ trong ngày",
           "Ghép cặp với bất kỳ TV nào hỗ trợ trình duyệt",
-          "Hình ảnh, video, web hoặc thẻ văn bản có thương hiệu",
           "Kích hoạt toàn tổ chức với một cú nhấp"
         ]
       },
@@ -612,7 +612,7 @@
         },
         {
           "q": "Nếu tôi chỉ muốn bảo trì, hoặc chỉ biển hiển thị?",
-          "a": "Bạn có thể. Gói thuê bao nền tảng bao gồm phiếu công việc bảo trì, sự kiện & tiệc, Hub IT, phương tiện và ba màn hình biển hiển thị với $100/tài sản. Thêm Biển hiển thị không giới hạn, Trải nghiệm khách hoặc Social Studio chỉ khi bạn muốn — chuyển đổi trên /billing, thanh toán theo tỷ lệ."
+          "a": "Bạn có thể. Gói thuê bao nền tảng bao gồm phiếu công việc bảo trì, sự kiện & tiệc, Hub IT, phương tiện và một màn hình biển hiển thị cho sảnh (hình ảnh + thẻ văn bản) với $100/tài sản. Thêm Biển hiển thị không giới hạn, Trải nghiệm khách hoặc Social Studio chỉ khi bạn muốn — chuyển đổi trên /billing, thanh toán theo tỷ lệ."
         },
         {
           "q": "Bổ sung biển hiển thị khác với Yodeck hoặc OptiSigns như thế nào?",

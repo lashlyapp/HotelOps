@@ -27,11 +27,13 @@ export const HOTELOPS_PRICE_LOOKUP_KEYS = {
   // in at signup (organizations.wants_onboarding_session). Gated +
   // deduped in code — see shouldAttachOnboardingFee.
   setupFee: 'hotelops_setup_fee',
-  // Add-on: unlimited signage screens beyond the 3 included in the base.
-  // $49 / property / month. See docs/pricing.md.
+  // Add-on: unlimited signage screens beyond the 1 lobby screen
+  // included in the base, plus video, web pages, and date/time-of-day
+  // scheduling. $49 / property / month. See docs/pricing.md.
   signageUnlimitedMonthly: 'hotelops_signage_unlimited_monthly',
   // Per-screen overage charge for properties that don't take the
-  // signage_unlimited add-on. $5 / screen / month beyond the 3 included.
+  // signage_unlimited add-on. $5 / screen / month beyond the 1 lobby
+  // screen included in the base.
   signageOveragePerScreenMonthly:
     'hotelops_signage_overage_per_screen_monthly',
   // Add-on: arrival pages + printable QR + guest issue intake.
