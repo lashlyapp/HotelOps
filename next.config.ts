@@ -2,6 +2,11 @@ import type { NextConfig } from 'next'
 
 const cdnUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
 const cdn = cdnUrl ? new URL(cdnUrl) : null
+// R2's S3 API endpoint — the host presigned upload URLs point at. The
+// public CDN above is for reads; the API endpoint is where browsers PUT
+// during direct-to-R2 uploads, so it needs its own CSP allowance.
+const r2ApiEndpoint = process.env.R2_ENDPOINT
+const r2Api = r2ApiEndpoint ? new URL(r2ApiEndpoint) : null
 
 // Stripe Checkout that we redirect customers to (used by setup-checkout
 // for adding/swapping payment methods). Billing details are now edited
@@ -15,6 +20,7 @@ function contentSecurityPolicy(): string {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseHost = supabaseUrl ? new URL(supabaseUrl).origin : null
   const cdnHost = cdn?.origin ?? null
+  const r2ApiHost = r2Api?.origin ?? null
   // `unsafe-eval` is only needed by the Next.js dev server (HMR/Fast
   // Refresh wraps modules in `eval`). Production builds don't use it,
   // so we drop it from the production CSP to shrink the XSS blast
@@ -55,6 +61,8 @@ function contentSecurityPolicy(): string {
       "'self'",
       ...(supabaseHost ? [supabaseHost, supabaseHost.replace(/^https/, 'wss')] : []),
       ...(cdnHost ? [cdnHost] : []),
+      // Direct-to-R2 presigned PUTs hit the S3 API host, not the public CDN.
+      ...(r2ApiHost ? [r2ApiHost] : []),
       'https://api.stripe.com',
     ],
     'frame-src': [...STRIPE_HOSTS],
