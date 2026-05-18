@@ -10,7 +10,6 @@ import { resolveActiveOrgAddonPriceIds } from '@/lib/stripe/start-subscription'
 import {
   ensureStripeCustomer,
   getSubscriptionForProperty,
-  markOnboardingFeeInvoiced,
   shouldAttachOnboardingFee,
 } from '@/lib/stripe/subscriptions'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -76,10 +75,10 @@ export const dynamic = 'force-dynamic'
  *
  *  - No subscription yet for the property → mode=subscription. Stripe
  *    creates the property's subscription AND collects its card in one
- *    step. quantity = 1 (a property is the billing unit). The one-time
- *    onboarding-session fee is added only when the org opted in to a
- *    1-on-1 onboarding session at signup (and hasn't already paid it
- *    on a previous property) — see shouldAttachOnboardingFee.
+ *    step. quantity = 1 (a property is the billing unit). The $150
+ *    onboarding fee is attached to this property's first invoice when
+ *    the org opted in to 1-on-1 setup at signup — once per property,
+ *    see shouldAttachOnboardingFee.
  *
  * The returned URL is opened in the same tab; success/cancel both bounce
  * back to /billing.
@@ -183,9 +182,9 @@ export async function POST(request: Request) {
     }
 
     // Self-serve creation path. quantity is fixed at 1 because the billing
-    // unit is a property. The onboarding-session fee is included only
-    // when the org opted in at signup AND hasn't already paid it on a
-    // previous property. Default path is no fee — the free trial walks
+    // unit is a property. The $150 onboarding fee is attached when the
+    // org opted in at signup — once per property, on the property's
+    // first invoice. Default path is no fee — the free trial walks
     // most teams through setup. See shouldAttachOnboardingFee.
     const stripeClient = stripe()
     const recurringPriceId = await requirePriceIdByLookupKey(
@@ -209,17 +208,6 @@ export async function POST(request: Request) {
       stripeClient,
       session.organization.id,
     )
-
-    // Dedupe the fee at URL-generation time. If the customer abandons
-    // this Checkout we'd rather under-charge once than risk a double-
-    // charge on a future property; the customer can always email
-    // support to add the session later. The idempotency key below
-    // guarantees that returning to the same URL within Stripe's 24h
-    // window resumes the same Checkout (with the fee), so abandonment
-    // is the only path that loses the line item.
-    if (setupFeePriceId) {
-      await markOnboardingFeeInvoiced(session.organization.id)
-    }
 
     const checkout = await stripeClient.checkout.sessions.create(
       {

@@ -53,9 +53,9 @@ const SLOT_HOURS_PT = [9, 10, 11, 13, 14, 15, 16] as const
  *  filters out "ASAP" tire-kickers. */
 const MIN_LEAD_DAYS = 3
 
-/** How many business days the grid shows. Picked to comfortably fill
- *  the card on desktop without forcing the user to scroll. */
-const SLOT_DAYS_COUNT = 10
+/** How many business days the grid shows. Picked to comfortably fit
+ *  in one row on desktop without horizontal scroll. */
+const SLOT_DAYS_COUNT = 7
 
 /** Deterministic FNV-1a-ish hash. Stable across page reloads so
  *  the same visitor doesn't see availability flicker between

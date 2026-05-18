@@ -15,7 +15,7 @@ import { SlotPicker } from './_components/slot-picker'
  * higher-intent buyers (multi-property groups, switchers, EU prospects
  * who want a human first) — books a 30-minute call.
  *
- * The page renders a 10-business-day calendar grid in US Pacific
+ * The page renders a 7-business-day calendar grid in US Pacific
  * (PT), opening 3 calendar days out so the founder has prep time
  * and ASAP tire-kickers self-deselect. Slots are a deterministic
  * mix of available + taken so the grid never reads as either dead

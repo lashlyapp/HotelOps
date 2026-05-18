@@ -181,19 +181,15 @@ export async function propertyHasBeenSubscribed(
 }
 
 /**
- * Decide whether to attach the one-time onboarding fee to a new
- * property subscription for this org. Two gates must both pass:
+ * Decide whether to attach the $150 per-property onboarding fee to a
+ * new property subscription for this org. The fee is per property —
+ * every property the org spins up while opted in pays it once on its
+ * own first invoice.
  *
- *   1. The org opted in to a 1-on-1 onboarding session at signup
- *      (organizations.wants_onboarding_session). Default is false —
- *      the free trial walks most teams through setup, so the session
- *      is opt-in.
- *
- *   2. The fee hasn't already been attached to a previous property's
- *      subscription for this org (organizations.onboarding_fee_invoiced_at
- *      is null). This is the org-wide dedupe — the customer only ever
- *      books one session, regardless of how many properties they add or
- *      whether they cancel and resubscribe.
+ * Single gate: the org opted in to 1-on-1 setup with our client
+ * consultant at signup (organizations.wants_onboarding_session).
+ * Default is false — the free trial walks most teams through setup,
+ * so the session is opt-in.
  *
  * Returns false if the org row can't be loaded (defensive — never
  * charge a fee we can't confirm intent for).
@@ -204,34 +200,12 @@ export async function shouldAttachOnboardingFee(
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('organizations')
-    .select('wants_onboarding_session, onboarding_fee_invoiced_at')
+    .select('wants_onboarding_session')
     .eq('id', orgId)
     .maybeSingle()
   if (error) return false
   if (!data) return false
-  if (!data.wants_onboarding_session) return false
-  if (data.onboarding_fee_invoiced_at) return false
-  return true
-}
-
-/**
- * Stamp organizations.onboarding_fee_invoiced_at the moment we attach
- * the setup-fee line item to a subscription. Optimistic: if the Stripe
- * call fails afterward, the timestamp stays set and the customer is
- * never charged twice; the rare cost is that a recoverable failure
- * mid-flight wouldn't retry attaching the fee. We accept that — under-
- * charging is the safer side to err on.
- *
- * Idempotent at the column level: subsequent calls with a non-null
- * value are no-ops thanks to the IS NULL clause.
- */
-export async function markOnboardingFeeInvoiced(orgId: string): Promise<void> {
-  const admin = createAdminClient()
-  await admin
-    .from('organizations')
-    .update({ onboarding_fee_invoiced_at: new Date().toISOString() })
-    .eq('id', orgId)
-    .is('onboarding_fee_invoiced_at', null)
+  return data.wants_onboarding_session
 }
 
 /**

@@ -11,10 +11,7 @@ import {
   requirePriceIdByLookupKey,
   resolvePriceIdByLookupKey,
 } from './prices'
-import {
-  markOnboardingFeeInvoiced,
-  shouldAttachOnboardingFee,
-} from './subscriptions'
+import { shouldAttachOnboardingFee } from './subscriptions'
 
 /**
  * Resolve the Stripe Price ids for every add-on the org currently has
@@ -64,14 +61,13 @@ export async function resolveActiveOrgAddonPriceIds(
 export type StartSubscriptionOptions = {
   priceId?: string
   /** Override the setup-fee Price id (otherwise resolved from the
-   *  hotelops_setup_fee lookup key). The fee is only attached when the
-   *  org opted in to a 1-on-1 onboarding session at signup
-   *  (organizations.wants_onboarding_session) AND the fee hasn't
-   *  already been invoiced for this org. */
+   *  hotelops_setup_fee lookup key). The fee is attached to each
+   *  property's first invoice when the org opted in to 1-on-1 setup
+   *  at signup (organizations.wants_onboarding_session). */
   setupFeePriceId?: string
   /** Suppress the setup fee for this specific call even if the org
-   *  opted in. Useful for ops/migration scripts that re-create a sub
-   *  for a property whose org has already paid setup historically. */
+   *  opted in. Useful for ops/migration scripts re-creating a sub for
+   *  a property that has already been onboarded. */
   skipSetupFee?: boolean
   /** Required. The payment method to charge the first (and subsequent)
    *  invoices against. Every subscription is created on
@@ -265,15 +261,6 @@ export async function startSubscriptionForProperty(
   })
 
   await syncToDb(admin, property.id, org.id, customerId, subscription)
-
-  // Dedupe future calls: once we've attached the onboarding fee to
-  // this org's first invoiced sub, never attach it again — not on a
-  // second property, not on a resubscribe after cancel. Stamped
-  // post-create so a failed Stripe call doesn't leave the org marked
-  // as "fee invoiced" when nothing actually went to Stripe.
-  if (setupFeePriceId) {
-    await markOnboardingFeeInvoiced(org.id)
-  }
 
   // Trial → paid conversion: the signup flow created this property with
   // a 10 GB cap (TRIAL_STORAGE_BYTES); the base plan includes 25 GB. Lift
