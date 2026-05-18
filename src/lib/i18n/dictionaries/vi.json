@@ -94,8 +94,51 @@
       "ctaSecondary": "Xem giá"
     },
     "positioning": {
+      "eyebrow": "Phạm vi",
       "title": "Danh mục mà chúng tôi không thuộc về: PMS của bạn.",
       "body": "Chúng tôi sẽ không bao giờ thay thế Cloudbeds, Mews, Opera hay Little Hotelier. Chúng tôi ngồi bên cạnh chúng và xử lý mọi bề mặt vận hành mà chúng để lại cho bảng tính và chat nhóm — phiếu công việc, đề xuất sự kiện, đăng nhập nhà cung cấp, biển hiển thị trên mọi TV, thẻ đón khách in được trong mọi phòng."
+    },
+    "workOrders": {
+      "eyebrow": "Mô-đun · bao gồm trong gói cơ bản",
+      "headline": "Phần mềm bảo trì khách sạn, ưu tiên ảnh.",
+      "body1": "Mỗi vòi nước rò rỉ, gạch nứt và ballast nhấp nháy đều được chụp ảnh hoặc quay video ngắn thay vì phiếu văn bản dài. Nhân viên lễ tân chụp, gắn thẻ, bàn giao; bộ phận kỹ thuật đóng phiếu bằng ảnh sau khi sửa. Bảng Kanban trên mọi tài sản, chủ sở hữu có quyền override hoàn tất, nhật ký hoạt động đầy đủ.",
+      "body2": "Thay thế các công cụ bảo trì khách sạn như Quore ($130/tháng mỗi tài sản) và HotSOS ($200–$500/tháng) — và không giống cả hai, nó đã có sẵn trong gói cơ bản $100/tài sản của chúng tôi.",
+      "features": [
+        "Chụp, gắn thẻ, giao việc — toàn bộ dưới 10 giây",
+        "Dấu vết bằng chứng trước / đang xử lý / sau",
+        "Số tham chiếu theo từng tài sản (WO-0042)",
+        "Chủ sở hữu có thể đánh dấu hoàn thành với nhật ký kiểm toán đầy đủ"
+      ]
+    },
+    "signage": {
+      "eyebrow": "Mô-đun · +$49/tài sản/tháng (không giới hạn) · 3 màn hình miễn phí",
+      "headline": "SaaS biển hiển thị khách sạn không có thuế theo màn hình.",
+      "body1": "TV sảnh, bảng phòng nghỉ, sàn hồ bơi, mọi phòng họp — điều khiển tất cả từ một bảng điều khiển. Ghép cặp TV bằng mã 6 chữ số, lập lịch playlist, đẩy thông báo khẩn cấp toàn tài sản chỉ với một cú nhấp. Miễn phí 3 màn hình đầu tiên mỗi tài sản; không giới hạn trên đó với $49/tài sản/tháng.",
+      "body2": "Yodeck và OptiSigns tính $8–$30 mỗi màn hình mỗi tháng. Một resort 20 màn hình trả Yodeck $160/tháng; trả chúng tôi $49 — cùng tính năng, ít hơn một phần ba chi phí.",
+      "features": [
+        "Ghép cặp với bất kỳ Fire TV, Onn., hoặc smart TV nào có trình duyệt",
+        "Lập lịch playlist theo ngày và giờ trong ngày",
+        "Hình ảnh, video, trang web hoặc thẻ văn bản có thương hiệu",
+        "Tiếp quản khẩn cấp cho toàn bộ tài sản"
+      ]
+    },
+    "arrival": {
+      "eyebrow": "Mô-đun · +$39/tài sản/tháng",
+      "headline": "Một concierge số mà khách đã biết cách sử dụng.",
+      "body1": "Chúng tôi in một thẻ QR cho mỗi phòng. Khách của bạn quét bằng ứng dụng máy ảnh có sẵn trên điện thoại — không cần cài đặt, không cần tài khoản — và đến trang đón khách có thương hiệu: Wi-Fi, giờ ăn, thông tin phòng gym, thực đơn dịch vụ phòng, hoạt động lân cận. Bạn chỉnh sửa trong năm phút; chúng tôi cache để tốc độ nhanh và host bố cục in.",
+      "body2": "Duve và Canary tính $3–$6 mỗi phòng có khách mỗi tháng. Một tài sản 40 phòng trả Duve $160; trả chúng tôi $39 — cố định, bất kể công suất.",
+      "features": [
+        "Wi-Fi tự động nhập từ Hub IT của bạn",
+        "Thực đơn nhà hàng + dịch vụ phòng với ảnh và giá",
+        "Thẻ QR in được với logo tài sản và URL ngắn",
+        "Không tài khoản khách, không ứng dụng để tải"
+      ]
+    },
+    "identityBand": {
+      "eyebrow": "Được xây dựng cho ngành khách sạn",
+      "headline": "Được xây dựng quanh ngày làm việc của bạn, không phải một mẫu chung.",
+      "body": "Mọi phần của {brand} đến từ các quy trình thực tế mà chủ khách sạn đã hướng dẫn chúng tôi — phiếu bảo trì từ Phòng 312, yêu cầu đặt tiệc cưới, TV sảnh bị đóng băng trên màn hình đen vào 4 giờ chiều thứ Bảy. Không phình to, không cần học. Chỉ là các mảnh ghép trong ngày của bạn, ở một nơi.",
+      "cta": "Bắt đầu ngay"
     },
     "pricingTeaser": {
       "eyebrow": "Giá",
@@ -116,7 +159,12 @@
     },
     "footer": {
       "tagline": "Lớp vận hành cho khách sạn boutique.",
-      "rights": "All rights reserved."
+      "rights": "Bảo lưu mọi quyền.",
+      "company": "Công ty",
+      "support": "Hỗ trợ",
+      "legal": "Pháp lý",
+      "privacyPolicy": "Chính sách quyền riêng tư",
+      "termsOfService": "Điều khoản dịch vụ"
     }
   },
   "signup": {
