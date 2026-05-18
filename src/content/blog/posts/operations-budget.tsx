@@ -9,8 +9,9 @@ export const meta: BlogPostModule['meta'] = {
   publishedAt: '2026-05-08',
   readingMinutes: 8,
   topic: 'Economics',
-  heroImage: '/AdobeStock_94588323.jpeg',
-  heroAlt: 'Hotel manager reviewing operations on a tablet',
+  heroImage:
+    'https://images.unsplash.com/photo-1762427354397-854a52e0ded7?w=1200&q=80&auto=format&fit=crop',
+  heroAlt: 'Operations budget worked out with calculator and notes',
 }
 
 export default function Post() {

@@ -2,14 +2,15 @@ import type { BlogPostModule } from '../types'
 
 export const meta: BlogPostModule['meta'] = {
   slug: 'boutique-hotels-underserved-by-software',
-  title: 'Boutique hotels are the most underserved corner of hospitality tech.',
+  title: "Hospitality tech's boutique blind spot",
   description:
     'Hospitality software was built for the big chains. The 20-to-60-room boutique market — the fastest-growing segment of leisure travel — has been treated as a footnote for two decades. Here is why the gap exists and why it is now starting to close.',
   publishedAt: '2026-05-12',
   readingMinutes: 7,
   topic: 'Industry',
-  heroImage: '/AdobeStock_327436679.jpeg',
-  heroAlt: 'Boutique hotel reception desk with brass service bell',
+  heroImage:
+    'https://images.unsplash.com/photo-1553369728-15ec6971afaf?w=1200&q=80&auto=format&fit=crop',
+  heroAlt: 'Quiet boutique hotel front desk waiting for the next guest',
 }
 
 export default function Post() {

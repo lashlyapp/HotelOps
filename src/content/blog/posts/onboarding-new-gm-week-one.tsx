@@ -10,8 +10,9 @@ export const meta: BlogPostModule['meta'] = {
   publishedAt: '2026-08-07',
   readingMinutes: 7,
   topic: 'Team',
-  heroImage: '/AdobeStock_327436679.jpeg',
-  heroAlt: 'Hotel reception desk during a calm morning shift',
+  heroImage:
+    'https://images.unsplash.com/photo-1677129666186-d29eba893fe3?w=1200&q=80&auto=format&fit=crop',
+  heroAlt: 'New GM at the front-desk workstation with a laptop',
 }
 
 export default function Post() {

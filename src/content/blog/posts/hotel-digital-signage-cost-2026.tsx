@@ -9,8 +9,9 @@ export const meta: BlogPostModule['meta'] = {
   publishedAt: '2026-05-06',
   readingMinutes: 8,
   topic: 'Benchmarks',
-  heroImage: '/AdobeStock_1896833868.jpeg',
-  heroAlt: 'Hotel lobby with digital signage on the wall',
+  heroImage:
+    'https://images.unsplash.com/photo-1557858310-9052820906f7?w=1200&q=80&auto=format&fit=crop',
+  heroAlt: 'Digital display screen mounted in a public space',
 }
 
 export default function Post() {

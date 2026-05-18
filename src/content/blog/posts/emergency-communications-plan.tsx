@@ -10,8 +10,9 @@ export const meta: BlogPostModule['meta'] = {
   publishedAt: '2026-09-18',
   readingMinutes: 6,
   topic: 'Operations',
-  heroImage: '/AdobeStock_1951250090.jpeg',
-  heroAlt: 'Boutique hotel exterior at dusk',
+  heroImage:
+    'https://images.unsplash.com/photo-1673388756897-28832439e9aa?w=1200&q=80&auto=format&fit=crop',
+  heroAlt: 'Hotel signage illuminated at night',
 }
 
 export default function Post() {

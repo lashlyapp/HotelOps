@@ -10,8 +10,9 @@ export const meta: BlogPostModule['meta'] = {
   publishedAt: '2026-06-26',
   readingMinutes: 8,
   topic: 'Benchmarks',
-  heroImage: '/AdobeStock_327436679.jpeg',
-  heroAlt: 'Hotel reception desk with brass service bell',
+  heroImage:
+    'https://images.unsplash.com/photo-1774921676536-12e96b39238c?w=1200&q=80&auto=format&fit=crop',
+  heroAlt: 'Hotel reception area with a modern design',
 }
 
 export default function Post() {

@@ -9,9 +9,9 @@ export const meta: BlogPostModule['meta'] = {
   publishedAt: '2026-05-17',
   readingMinutes: 7,
   topic: 'Marketing',
-  heroImage: '/AdobeStock_131189921.jpeg',
-  heroAlt:
-    'Phone propped on a hotel breakfast table with morning sun on the terrace.',
+  heroImage:
+    'https://images.unsplash.com/photo-1771254240590-dd2d25251daa?w=1200&q=80&auto=format&fit=crop',
+  heroAlt: 'Content creator filming inside a boutique hotel room',
 }
 
 export default function Post() {
