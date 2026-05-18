@@ -10,8 +10,9 @@ export const meta: BlogPostModule['meta'] = {
   readingMinutes: 7,
   topic: 'Marketing',
   heroImage:
-    'https://images.unsplash.com/photo-1505156868547-9b49f4df4e04?w=1200&q=80&auto=format&fit=crop',
-  heroAlt: 'Smartphone showing the Instagram icon on the home screen',
+    'https://images.unsplash.com/photo-1614442042855-e17d53875286?w=1200&q=80&auto=format&fit=crop',
+  heroAlt:
+    'Hand capturing a food shot on a smartphone for the property’s social feed',
 }
 
 export default function Post() {
