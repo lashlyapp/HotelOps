@@ -170,7 +170,7 @@ export default function Post() {
       <p>
         It is also one line item rather than three. The
         freelancer at $200, the scheduling app at $15, and the
-        AI tool at $20 fold into the same $19/property/month
+        AI tool at $20 fold into the same $29/property/month
         Social Studio add-on, with the freelancer’s biggest
         weakness — the generic voice — solved by the
         feedback loop that the freelancer could not run for you.

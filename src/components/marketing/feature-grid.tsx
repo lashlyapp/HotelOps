@@ -12,17 +12,18 @@ import type { Dictionary } from '@/lib/i18n/dictionaries'
  *   modules → here are deep-dives on the headliners
  *   pricing → here's what it costs
  *
- * Categorized grid because the surface area is ~20 features. A
+ * Categorized list because the surface area is ~20 features. A
  * flat list overwhelms; categories let a scanner find their
  * concern (operations vs guest-facing vs billing) in two seconds.
  *
- * Six categories laid out in a 2-column grid (3 rows). Item counts
- * vary — currently 4 everywhere except Add-ons (3). The grid sizes
- * categories, not items, so unevenness inside a category doesn't
- * matter. Dictionary copy is the source of truth; this component
- * only renders structure. Anchor slugs are positional (CATEGORY_SLUGS)
- * so the landing-page FeaturesDropdown can deep-link to the same
- * anchor across locales even though category titles are translated.
+ * Single column so that anchor links land cleanly — in a 2-column
+ * layout the target anchor sits next to a sibling category at the
+ * same scroll position, which makes the deep-link from the navbar
+ * dropdown feel imprecise. Dictionary copy is the source of truth;
+ * this component only renders structure. Anchor slugs are positional
+ * (CATEGORY_SLUGS) so the landing-page FeaturesDropdown can deep-link
+ * to the same anchor across locales even though category titles are
+ * translated.
  */
 const CATEGORY_SLUGS = [
   'operations',
@@ -43,8 +44,8 @@ export function FeatureGrid({
       id="features"
       className="border-y border-border-subtle bg-surface"
     >
-      <div className="mx-auto max-w-6xl px-6 py-20">
-        <div className="max-w-3xl">
+      <div className="mx-auto max-w-3xl px-6 py-20">
+        <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-muted">
             {t.eyebrow}
           </p>
@@ -54,7 +55,7 @@ export function FeatureGrid({
           <p className="mt-4 text-base text-muted leading-relaxed">{t.sub}</p>
         </div>
 
-        <div className="mt-12 grid gap-x-10 gap-y-12 md:grid-cols-2">
+        <div className="mt-12 space-y-16">
           {t.categories.map((category, i) => (
             <div
               key={category.title}

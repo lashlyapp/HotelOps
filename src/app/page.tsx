@@ -1,11 +1,10 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { Wordmark } from '@/components/brand/wordmark'
 import { Footer } from '@/components/layout/footer'
 import { AsianDestinationsBand } from '@/components/marketing/asian-destinations-band'
 import { DestinationsBand } from '@/components/marketing/destinations-band'
-import { FeaturesDropdown } from '@/components/marketing/features-dropdown'
+import { PublicHeader } from '@/components/marketing/public-header'
 import { SharpHeroImage } from '@/components/marketing/sharp-hero-image'
 import { UseCasesBand } from '@/components/marketing/use-cases-band'
 import { Card, CardBody } from '@/components/ui/card'
@@ -182,67 +181,7 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <header className="border-b border-border-subtle">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          <Wordmark size="md" href="/" />
-          <nav
-            aria-label={t.nav.primaryLabel}
-            className="hidden items-center gap-1 text-sm sm:flex"
-          >
-            <FeaturesDropdown
-              label={t.features.navLabel}
-              items={[
-                { href: '/#work-orders', label: t.nav.workOrders },
-                { href: '/features#operations', label: t.nav.events },
-                { href: '/#signage', label: t.nav.signage },
-                { href: '/#arrival', label: t.nav.arrival },
-                { href: '/features#media', label: t.nav.media },
-                { href: '/features#addons', label: t.nav.social },
-                { href: '/features#operations', label: t.nav.itHub },
-                { href: '/features', label: t.features.allLabel },
-              ]}
-            />
-            <Link
-              href="/pricing"
-              className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
-            >
-              {t.nav.pricing}
-            </Link>
-            <Link
-              href="/blog"
-              className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
-            >
-              {t.blog.navLabel}
-            </Link>
-            <Link
-              href="/about"
-              className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
-            >
-              {t.about.navLabel}
-            </Link>
-            <Link
-              href="/demo"
-              className="focus-ring rounded-md px-3 py-1.5 text-muted hover:text-fg"
-            >
-              {t.demo.navLabel}
-            </Link>
-          </nav>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="focus-ring rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-fg"
-            >
-              {t.common.logIn}
-            </Link>
-            <Link
-              href="/signup"
-              className="focus-ring inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-fg hover:bg-primary-hover transition-colors"
-            >
-              {t.common.signUp}
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicHeader dict={t} active="home" />
 
       <main className="flex-1">
         {/* ─── Hero ───────────────────────────────────────────────────── */}

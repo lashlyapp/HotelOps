@@ -114,9 +114,9 @@
       "imageAlt": "Lobby de hotel — captura de orden de trabajo en contexto"
     },
     "signage": {
-      "eyebrow": "Módulo · +$49/propiedad/mes (ilimitado) · 3 pantallas gratis",
+      "eyebrow": "Módulo · +$49/propiedad/mes · TV del lobby incluido",
       "headline": "SaaS de señalización hotelera sin el impuesto por pantalla.",
-      "body1": "Televisor del lobby, tablero de la sala de descanso, terraza de la piscina, cada sala de reuniones — gestiónalo todo desde un panel. Empareja un TV con un código de 6 dígitos, programa listas de reproducción, envía un mensaje de emergencia para toda la propiedad en un solo clic. Gratis para las primeras 3 pantallas por propiedad; ilimitado a partir de ahí por $49/propiedad/mes.",
+      "body1": "Televisor del lobby, tablero de la sala de descanso, terraza de la piscina, cada sala de reuniones — gestiónalo todo desde un panel. Empareja un TV con un código de 6 dígitos, programa listas de reproducción, envía un mensaje de emergencia para toda la propiedad en un solo clic. Tu TV del lobby está incluido en el plan base (imagen + tarjeta de texto); el vídeo, las páginas web, la programación y cada pantalla adicional se desbloquean con Señalización Ilimitada por $49/propiedad/mes.",
       "body2": "Yodeck y OptiSigns cobran $8–$30 por pantalla al mes. Un resort de 20 pantallas paga $160/mes a Yodeck; nos paga $49 a nosotros — la misma función, menos de un tercio del coste.",
       "features": [
         "Empareja cualquier Fire TV, Onn. o televisor inteligente con navegador",
@@ -149,11 +149,11 @@
     "pricingTeaser": {
       "eyebrow": "Precios",
       "headline": "Una sola línea de $100/propiedad. Tres complementos. Eso es todo.",
-      "body": "Un hotel boutique de 40 habitaciones que compra las mismas funciones por separado a Quore, Yodeck, Duve y un freelance de redes sociales paga unos $679/mes. Con nosotros, todo activado cuesta $207/mes por propiedad — y puedes eliminar cualquier complemento con un solo clic.",
+      "body": "Un hotel boutique de 40 habitaciones que compra las mismas funciones por separado a Quore, Yodeck, Duve y un freelance de redes sociales paga unos $679/mes. Con nosotros, todo activado cuesta $217/mes por propiedad — y puedes eliminar cualquier complemento con un solo clic.",
       "cta": "Ver precios completos y comparativa →",
       "mini": {
         "baseLabel": "Base",
-        "baseSub": "Órdenes de trabajo, Eventos y catering, Hub de TI, Medios, 3 pantallas de señalización",
+        "baseSub": "Órdenes de trabajo, Eventos y catering, Hub de TI, Medios, pantalla del lobby",
         "signageLabel": "Señalización Ilimitada",
         "signageSub": "opcional · pantallas ilimitadas",
         "guestLabel": "Experiencia del huésped",
@@ -367,10 +367,6 @@
           {
             "name": "Sin Contratos",
             "description": "Cancela desde tu cuenta en cualquier momento. Sin compromisos anuales, sin períodos de aviso, sin entrevistas de salida."
-          },
-          {
-            "name": "Prueba Gratuita de 7 Días",
-            "description": "Acceso completo a funciones por 7 días. Sin tarjeta para empezar; tus datos persisten si conviertes y se exportan si no."
           }
         ]
       },
@@ -379,7 +375,7 @@
         "items": [
           {
             "name": "Señalización ilimitada",
-            "description": "Sin el límite de 3 pantallas. Señalización en cada TV de cada propiedad — vestíbulos, restaurantes, salas de reuniones, back-of-house — por un precio fijo de complemento."
+            "description": "Cada TV de cada propiedad, además de vídeo, páginas web y programación por fecha y hora. Vestíbulos, restaurantes, salas de reuniones, back-of-house — un precio fijo de complemento."
           },
           {
             "name": "Experiencia del huésped",
@@ -440,7 +436,7 @@
         "headline": "Sustituyeron cuatro suscripciones SaaS independientes",
         "type": "Grupo hotelero de diseño con dos propiedades",
         "region": "Ciudad de México, México",
-        "body": "Cancelaron su herramienta de tickets de mantenimiento, su plataforma de eventos y banquetes, su suscripción de señalización digital, su app de conserjería y el freelancer que les escribía los posts en redes. El gasto neto bajó unos $500/propiedad/mes con los mismos flujos de trabajo — todo consolidado en una sola línea de $207."
+        "body": "Cancelaron su herramienta de tickets de mantenimiento, su plataforma de eventos y banquetes, su suscripción de señalización digital, su app de conserjería y el freelancer que les escribía los posts en redes. El gasto neto bajó unos $500/propiedad/mes con los mismos flujos de trabajo — todo consolidado en una sola línea de $217."
       },
       {
         "headline": "Director nuevo operativo en una tarde, no en una semana",
@@ -525,7 +521,7 @@
   "pricing": {
     "eyebrow": "Precios",
     "headline": "Por propiedad. No por usuario. No por pantalla. No por habitación.",
-    "sub": "Una base de $100/propiedad/mes. Tres complementos opcionales. Esa es toda la lista de precios — y el máximo que una sola propiedad puede costarte es $207/mes, sin importar cuántas pantallas, habitaciones o personal tengas.",
+    "sub": "Una base de $100/propiedad/mes. Tres complementos opcionales. Esa es toda la lista de precios — y el máximo que una sola propiedad puede costarte es $217/mes, sin importar cuántas pantallas, habitaciones o personal tengas.",
     "midCycleNote": "Sin contratos. Sin compromisos anuales. Añade o quita opciones cuando quieras — cancela en cualquier momento desde tu cuenta.",
     "cadence": "propiedad / mes",
     "tagRequired": "Obligatorio",
@@ -533,25 +529,25 @@
     "plans": {
       "base": {
         "label": "Base",
-        "body": "Todo lo que cada propiedad necesita desde el primer día — órdenes de trabajo de mantenimiento, propuestas de eventos, registros de IT, biblioteca multimedia y 3 pantallas de señalización.",
+        "body": "Todo lo que cada propiedad necesita desde el primer día — órdenes de trabajo de mantenimiento, propuestas de eventos, registros de IT, biblioteca multimedia y una pantalla de señalización para el lobby.",
         "features": [
           "Órdenes de trabajo (Kanban con evidencia foto/vídeo)",
           "Eventos y banquetes (consulta → propuesta → factura)",
           "IT Hub (Wi-Fi, accesos de proveedores, equipamiento)",
           "Catálogo multimedia con CDN global",
-          "3 pantallas de señalización incluidas",
+          "1 pantalla de señalización del lobby (imagen + tarjeta de texto)",
+          "Aviso de emergencia para toda la propiedad",
           "Miembros de equipo ilimitados"
         ]
       },
       "signage": {
         "label": "Señalización Ilimitada",
-        "body": "Elimina el límite de 3 pantallas. Televisores ilimitados en cada propiedad — recepción, sala de descanso, salas de reuniones, zona de piscina. Mismo programador, mismo aviso de emergencia.",
+        "body": "La TV del lobby viene incluida gratis en el plan base. Esto desbloquea todas las demás pantallas en cada propiedad — bar, sala de descanso, salas de reuniones, zona de piscina — además de vídeo, páginas web y programación por fecha y hora.",
         "features": [
           "Pantallas ilimitadas por propiedad",
-          "Aviso de emergencia para toda la propiedad",
+          "Listas con vídeo y páginas web",
           "Programación por fecha y franja horaria",
           "Empareja cualquier TV con navegador",
-          "Imagen, vídeo, web o tarjeta de texto con marca",
           "Activado para toda la organización con un clic"
         ]
       },
@@ -569,7 +565,7 @@
       },
       "social": {
         "label": "Social Studio",
-        "body": "Una publicación social redactada por IA por propiedad, cada mañana. Texto, hashtags y una foto elegida de tu biblioteca multimedia — lista para copiar, descargar o enviarte por correo. Nunca tocamos las plataformas sociales.",
+        "body": "Gestiona la presencia social de tu hotel por menos de $1 al día. Una publicación redactada por IA por propiedad, cada mañana — texto, hashtags y una foto elegida de tu biblioteca multimedia, lista para copiar, descargar o enviarte por correo. Nunca tocamos las plataformas sociales.",
         "features": [
           "Una publicación de marca por propiedad al día",
           "Tres variantes de texto, hashtags temáticos",
@@ -612,7 +608,7 @@
         },
         {
           "q": "¿Y si solo quiero mantenimiento, o solo señalización?",
-          "a": "Puedes. La suscripción base incluye órdenes de trabajo de mantenimiento, eventos y banquetes, IT Hub, multimedia y tres pantallas de señalización por $100/propiedad. Añade Señalización Ilimitada, Experiencia del Huésped o Social Studio solo si las quieres — actívalas en /billing, facturadas prorrateadas."
+          "a": "Puedes. La suscripción base incluye órdenes de trabajo de mantenimiento, eventos y banquetes, IT Hub, multimedia y una pantalla de señalización para el lobby (imagen + tarjeta de texto) por $100/propiedad. Añade Señalización Ilimitada, Experiencia del Huésped o Social Studio solo si las quieres — actívalas en /billing, facturadas prorrateadas."
         },
         {
           "q": "¿En qué se diferencia el complemento de señalización de Yodeck u OptiSigns?",

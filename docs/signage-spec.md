@@ -12,9 +12,11 @@ Uniguest, Nevotek) charges per room and hides pricing behind a sales call.
 HotelOps already bills per **property**, already stores per-property media on
 R2 with a zero-egress CDN, and already has authenticated property-scoped data
 (events, properties, IT hub). We can ship signage at flat per-property
-pricing with unlimited screens, undercut every horizontal vendor on TCO past
-3 screens, undercut every hotel incumbent by an order of magnitude, and
-absorb 100% of incremental infra cost into a zero-marginal-cost stack.
+pricing with unlimited screens, undercut every horizontal vendor on TCO
+once a boutique wants video / scheduling (≈2 Pro-tier screens) or pure
+screen count past ≈6 entry-tier screens, undercut every hotel incumbent
+by an order of magnitude, and absorb 100% of incremental infra cost
+into a zero-marginal-cost stack.
 
 ## 2. Competitive landscape (May 2026)
 
@@ -63,26 +65,37 @@ table below is kept for context only.
 
 ### Structure
 
-| Plan tier (HotelOps) | Today                  | With signage                                    |
-| -------------------- | ---------------------- | ----------------------------------------------- |
-| Base                 | $100/property/mo       | $100/property/mo — **3 screens included free**  |
-| Signage add-on       | —                      | +$49/property/mo for **unlimited screens**      |
-| Overage (no add-on)  | —                      | $5/screen/mo beyond the 3 included              |
+| Plan tier (HotelOps) | Today                  | With signage                                                              |
+| -------------------- | ---------------------- | ------------------------------------------------------------------------- |
+| Base                 | $100/property/mo       | $100/property/mo — **1 lobby screen included** (image + text card only)   |
+| Signage add-on       | —                      | +$49/property/mo for **unlimited screens + video + web + scheduling**     |
+| Overage (no add-on)  | —                      | $5/screen/mo beyond the 1 lobby screen included                           |
 
-Rationale:
+Rationale (revised — boutiques average 1–2 lobby/bar screens, so a
+3-screen cap meant most customers never reached the upgrade trigger;
+dropping the cap to 1 + gating video/web/scheduling makes the upsell
+real for almost every property that actually uses signage):
 
-- **3 free screens** is the customer-acquisition hook. Every property has a
-  lobby TV, a breakroom TV, and at least one meeting board — and they all
-  come for free with the existing subscription. Zero friction, zero new
-  contract, instantly demoable.
-- **$49/property unlimited** is the expansion play. A 6-screen property
-  pays $49 (vs. $48 on Yodeck per-screen — break-even at 6, advantage at
-  7+). A 20-screen resort pays $49 (vs. $160 on Yodeck, $300+ on
-  ScreenCloud, $1,000+ on Otrum). Resorts and meeting-heavy properties
-  will buy this without a second thought.
-- **$5/screen overage** is the "didn't bother to upgrade" path. Slightly
-  punitive vs. the flat plan ($5 × 4 extra screens = $20/mo, vs. $49 flat
-  for unlimited) which nudges people into the add-on naturally.
+- **1 free lobby screen** is the acquisition hook. Every property has a
+  lobby TV; the base plan can drive it with a logo + welcome card. Zero
+  friction, zero new contract, instantly demoable — but it's clearly a
+  "starter," which is the point.
+- **$49/property unlimited** is the expansion play. The moment an
+  operator pairs a second TV (bar, breakroom, meeting room) or wants
+  to loop a brand video, they hit the wall and the add-on is the
+  obvious answer. A 6-screen property pays $49 (vs. $48 on Yodeck —
+  break-even at 2 screens for boutique multi-room properties because
+  the add-on bundles video + scheduling that Yodeck charges Pro tier
+  for). A 20-screen resort pays $49 (vs. $160 on Yodeck, $300+ on
+  ScreenCloud, $1,000+ on Otrum).
+- **$5/screen overage** is the "didn't bother to upgrade" path. With
+  the cap at 1, every extra screen meters quickly toward the flat
+  $49 (9 extras = $45, 10 extras = $50), which nudges people into the
+  add-on naturally past a couple of screens. Video and web items
+  still require Unlimited even on the overage path — they're feature
+  gates, not screen-count gates.
+- **Emergency broadcast** stays in base. Safety override; never
+  paywalled.
 
 ### Stripe wiring
 
@@ -400,8 +413,8 @@ Tagline: **"The signage that comes with your hotel software."**
 
 Sales bullets to put on the marketing page:
 
-- Free for your first 3 screens — included in every HotelOps subscription.
-- Flat $49/property/month for unlimited screens. No per-screen surprise bills.
+- Lobby TV included free — every HotelOps subscription drives one screen with image + text card content.
+- Flat $49/property/month for unlimited screens, video, web pages, and scheduling. No per-screen surprise bills.
 - Plays from your existing photo library — no separate uploads.
 - Meeting-room boards auto-fill from your event manager.
 - Emergency broadcast: takeover every screen on property in one click.
@@ -411,7 +424,7 @@ Comparison table for the landing page:
 
 | For 6 screens at one property | Monthly cost      |
 | ----------------------------- | ----------------- |
-| **HotelOps Signage**          | **$0–$49**        |
+| **HotelOps Signage Unlimited**| **$49**           |
 | Yodeck Premium                | $66               |
 | OptiSigns Pro                 | $75               |
 | ScreenCloud Pro               | $180              |
@@ -422,7 +435,7 @@ Comparison table for the landing page:
 1. Do we want signage as a separate Stripe Price (recommended — clean
    reporting), or roll it silently into the base $100 to remove the
    purchase decision entirely?
-2. Should the 3 included screens be per-property or per-org? (Recommend
+2. Should the lobby screen be per-property or per-org? (Decided:
    per-property — matches existing pricing axis.)
 3. Default playlist behaviour when none exists — black screen, property
    logo, or marketing default? (Recommend property logo on bg gradient.)
@@ -437,7 +450,7 @@ Comparison table for the landing page:
 - Week 1: schema + screens CRUD + pair flow + player skeleton
 - Week 2: playlist editor + R2 picker reuse + scheduling
 - Week 3: heartbeat + emergency override + Service Worker prefetch
-- Week 4: Stripe wiring (add-on Price + included-3 logic) + admin tenant view
+- Week 4: Stripe wiring (add-on Price + included-1 logic) + admin tenant view
 - Week 5: dogfood on a friendly tenant; bug bash; docs page
 - Week 6: marketing page + comparison table + soft launch to existing tenants
 

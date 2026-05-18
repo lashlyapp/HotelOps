@@ -9,11 +9,11 @@ const content: LpContent = {
   slug: 'social-studio',
   metaTitle: 'Hotel social media posts — one AI-drafted post per day | MyHotelOps',
   metaDescription:
-    'One AI-drafted social post per property, every morning — caption, hashtags, and a photo picked from your own media library. Copy, download, or email to yourself; you publish from your phone. No platform integrations, no OAuth, your accounts stay yours.',
+    'Manage your hotel’s social presence for less than $1 a day. One AI-drafted social post per property, every morning — caption, hashtags, and a photo picked from your own media library. Copy, download, or email to yourself; you publish from your phone. No platform integrations, no OAuth, your accounts stay yours.',
   eyebrow: 'Social Studio',
   heroHeadline: 'A social post a day. Ready before you finish your coffee.',
   heroSub:
-    'Social Studio drafts one ready-to-publish social post per property every morning at 6 AM local — caption, hashtags, and a photo picked from your own media library. Copy, download, or email it to yourself; you post from your phone. No platform integrations that break, no OAuth grants to manage, your social accounts stay yours.',
+    'Social Studio drafts one ready-to-publish social post per property every morning at 6 AM local — caption, hashtags, and a photo picked from your own media library. Copy, download, or email it to yourself; you post from your phone. No platform integrations that break, no OAuth grants to manage, your social accounts stay yours. Manage your hotel’s social presence for less than $1 a day.',
   heroImage: '/AdobeStock_1951250090.jpeg',
   heroAlt: 'Boutique hotel exterior at golden hour',
   problemBullets: [
@@ -64,7 +64,7 @@ const content: LpContent = {
     },
     {
       q: 'How much does Social Studio cost?',
-      a: 'Social Studio is an optional add-on, billed prorated on top of the $100/property/month base subscription. Toggle it on or off from /billing whenever you want. The base subscription stays whether or not you use the add-on.',
+      a: 'Social Studio is $29/property/month — less than $1 a day to manage your hotel’s social presence. Optional add-on, billed prorated on top of the $100/property/month base. Toggle it on or off from /billing whenever you want; the base subscription stays whether or not you use the add-on.',
     },
     {
       q: 'Where do the photos come from?',

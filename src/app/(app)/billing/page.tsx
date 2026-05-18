@@ -611,7 +611,7 @@ function AddonsCard({
             priceCents={4900}
             propertyCount={propertyCount}
             active={organization.signage_unlimited_addon_active}
-            description="Unlimited TV screens per property. Base subscription includes 3 per property; this add-on lifts the cap."
+            description="Unlimited TV screens per property, plus video, web pages, and date + time-of-day scheduling. Base subscription includes one lobby screen with image + text card content."
           />
         </div>
         <div className="p-5">
@@ -628,7 +628,7 @@ function AddonsCard({
           <AddonToggle
             addonKey="social_studio"
             label="Social Studio"
-            priceCents={1900}
+            priceCents={2900}
             propertyCount={propertyCount}
             active={organization.social_studio_addon_active}
             description="One AI-drafted social post per property per day — captions, hashtags, and a photo pick from your media library. Generated automatically every morning."

@@ -33,7 +33,7 @@ const COPY: Record<
     label: 'Signage Unlimited',
     priceCents: 4900,
     description:
-      'Unlimited TV screens per property. The base plan includes 3 screens; this add-on lifts the cap so you can keep adding screens at every property in your organization.',
+      'Unlimited TV screens per property, plus video, web pages, and date + time-of-day scheduling. The base plan includes one lobby screen with image and text card content — this add-on unlocks everything else, across every property in your organization.',
   },
   guest_experience: {
     label: 'Guest Experience',
