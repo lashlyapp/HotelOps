@@ -10,8 +10,9 @@ export const meta: BlogPostModule['meta'] = {
   publishedAt: '2026-09-04',
   readingMinutes: 6,
   topic: 'Guest experience',
-  heroImage: '/AdobeStock_131189921.jpeg',
-  heroAlt: 'Guest arriving in a modern boutique hotel room',
+  heroImage:
+    'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1200&q=80&auto=format&fit=crop',
+  heroAlt: 'Modern boutique hotel guest room ready for arrival',
 }
 
 export default function Post() {

@@ -10,8 +10,9 @@ export const meta: BlogPostModule['meta'] = {
   publishedAt: '2026-11-13',
   readingMinutes: 8,
   topic: 'Multi-property',
-  heroImage: '/AdobeStock_1951250090.jpeg',
-  heroAlt: 'New owner walking through a recently acquired boutique hotel',
+  heroImage:
+    'https://images.unsplash.com/photo-1649731000184-7ced04998f44?w=1200&q=80&auto=format&fit=crop',
+  heroAlt: 'Hotel corridor with artwork during a property walk-through',
 }
 
 export default function Post() {

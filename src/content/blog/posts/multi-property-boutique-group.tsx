@@ -10,8 +10,9 @@ export const meta: BlogPostModule['meta'] = {
   publishedAt: '2026-07-10',
   readingMinutes: 8,
   topic: 'Multi-property',
-  heroImage: '/AdobeStock_1951250090.jpeg',
-  heroAlt: 'Boutique hotel exterior — small group operations',
+  heroImage:
+    'https://images.unsplash.com/photo-1723813134110-ce365d5c3a73?w=1200&q=80&auto=format&fit=crop',
+  heroAlt: 'Multi-story boutique property lit up at night',
 }
 
 export default function Post() {

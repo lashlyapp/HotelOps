@@ -10,8 +10,9 @@ export const meta: BlogPostModule['meta'] = {
   publishedAt: '2026-06-12',
   readingMinutes: 7,
   topic: 'Guest experience',
-  heroImage: '/AdobeStock_131189921.jpeg',
-  heroAlt: 'Modern hotel guest room with a phone on the desk',
+  heroImage:
+    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1200&q=80&auto=format&fit=crop',
+  heroAlt: 'Hotel guest room with a wooden bed frame and bedside lamps',
 }
 
 export default function Post() {

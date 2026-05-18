@@ -9,9 +9,10 @@ export const meta: BlogPostModule['meta'] = {
   publishedAt: '2026-05-17',
   readingMinutes: 7,
   topic: 'Marketing',
-  heroImage: '/AdobeStock_131189921.jpeg',
+  heroImage:
+    'https://images.unsplash.com/photo-1758522488987-ad5f0bb86077?w=1200&q=80&auto=format&fit=crop',
   heroAlt:
-    'Phone propped on a hotel breakfast table with morning sun on the terrace.',
+    'Hotelier checking the property’s social feed over morning coffee',
 }
 
 export default function Post() {

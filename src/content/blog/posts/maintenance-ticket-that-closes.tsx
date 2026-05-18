@@ -10,8 +10,9 @@ export const meta: BlogPostModule['meta'] = {
   publishedAt: '2026-05-29',
   readingMinutes: 8,
   topic: 'Operations',
-  heroImage: '/AdobeStock_94588323.jpeg',
-  heroAlt: 'Hotel manager reviewing maintenance tickets on a tablet',
+  heroImage:
+    'https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=1200&q=80&auto=format&fit=crop',
+  heroAlt: 'Hand tools laid out for a hotel maintenance task',
 }
 
 export default function Post() {

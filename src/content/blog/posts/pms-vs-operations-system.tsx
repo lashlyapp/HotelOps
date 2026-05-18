@@ -9,8 +9,9 @@ export const meta: BlogPostModule['meta'] = {
   publishedAt: '2026-05-10',
   readingMinutes: 7,
   topic: 'PMS',
-  heroImage: '/AdobeStock_327436679.jpeg',
-  heroAlt: 'Boutique hotel reception desk where the PMS lives',
+  heroImage:
+    'https://images.unsplash.com/photo-1759038085950-1234ca8f5fed?w=1200&q=80&auto=format&fit=crop',
+  heroAlt: 'Modern hotel reception desk where the PMS lives',
 }
 
 export default function Post() {
