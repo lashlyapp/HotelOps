@@ -19,6 +19,7 @@ Multi-tenant operations stack for independent and boutique hotels. Self-serve si
 | Path             | What it does                                                                                                                  |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `/dashboard`     | Per-org overview: files, storage, recent invoices, per-property roll-up.                                                      |
+| `/market`        | **Revenue Intelligence** — AI-native commercial copilot. Auto-detected market profile + comp set, daily executive briefing, demand-signal feed, and pricing recommendations. No analyst configuration required. |
 | `/work-orders`   | Photo-first maintenance tickets on a Kanban board, time-stamped audit log.                                                    |
 | `/events`        | Events & catering: inquiry → proposal → invoice in one place; branded PDFs.                                                   |
 | `/signage`       | Browser-based digital signage. 3 screens in base; unlimited via the **Signage Unlimited** add-on.                             |

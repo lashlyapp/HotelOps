@@ -803,3 +803,115 @@ export type SocialCaptionFeedback = {
   created_at: string
   updated_at: string
 }
+
+// ----------------------------------------------------------------------------
+// Revenue Intelligence — see 20260522000000_revenue_intelligence.sql
+// ----------------------------------------------------------------------------
+
+export type MarketSegment =
+  | 'economy'
+  | 'midscale'
+  | 'upscale'
+  | 'luxury'
+  | 'lifestyle'
+  | 'boutique'
+
+export type DemandOutlook = 'soft' | 'steady' | 'strong' | 'compressed'
+
+export type SignalConfidence = 'low' | 'medium' | 'high'
+
+export type DemandSignalType =
+  | 'convention'
+  | 'concert'
+  | 'sports'
+  | 'festival'
+  | 'holiday'
+  | 'seasonal'
+  | 'compression'
+
+export type RecommendationType =
+  | 'rate_increase'
+  | 'rate_hold'
+  | 'rate_decrease'
+  | 'parity_alert'
+  | 'visibility_gap'
+
+export type CompetitorArchetype =
+  | 'similar_boutique'
+  | 'lifestyle_peer'
+  | 'upscale_chain'
+  | 'independent_peer'
+
+export type PropertyMarketProfile = {
+  property_id: string
+  org_id: string
+  market_segment: MarketSegment
+  tier: number
+  adr_floor: number | null
+  adr_ceiling: number | null
+  location_descriptor: string | null
+  amenity_tags: string | null
+  operator_confirmed: boolean
+  detected_at: string
+  updated_at: string
+}
+
+export type PropertyCompetitor = {
+  id: string
+  property_id: string
+  org_id: string
+  competitor_name: string
+  archetype: CompetitorArchetype
+  distance_km: number | null
+  adr_floor: number | null
+  adr_ceiling: number | null
+  match_score: number
+  external_source: string | null
+  external_id: string | null
+  created_at: string
+}
+
+export type MarketDemandSignal = {
+  id: string
+  property_id: string
+  org_id: string
+  signal_date: string
+  signal_key: string
+  signal_type: DemandSignalType
+  headline: string
+  intensity: number
+  confidence: SignalConfidence
+  context: Record<string, unknown>
+  created_at: string
+}
+
+export type PricingRecommendation = {
+  id: string
+  property_id: string
+  org_id: string
+  target_date: string
+  recommendation_key: string
+  recommendation_type: RecommendationType
+  headline: string
+  rationale: string | null
+  suggested_delta: number | null
+  priority: number
+  confidence: SignalConfidence
+  contributing_signals: string[]
+  acted_at: string | null
+  created_at: string
+}
+
+export type DailyMarketBriefing = {
+  id: string
+  property_id: string
+  org_id: string
+  briefing_date: string
+  headline: string
+  body: string
+  opportunity_count: number
+  alert_count: number
+  demand_outlook: DemandOutlook
+  source_signal_ids: string[]
+  created_at: string
+}
