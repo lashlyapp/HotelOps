@@ -21,13 +21,13 @@ import { getLocale } from '@/lib/i18n/get-locale'
 export const metadata: Metadata = {
   title: `Features — ${BRAND.name}`,
   description:
-    "Every MyHotelOps feature in one place — work orders, events, IT hub, signage, branded arrival pages, multi-property console, and more. Per-property pricing, no per-seat or per-screen surprises.",
+    "AI market intelligence at the core — daily executive briefing, OTA pricing radar, auto-detected comp set, demand signals, review intelligence. Plus the operational platform: work orders, events, signage, branded arrival pages. One license, one flat per-property price.",
   alternates: { canonical: `https://www.${BRAND.domain}/features` },
   openGraph: {
     type: 'website',
     title: `Features — ${BRAND.name}`,
     description:
-      "The full operations stack for boutique hotels — operations, guest-facing, media, multi-property, billing.",
+      "AI market intelligence + the operational platform for boutique hotels — all in one license.",
     url: `https://www.${BRAND.domain}/features`,
     siteName: BRAND.name,
   },

@@ -16,6 +16,7 @@ import { BRAND } from '@/lib/brand'
  * up automatically at /sitemap.xml.
  */
 const LP_SLUGS = [
+  'revenue-intelligence',
   'work-orders',
   'events',
   'signage',
@@ -57,7 +58,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${base}/lp/${slug}`,
       lastModified: now,
       changeFrequency: 'monthly' as const,
-      priority: 0.6,
+      // Flagship LP is bumped vs. operational LPs.
+      priority: slug === 'revenue-intelligence' ? 0.95 : 0.6,
     })),
     {
       url: `${base}/privacy`,

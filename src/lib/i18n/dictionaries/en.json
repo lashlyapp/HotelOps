@@ -74,6 +74,7 @@
     }
   },
   "nav": {
+    "marketIntelligence": "Market Intelligence",
     "workOrders": "Work Orders",
     "events": "Events & Catering",
     "signage": "Signage",
@@ -86,19 +87,19 @@
   },
   "marketing": {
     "hero": {
-      "eyebrow": "Hotel back-office software · works alongside any PMS",
-      "headline": "Everything your PMS doesn't do.",
-      "sub": "MyHotelOps is the operations layer that runs alongside your hotel's reservation system. Maintenance, events, vendors, signage, guest arrival — every part of running a boutique hotel that lives outside your PMS, in one place.",
-      "personaLine": "Built for owners, GMs, and managers — not for line staff fighting your reservation system.",
+      "eyebrow": "AI hospitality market intelligence · for independent hotels",
+      "headline": "Know what is happening around your hotel.",
+      "sub": "MyHotelOps is a real-time commercial radar for boutique and independent hotels. Monitor OTA pricing movement, nearby demand surges, competitor activity, and local events — without PMS integrations, analyst dashboards, or enterprise onboarding. The operational platform comes bundled.",
+      "personaLine": "Built for owners and GMs who want one short briefing each morning, not thirty dashboards each week.",
       "trialLine": "7-day free trial. No credit card. 10 GB included.",
       "ctaPrimary": "Start free trial",
       "ctaSecondary": "See pricing",
-      "imageAlt": "Hotel manager reviewing operations on a tablet"
+      "imageAlt": "Hotel manager reviewing market intelligence on a tablet"
     },
     "positioning": {
       "eyebrow": "Scope",
-      "title": "The category we're not in: your PMS.",
-      "body": "We will never replace Cloudbeds, Mews, Opera, or Little Hotelier. We sit next to them and handle every operational surface they leave to spreadsheets and group chats — work orders, event proposals, vendor logins, signage on every TV, the printable arrival card in every room."
+      "title": "Not your PMS. Not your booking engine. The radar.",
+      "body": "We do not replace Cloudbeds, Mews, Opera, or any reservation system. We watch the market around you — OTA pricing, comp-set availability, local events, weather disruption, review sentiment — and translate it into one short briefing each morning. The platform's operational tools (work orders, events, signage, social, arrival pages) come in the same license, so the daily ops your team already runs stays in one place."
     },
     "workOrders": {
       "eyebrow": "Module · included in base",
@@ -267,9 +268,38 @@
     "navLabel": "Features",
     "allLabel": "All features",
     "eyebrow": "Everything included",
-    "title": "Built like the boutique back office actually works.",
-    "sub": "The full surface area, in one place. No per-module pricing — every feature below is in the $100/property base or one of the three flat-rate add-ons. Nothing here costs extra by seat, by screen, or by room.",
+    "title": "AI market intelligence at the core, with the operational platform around it.",
+    "sub": "Market Intelligence — the daily briefing, OTA pricing radar, comp set, demand signals, review intelligence — sits at the heart of the platform. The operational modules (work orders, events, signage, social, arrival pages) come in the same license. One per-property price covers everything below.",
     "categories": [
+      {
+        "title": "Market Intelligence",
+        "items": [
+          {
+            "name": "Daily AI Briefing",
+            "description": "One short executive summary every morning — demand outlook, comp-set movement, 2–3 pricing opportunities. No charts, no spreadsheets, no analyst translation."
+          },
+          {
+            "name": "Auto-detected Comp Set",
+            "description": "Comparable boutiques are discovered the moment your property is added. No competitor list to configure, ever; their rates and availability shape your recommendations the same day."
+          },
+          {
+            "name": "OTA Pricing Radar",
+            "description": "Live competitor rates and availability from Booking.com, Expedia, and Hotelbeds (via licensed affiliate APIs). Saturday tightening shows up Monday with a concrete suggested rate, not a dashboard."
+          },
+          {
+            "name": "Local Demand Signals",
+            "description": "Concerts, conventions, festivals, sports, and severe weather within 25 km of your property — pulled from Ticketmaster, Eventbrite, NWS, Open-Meteo, and Wikipedia, surfaced as a 21-day demand outlook."
+          },
+          {
+            "name": "Review Intelligence",
+            "description": "30-day rolling sentiment, comp-set comparison, and top complaint / praise themes from TripAdvisor. Triggered by your TripAdvisor URL — nothing to configure, no analyst to hire."
+          },
+          {
+            "name": "Peer ADR Benchmark",
+            "description": "Anonymized rate band across boutiques in your city — opt-in, HMAC-hashed at contribution, never shown until at least three properties opt in (k-anonymity). The first cross-tenant signal nobody else has."
+          }
+        ]
+      },
       {
         "title": "Operations",
         "items": [
@@ -522,7 +552,7 @@
   "pricing": {
     "eyebrow": "Pricing",
     "headline": "Per property. Not per seat. Not per screen. Not per room.",
-    "sub": "One $100/property/month base. Three optional add-ons. That’s the whole price list — and the maximum a single property can possibly cost you is $217/month, regardless of how many screens, rooms, or staff you have.",
+    "sub": "One $100/property/month base — includes AI Market Intelligence and the full operational platform. Three optional flat-rate add-ons. That's the whole price list; max possible cost per property is $217/month, no matter how many screens, rooms, or staff you have. Lighthouse charges $300–800/month for market intelligence alone.",
     "midCycleNote": "No contracts. No annual commitments. Add or remove options whenever you want — cancel any time from your account.",
     "cadence": "property / month",
     "tagRequired": "Required",
@@ -530,8 +560,9 @@
     "plans": {
       "base": {
         "label": "Base",
-        "body": "Everything every property needs on day one — maintenance work orders, event proposals, IT records, media library, and a lobby signage screen.",
+        "body": "AI Market Intelligence (daily briefing, OTA pricing radar, comp set, demand signals, review intelligence) plus the full operational platform — work orders, events, IT hub, media library, and a lobby signage screen.",
         "features": [
+          "AI Market Intelligence — daily briefing, OTA radar, comp set, demand signals, review intelligence",
           "Work Orders (Kanban with photo/video evidence)",
           "Events & Catering (inquiry → proposal → invoice)",
           "IT Hub (Wi-Fi, vendor logins, equipment)",

@@ -50,6 +50,9 @@ export type Organization = {
   // $150 hotelops_setup_fee line item is attached to every property's
   // first invoice (per-property pricing).
   wants_onboarding_session: boolean
+  // Revenue Intelligence preferences — see 20260522030000_revenue_intelligence_rates.sql.
+  peer_adr_opt_in: boolean
+  market_briefing_email_opt_out: boolean
 }
 
 export type Profile = {
@@ -802,4 +805,165 @@ export type SocialCaptionFeedback = {
   voter_id: string | null
   created_at: string
   updated_at: string
+}
+
+// ----------------------------------------------------------------------------
+// Revenue Intelligence — see 20260522000000_revenue_intelligence.sql
+// ----------------------------------------------------------------------------
+
+export type MarketSegment =
+  | 'economy'
+  | 'midscale'
+  | 'upscale'
+  | 'luxury'
+  | 'lifestyle'
+  | 'boutique'
+
+export type DemandOutlook = 'soft' | 'steady' | 'strong' | 'compressed'
+
+export type SignalConfidence = 'low' | 'medium' | 'high'
+
+export type DemandSignalType =
+  | 'convention'
+  | 'concert'
+  | 'sports'
+  | 'festival'
+  | 'holiday'
+  | 'seasonal'
+  | 'compression'
+
+export type RecommendationType =
+  | 'rate_increase'
+  | 'rate_hold'
+  | 'rate_decrease'
+  | 'parity_alert'
+  | 'visibility_gap'
+
+export type CompetitorArchetype =
+  | 'similar_boutique'
+  | 'lifestyle_peer'
+  | 'upscale_chain'
+  | 'independent_peer'
+
+export type PropertyMarketProfile = {
+  property_id: string
+  org_id: string
+  market_segment: MarketSegment
+  tier: number
+  adr_floor: number | null
+  adr_ceiling: number | null
+  location_descriptor: string | null
+  amenity_tags: string | null
+  operator_confirmed: boolean
+  detected_at: string
+  updated_at: string
+  // Customer-provided external identifiers for review intelligence.
+  // Added by 20260522020000_revenue_intelligence_expansion.sql.
+  tripadvisor_url: string | null
+  google_place_id: string | null
+}
+
+export type PropertyCompetitor = {
+  id: string
+  property_id: string
+  org_id: string
+  competitor_name: string
+  archetype: CompetitorArchetype
+  distance_km: number | null
+  adr_floor: number | null
+  adr_ceiling: number | null
+  match_score: number
+  external_source: string | null
+  external_id: string | null
+  created_at: string
+}
+
+export type MarketDemandSignal = {
+  id: string
+  property_id: string
+  org_id: string
+  signal_date: string
+  signal_key: string
+  signal_type: DemandSignalType
+  headline: string
+  intensity: number
+  confidence: SignalConfidence
+  context: Record<string, unknown>
+  created_at: string
+}
+
+export type PricingRecommendation = {
+  id: string
+  property_id: string
+  org_id: string
+  target_date: string
+  recommendation_key: string
+  recommendation_type: RecommendationType
+  headline: string
+  rationale: string | null
+  suggested_delta: number | null
+  priority: number
+  confidence: SignalConfidence
+  contributing_signals: string[]
+  acted_at: string | null
+  created_at: string
+}
+
+export type DailyMarketBriefing = {
+  id: string
+  property_id: string
+  org_id: string
+  briefing_date: string
+  headline: string
+  body: string
+  opportunity_count: number
+  alert_count: number
+  demand_outlook: DemandOutlook
+  source_signal_ids: string[]
+  created_at: string
+}
+
+// L3 signal tables added in 20260522020000_revenue_intelligence_expansion.sql
+
+export type ReviewSentimentSignal = {
+  id: string
+  property_id: string
+  org_id: string
+  observed_at: string
+  window_days: number
+  rating_avg: number | null
+  rating_delta_vs_prev: number | null
+  review_count_window: number
+  sentiment_avg: number | null
+  top_complaint_theme: string | null
+  top_praise_theme: string | null
+  competitor_avg: number | null
+  vs_competitor_delta: number | null
+}
+
+export type SearchIntentSignal = {
+  id: string
+  property_id: string
+  org_id: string
+  observed_at: string
+  destination_demand_score: number | null
+  wow_change_pct: number | null
+  yoy_change_pct: number | null
+  pageview_avg_7d: number | null
+  pageview_avg_28d: number | null
+  trending_up: boolean
+}
+
+export type WeatherDisruptionSignal = {
+  id: string
+  property_id: string
+  org_id: string
+  signal_date: string
+  kind: string
+  intensity: number
+  headline: string
+  effective_at: string | null
+  ends_at: string | null
+  source: string
+  source_external_id: string | null
 }

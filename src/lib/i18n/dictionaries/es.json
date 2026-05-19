@@ -74,6 +74,7 @@
     }
   },
   "nav": {
+    "marketIntelligence": "Inteligencia de mercado",
     "workOrders": "Órdenes de trabajo",
     "events": "Eventos y banquetes",
     "signage": "Señalización",
@@ -86,14 +87,14 @@
   },
   "marketing": {
     "hero": {
-      "eyebrow": "Software de back-office hotelero · compatible con cualquier PMS",
-      "headline": "Todo lo que tu PMS no hace.",
-      "sub": "MyHotelOps es la capa de operaciones que funciona junto a tu sistema de reservas. Mantenimiento, eventos, proveedores, señalización, llegada del huésped — todo lo que implica gestionar un hotel boutique fuera del PMS, en un solo lugar.",
-      "personaLine": "Diseñado para propietarios, directores y gerentes — no para el personal que lucha con tu sistema de reservas.",
+      "eyebrow": "Inteligencia hotelera con IA · para hoteles independientes",
+      "headline": "Sepa qué ocurre alrededor de su hotel.",
+      "sub": "MyHotelOps es un radar comercial en tiempo real para hoteles boutique e independientes. Monitoree el movimiento de precios OTA, los picos de demanda cercanos, la actividad de la competencia y los eventos locales — sin integraciones con el PMS, sin paneles de analistas, sin onboarding empresarial. La plataforma operativa viene incluida.",
+      "personaLine": "Diseñado para propietarios y gerentes que quieren un breve resumen cada mañana, no treinta paneles cada semana.",
       "trialLine": "Prueba gratuita de 7 días. Sin tarjeta de crédito. 10 GB incluidos.",
       "ctaPrimary": "Empezar prueba gratuita",
       "ctaSecondary": "Ver precios",
-      "imageAlt": "Gerente de hotel revisando operaciones en una tableta"
+      "imageAlt": "Gerente de hotel revisando inteligencia de mercado en una tableta"
     },
     "positioning": {
       "eyebrow": "Alcance",
@@ -270,6 +271,35 @@
     "title": "Construido como realmente funciona el back-office boutique.",
     "sub": "Toda la superficie, en un solo lugar. Sin precios por módulo — cada función a continuación está en la base de $100/propiedad o en uno de los tres complementos de tarifa plana. Nada aquí cuesta extra por puesto, pantalla o habitación.",
     "categories": [
+      {
+        "title": "Inteligencia de mercado",
+        "items": [
+          {
+            "name": "Resumen diario con IA",
+            "description": "Un breve resumen ejecutivo cada mañana — perspectiva de demanda, movimiento del comp set y 2 o 3 oportunidades de precio. Sin gráficos, sin hojas de cálculo, sin traducción analista."
+          },
+          {
+            "name": "Comp set detectado automáticamente",
+            "description": "Los hoteles boutique cercanos se descubren en el momento en que añades tu propiedad. Nunca configuras una lista de competidores; sus tarifas y disponibilidad alimentan tus recomendaciones desde el primer día."
+          },
+          {
+            "name": "Radar de precios OTA",
+            "description": "Tarifas y disponibilidad de la competencia en tiempo real desde Booking.com, Expedia y Hotelbeds (vía APIs de afiliado con licencia). El sábado se tensa: el lunes lo sabes, con una tarifa concreta sugerida."
+          },
+          {
+            "name": "Señales de demanda local",
+            "description": "Conciertos, congresos, festivales, deportes y meteorología severa en un radio de 25 km — extraídos de Ticketmaster, Eventbrite, NWS, Open-Meteo y Wikipedia, presentados como perspectiva de demanda a 21 días."
+          },
+          {
+            "name": "Inteligencia de reseñas",
+            "description": "Sentimiento móvil de 30 días, comparación con la competencia y temas principales de elogio o queja desde TripAdvisor. Se activa con tu URL de TripAdvisor — sin configuración, sin analista que contratar."
+          },
+          {
+            "name": "Benchmark ADR entre pares",
+            "description": "Banda de tarifas anónima entre boutiques de tu ciudad — opt-in, hash HMAC al contribuir, nunca mostrado hasta que al menos tres propiedades opten (k-anonimato). La primera señal cross-tenant que nadie más tiene."
+          }
+        ]
+      },
       {
         "title": "Operaciones",
         "items": [
@@ -530,8 +560,9 @@
     "plans": {
       "base": {
         "label": "Base",
-        "body": "Todo lo que cada propiedad necesita desde el primer día — órdenes de trabajo de mantenimiento, propuestas de eventos, registros de IT, biblioteca multimedia y una pantalla de señalización para el lobby.",
+        "body": "Inteligencia de Mercado con IA (resumen diario, radar de precios OTA, comp set, señales de demanda, inteligencia de reseñas) más toda la plataforma operativa — órdenes de trabajo, eventos, IT hub, biblioteca multimedia y una pantalla de señalización del lobby.",
         "features": [
+          "Inteligencia de mercado con IA — resumen diario, radar OTA, comp set, señales de demanda, inteligencia de reseñas",
           "Órdenes de trabajo (Kanban con evidencia foto/vídeo)",
           "Eventos y banquetes (consulta → propuesta → factura)",
           "IT Hub (Wi-Fi, accesos de proveedores, equipamiento)",

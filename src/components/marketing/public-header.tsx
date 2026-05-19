@@ -56,6 +56,7 @@ export function PublicHeader({
           <FeaturesDropdown
             label={dict.features.navLabel}
             items={[
+              { href: '/lp/revenue-intelligence', label: dict.nav.marketIntelligence },
               { href: '/#work-orders', label: dict.nav.workOrders },
               { href: '/features#operations', label: dict.nav.events },
               { href: '/#signage', label: dict.nav.signage },

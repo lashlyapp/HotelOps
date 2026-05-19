@@ -74,6 +74,7 @@
     }
   },
   "nav": {
+    "marketIntelligence": "Intelligence de marché",
     "workOrders": "Bons de travail",
     "events": "Événements & banquets",
     "signage": "Affichage",
@@ -86,14 +87,14 @@
   },
   "marketing": {
     "hero": {
-      "eyebrow": "Logiciel back-office pour hôtels · compatible avec tout PMS",
-      "headline": "Tout ce que votre PMS ne fait pas.",
-      "sub": "MyHotelOps est la couche d'exploitation qui fonctionne aux côtés de votre système de réservation. Maintenance, événements, fournisseurs, affichage, accueil des clients — tout ce qui fait tourner un hôtel boutique en dehors du PMS, au même endroit.",
-      "personaLine": "Conçu pour les propriétaires, directeurs et managers — pas pour le personnel qui se bat avec votre système de réservation.",
+      "eyebrow": "Intelligence hôtelière par IA · pour hôtels indépendants",
+      "headline": "Sachez ce qui se passe autour de votre hôtel.",
+      "sub": "MyHotelOps est un radar commercial en temps réel pour les hôtels boutique et indépendants. Surveillez les mouvements de prix OTA, les pics de demande à proximité, l'activité concurrente et les événements locaux — sans intégration PMS, sans tableaux de bord d'analyste, sans déploiement entreprise. La plateforme opérationnelle est incluse.",
+      "personaLine": "Conçu pour les propriétaires et directeurs qui veulent un bref résumé chaque matin, pas trente tableaux de bord chaque semaine.",
       "trialLine": "Essai gratuit de 7 jours. Sans carte bancaire. 10 Go inclus.",
       "ctaPrimary": "Démarrer l'essai gratuit",
       "ctaSecondary": "Voir les tarifs",
-      "imageAlt": "Manager d'hôtel passant en revue les opérations sur une tablette"
+      "imageAlt": "Manager d'hôtel passant en revue l'intelligence de marché sur une tablette"
     },
     "positioning": {
       "eyebrow": "Périmètre",
@@ -270,6 +271,35 @@
     "title": "Conçu comme un back-office boutique fonctionne réellement.",
     "sub": "Toute la surface, en un seul endroit. Pas de tarification par module — chaque fonctionnalité ci-dessous est dans la base à 100$/propriété ou dans l'une des trois options à tarif forfaitaire. Rien ici ne coûte plus par siège, par écran ou par chambre.",
     "categories": [
+      {
+        "title": "Intelligence de marché",
+        "items": [
+          {
+            "name": "Briefing quotidien IA",
+            "description": "Un court résumé exécutif chaque matin — perspective de la demande, mouvement du comp set, 2 à 3 opportunités tarifaires. Pas de graphiques, pas de tableurs, pas de traduction d'analyste."
+          },
+          {
+            "name": "Comp set détecté automatiquement",
+            "description": "Les boutiques voisines sont identifiées dès l'ajout de votre établissement. Aucune liste de concurrents à configurer ; leurs tarifs et disponibilités nourrissent vos recommandations dès le premier jour."
+          },
+          {
+            "name": "Radar des prix OTA",
+            "description": "Tarifs et disponibilités concurrents en direct depuis Booking.com, Expedia et Hotelbeds (via APIs affiliées sous licence). Le samedi se tend : vous le savez le lundi, avec un tarif suggéré concret."
+          },
+          {
+            "name": "Signaux de demande locale",
+            "description": "Concerts, congrès, festivals, sports et météo sévère dans un rayon de 25 km — récupérés depuis Ticketmaster, Eventbrite, NWS, Open-Meteo et Wikipedia, présentés comme une perspective de demande sur 21 jours."
+          },
+          {
+            "name": "Intelligence des avis",
+            "description": "Sentiment glissant sur 30 jours, comparaison au comp set et thèmes principaux d'éloge ou de plainte depuis TripAdvisor. Activé par votre URL TripAdvisor — rien à configurer, pas d'analyste à embaucher."
+          },
+          {
+            "name": "Benchmark ADR entre pairs",
+            "description": "Bande tarifaire anonymisée entre boutiques de votre ville — opt-in, haché HMAC à la contribution, jamais affiché tant que trois établissements n'ont pas opté (k-anonymat). Le premier signal cross-tenant que personne d'autre n'a."
+          }
+        ]
+      },
       {
         "title": "Exploitation",
         "items": [
@@ -530,8 +560,9 @@
     "plans": {
       "base": {
         "label": "Base",
-        "body": "Tout ce dont chaque propriété a besoin dès le premier jour — bons de travail de maintenance, propositions d'événements, registres IT, bibliothèque média et un écran d'affichage pour le lobby.",
+        "body": "Intelligence de marché par IA (briefing quotidien, radar des prix OTA, comp set, signaux de demande, intelligence des avis) plus toute la plateforme opérationnelle — bons de travail, événements, IT hub, bibliothèque média et un écran d'affichage du lobby.",
         "features": [
+          "Intelligence de marché par IA — briefing quotidien, radar OTA, comp set, signaux de demande, intelligence des avis",
           "Bons de travail (Kanban avec preuve photo/vidéo)",
           "Événements & banquets (demande → proposition → facture)",
           "IT Hub (Wi-Fi, accès fournisseurs, équipement)",

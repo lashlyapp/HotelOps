@@ -25,6 +25,7 @@ import type { Dictionary } from '@/lib/i18n/dictionaries'
  * positional so cross-locale links work.
  */
 const CATEGORY_SLUGS = [
+  'market-intelligence',
   'operations',
   'guest-facing',
   'media',
