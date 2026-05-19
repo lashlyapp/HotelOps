@@ -50,6 +50,9 @@ export type Organization = {
   // $150 hotelops_setup_fee line item is attached to every property's
   // first invoice (per-property pricing).
   wants_onboarding_session: boolean
+  // Revenue Intelligence preferences — see 20260522030000_revenue_intelligence_rates.sql.
+  peer_adr_opt_in: boolean
+  market_briefing_email_opt_out: boolean
 }
 
 export type Profile = {

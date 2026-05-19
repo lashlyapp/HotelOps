@@ -163,6 +163,40 @@ export async function saveMarketProfileAction(
 // Mark a recommendation as acted on so it stops appearing in the
 // "active opportunities" list.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Toggle org-level Revenue Intelligence preferences:
+//   • peer_adr_opt_in — contribute anonymized ADR band to the city pool
+//   • market_briefing_email_opt_out — silence the daily 6am digest
+// Only org_owners can change these.
+// ---------------------------------------------------------------------------
+export async function saveMarketPreferencesAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await requireOrgUser({ write: true })
+  const blocked = denyIfRestricted(session)
+  if (blocked) return blocked
+  if (session.profile.role !== 'org_owner') {
+    return { error: 'Only the org owner can change market preferences.' }
+  }
+
+  const peerOptIn = String(formData.get('peer_adr_opt_in') ?? '') === 'on'
+  const emailOptOut = String(formData.get('market_briefing_email_opt_out') ?? '') === 'on'
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('organizations')
+    .update({
+      peer_adr_opt_in: peerOptIn,
+      market_briefing_email_opt_out: emailOptOut,
+    })
+    .eq('id', session.organization.id)
+  if (error) return { error: error.message }
+
+  revalidatePath('/market/settings')
+  return { success: 'Preferences saved.' }
+}
+
 export async function actOnRecommendationAction(
   formData: FormData,
 ): Promise<void> {

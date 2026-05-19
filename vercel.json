@@ -64,6 +64,22 @@
     {
       "path": "/api/cron/scrape-tripadvisor",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-booking-rates",
+      "schedule": "0 4,16 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-expedia-rates",
+      "schedule": "30 4,16 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-hotelbeds-rates",
+      "schedule": "0 5,17 * * *"
+    },
+    {
+      "path": "/api/cron/send-market-briefing-email",
+      "schedule": "0 13 * * *"
     }
   ]
 }

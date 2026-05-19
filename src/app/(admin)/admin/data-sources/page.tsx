@@ -21,6 +21,9 @@ const RUNNABLE_SOURCES = new Set([
   'ticketmaster',
   'eventbrite',
   'tripadvisor',
+  'booking_affiliate',
+  'expedia_rapid',
+  'hotelbeds',
 ])
 
 const CATEGORY_LABEL: Record<string, string> = {

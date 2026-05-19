@@ -184,7 +184,16 @@ boundary for years.
 | Open-Meteo | Weather | None | 14-day forecast, severe alerts |
 | Wikipedia events | Events | None | Annual festivals, recurring events |
 
-### Active (PR 3 — this PR)
+### Active (PR 4 — competitor rates + peer benchmark + email digest)
+| Source / surface | Layer | Key needed | Notes |
+|---|---|---|---|
+| Booking.com Affiliate Distribution v2 | Comp rates | `BOOKING_AFFILIATE_USERNAME` + `_PASSWORD` | Prebuilt adapter; flips on the moment creds land |
+| Expedia Rapid (EAN) v3 | Comp rates | `EXPEDIA_RAPID_API_KEY` + `_API_SECRET` | Prebuilt; SHA-512 signature header |
+| Hotelbeds Hotel API 1.0 | Comp rates | `HOTELBEDS_API_KEY` + `_API_SECRET` | Prebuilt; SHA-256 signature header |
+| Peer ADR pool | L3 signal | `PEER_HASH_SALT` env | Opt-in per org on /market/settings; k-anonymity ≥3 enforced |
+| Daily morning email digest | Surface | `RESEND_API_KEY` (already set) | Per-property briefing sent to org owner at 13:00 UTC; opt-out per org |
+
+### Active (PR 3)
 | Source | Layer | Key needed | Notes |
 |---|---|---|---|
 | NWS alerts | Disruption | None | US severe weather alerts |
@@ -284,10 +293,11 @@ Status updated as items are reported done.
 - [ ] Set `PEER_HASH_SALT` env var (any long random string) — used to hash reviewer names for anonymity. Rotate it never if you want stable hashes; rotate it once if you ever need to invalidate a leaked dataset.
 
 ## Phase 3 — OTA affiliate approvals (1–2 weeks each, do in parallel)
-- [ ] Apply for **Booking.com Affiliate Partner** at partner.booking.com → on approval, add credentials as `BOOKING_AFFILIATE_*` env vars
-- [ ] Apply for **Expedia Group Rapid (EAN)** at developers.expediagroup.com → add credentials as `EXPEDIA_RAPID_*` env vars
+Adapters are prebuilt; flip on the moment env vars land.
+- [ ] Apply for **Booking.com Affiliate Partner** at partner.booking.com → add `BOOKING_AFFILIATE_USERNAME` + `BOOKING_AFFILIATE_PASSWORD`
+- [ ] Apply for **Expedia Group Rapid (EAN)** at developers.expediagroup.com → add `EXPEDIA_RAPID_API_KEY` + `EXPEDIA_RAPID_API_SECRET`
+- [ ] Apply for **Hotelbeds** at developer.hotelbeds.com → add `HOTELBEDS_API_KEY` + `HOTELBEDS_API_SECRET`
 - [ ] (Optional, fastest) Apply for **Travelpayouts** at travelpayouts.com → add `TRAVELPAYOUTS_API_TOKEN`
-- [ ] Apply for **Hotelbeds** at developer.hotelbeds.com → add `HOTELBEDS_*` env vars
 
 ## Phase 4 — Optional product decisions
 - [ ] Decide: turn on peer ADR pool (requires customer opt-in flow build) — yes/no

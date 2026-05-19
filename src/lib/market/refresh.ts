@@ -15,6 +15,8 @@ import { refreshDemandSignals } from './demand'
 import { detectAndStoreMarketProfile } from './profile'
 import { refreshPricingRecommendations } from './recommendations'
 import { buildDemandSignalsFromRealData } from './signals/demand'
+import { buildParitySnapshots } from './signals/parity'
+import { buildPeerBenchmark, contributePeerAdr } from './signals/peer-benchmark'
 import { buildReviewSentimentSignals } from './signals/review-sentiment'
 import { buildSearchIntentSignals } from './signals/search-intent'
 import { buildWeatherDisruptionSignals } from './signals/weather-disruption'
@@ -58,6 +60,9 @@ export async function refreshMarketIntelligence(
     buildWeatherDisruptionSignals(property, { today: options.today }),
     buildSearchIntentSignals(property),
     buildReviewSentimentSignals(property),
+    buildParitySnapshots(property, profile),
+    contributePeerAdr(property, profile, organization.currency),
+    buildPeerBenchmark(property, profile),
   ])
   const recommendations = await refreshPricingRecommendations(
     property,

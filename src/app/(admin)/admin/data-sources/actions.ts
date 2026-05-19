@@ -6,8 +6,11 @@ import { getDataSource, setDataSourceEnabled } from '@/lib/market/registry'
 import { buildAdapterContext } from '@/lib/market/sources/context'
 import { runAdapter } from '@/lib/market/sources/runner'
 import type { Adapter } from '@/lib/market/sources/types'
+import { bookingAffiliateAdapter } from '@/lib/market/sources/booking-affiliate'
 import { eventbriteAdapter } from '@/lib/market/sources/eventbrite'
 import { exchangeRateAdapter } from '@/lib/market/sources/exchange-rate'
+import { expediaRapidAdapter } from '@/lib/market/sources/expedia-rapid'
+import { hotelbedsAdapter } from '@/lib/market/sources/hotelbeds'
 import { nagerHolidaysAdapter } from '@/lib/market/sources/nager-holidays'
 import { nwsAlertsAdapter } from '@/lib/market/sources/nws-alerts'
 import { openMeteoAdapter } from '@/lib/market/sources/open-meteo'
@@ -20,6 +23,7 @@ import { normalizeDisruptions } from '@/lib/market/normalizers/disruptions'
 import { normalizeEvents } from '@/lib/market/normalizers/events'
 import { normalizeFx } from '@/lib/market/normalizers/fx'
 import { normalizeHolidays } from '@/lib/market/normalizers/holidays'
+import { normalizeRates } from '@/lib/market/normalizers/rates'
 import { normalizeReviews } from '@/lib/market/normalizers/reviews'
 import { normalizeSearchDemand } from '@/lib/market/normalizers/search-demand'
 import { normalizeVenues } from '@/lib/market/normalizers/venues'
@@ -44,6 +48,9 @@ const ADAPTER_BY_SOURCE: Record<
   ticketmaster: { adapter: ticketmasterAdapter, normalize: normalizeEvents },
   eventbrite: { adapter: eventbriteAdapter, normalize: normalizeEvents },
   tripadvisor: { adapter: tripadvisorAdapter, normalize: normalizeReviews },
+  booking_affiliate: { adapter: bookingAffiliateAdapter, normalize: normalizeRates },
+  expedia_rapid: { adapter: expediaRapidAdapter, normalize: normalizeRates },
+  hotelbeds: { adapter: hotelbedsAdapter, normalize: normalizeRates },
 }
 
 export async function toggleDataSourceAction(

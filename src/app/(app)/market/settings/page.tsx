@@ -4,6 +4,7 @@ import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requireOrgUser } from '@/lib/auth/session'
 import { detectAndStoreMarketProfile } from '@/lib/market/profile'
 import { PropertyTabs } from '../_components/property-tabs'
+import { PreferencesForm } from './_components/preferences-form'
 import { ProfileForm } from './_components/profile-form'
 
 type SearchParams = Promise<{ property?: string }>
@@ -69,6 +70,18 @@ export default async function MarketSettingsPage({
           active: p.slug === activeProperty.slug,
         }))}
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Org-wide preferences</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <PreferencesForm
+            peerAdrOptIn={session.organization.peer_adr_opt_in}
+            marketBriefingEmailOptOut={session.organization.market_briefing_email_opt_out}
+          />
+        </CardBody>
+      </Card>
 
       <Card>
         <CardHeader>
