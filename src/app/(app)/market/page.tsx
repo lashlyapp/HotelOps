@@ -6,12 +6,15 @@ import {
   loadMarketBundleForToday,
   refreshMarketIntelligence,
 } from '@/lib/market/refresh'
+import { createAdminClient } from '@/lib/supabase/admin'
+import type { PropertyMarketProfile, ReviewSentimentSignal } from '@/lib/supabase/types'
 import { BriefingCard } from './_components/briefing-card'
 import { CompetitorList } from './_components/competitor-list'
 import { DemandList } from './_components/demand-list'
 import { PropertyTabs } from './_components/property-tabs'
 import { RecommendationsList } from './_components/recommendations-list'
 import { RefreshForm } from './_components/refresh-form'
+import { ReviewIntelligenceCard } from './_components/review-intelligence-card'
 
 type SearchParams = Promise<{ property?: string }>
 
@@ -57,6 +60,26 @@ export default async function MarketPage({
 
   const currencyCode = session.organization.currency.toUpperCase()
 
+  // Pull the latest review sentiment snapshot + profile to decide
+  // whether the review intelligence card should prompt for a
+  // TripAdvisor URL or show real data.
+  const admin = createAdminClient()
+  const [{ data: latestReview }, { data: profileRow }] = await Promise.all([
+    admin
+      .from('review_sentiment_signals')
+      .select('*')
+      .eq('property_id', activeProperty.id)
+      .order('observed_at', { ascending: false })
+      .limit(1)
+      .maybeSingle<ReviewSentimentSignal>(),
+    admin
+      .from('property_market_profile')
+      .select('tripadvisor_url')
+      .eq('property_id', activeProperty.id)
+      .maybeSingle<Pick<PropertyMarketProfile, 'tripadvisor_url'>>(),
+  ])
+  const hasTripadvisorUrl = Boolean(profileRow?.tripadvisor_url)
+
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-5xl">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -90,6 +113,11 @@ export default async function MarketPage({
         <RecommendationsList recommendations={bundle.recommendations} />
         <DemandList signals={bundle.signals} />
       </div>
+
+      <ReviewIntelligenceCard
+        signal={latestReview ?? null}
+        hasTripadvisorUrl={hasTripadvisorUrl}
+      />
 
       <CompetitorList
         competitors={bundle.competitors}

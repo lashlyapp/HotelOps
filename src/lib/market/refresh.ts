@@ -15,6 +15,9 @@ import { refreshDemandSignals } from './demand'
 import { detectAndStoreMarketProfile } from './profile'
 import { refreshPricingRecommendations } from './recommendations'
 import { buildDemandSignalsFromRealData } from './signals/demand'
+import { buildReviewSentimentSignals } from './signals/review-sentiment'
+import { buildSearchIntentSignals } from './signals/search-intent'
+import { buildWeatherDisruptionSignals } from './signals/weather-disruption'
 
 export type MarketIntelligenceBundle = {
   profile: PropertyMarketProfile
@@ -46,6 +49,16 @@ export async function refreshMarketIntelligence(
   const signals = realSignals.length > 0
     ? realSignals
     : await refreshDemandSignals(property, profile, { today: options.today })
+
+  // Best-effort: build the auxiliary signals (weather disruptions,
+  // search intent, review sentiment) when their data is available.
+  // Failures here don't block /market — the briefing degrades to
+  // "data not yet available" rather than throwing.
+  await Promise.allSettled([
+    buildWeatherDisruptionSignals(property, { today: options.today }),
+    buildSearchIntentSignals(property),
+    buildReviewSentimentSignals(property),
+  ])
   const recommendations = await refreshPricingRecommendations(
     property,
     profile,

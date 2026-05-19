@@ -854,6 +854,10 @@ export type PropertyMarketProfile = {
   operator_confirmed: boolean
   detected_at: string
   updated_at: string
+  // Customer-provided external identifiers for review intelligence.
+  // Added by 20260522020000_revenue_intelligence_expansion.sql.
+  tripadvisor_url: string | null
+  google_place_id: string | null
 }
 
 export type PropertyCompetitor = {
@@ -914,4 +918,49 @@ export type DailyMarketBriefing = {
   demand_outlook: DemandOutlook
   source_signal_ids: string[]
   created_at: string
+}
+
+// L3 signal tables added in 20260522020000_revenue_intelligence_expansion.sql
+
+export type ReviewSentimentSignal = {
+  id: string
+  property_id: string
+  org_id: string
+  observed_at: string
+  window_days: number
+  rating_avg: number | null
+  rating_delta_vs_prev: number | null
+  review_count_window: number
+  sentiment_avg: number | null
+  top_complaint_theme: string | null
+  top_praise_theme: string | null
+  competitor_avg: number | null
+  vs_competitor_delta: number | null
+}
+
+export type SearchIntentSignal = {
+  id: string
+  property_id: string
+  org_id: string
+  observed_at: string
+  destination_demand_score: number | null
+  wow_change_pct: number | null
+  yoy_change_pct: number | null
+  pageview_avg_7d: number | null
+  pageview_avg_28d: number | null
+  trending_up: boolean
+}
+
+export type WeatherDisruptionSignal = {
+  id: string
+  property_id: string
+  org_id: string
+  signal_date: string
+  kind: string
+  intensity: number
+  headline: string
+  effective_at: string | null
+  ends_at: string | null
+  source: string
+  source_external_id: string | null
 }

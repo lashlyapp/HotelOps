@@ -36,6 +36,34 @@
     {
       "path": "/api/cron/scrape-wikipedia-events",
       "schedule": "0 4 * * 1"
+    },
+    {
+      "path": "/api/cron/scrape-nws-alerts",
+      "schedule": "0 */3 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-pageviews",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-fx",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-venues",
+      "schedule": "0 2 * * 0"
+    },
+    {
+      "path": "/api/cron/scrape-ticketmaster",
+      "schedule": "0 */2 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-eventbrite",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-tripadvisor",
+      "schedule": "0 7 * * *"
     }
   ]
 }

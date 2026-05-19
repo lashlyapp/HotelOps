@@ -85,6 +85,7 @@ export default async function MarketSettingsPage({
               adr_ceiling: profile.adr_ceiling,
               location_descriptor: profile.location_descriptor,
               amenity_tags: profile.amenity_tags,
+              tripadvisor_url: profile.tripadvisor_url,
             }}
           />
         </CardBody>

@@ -113,6 +113,10 @@ export async function saveMarketProfileAction(
   }
   const location = trimOrNull(formData.get('location_descriptor'))
   const amenityTags = trimOrNull(formData.get('amenity_tags'))
+  const tripadvisorUrl = trimOrNull(formData.get('tripadvisor_url'))
+  if (tripadvisorUrl && !/^https?:\/\/(www\.)?tripadvisor\./i.test(tripadvisorUrl)) {
+    return { error: 'TripAdvisor URL must point to tripadvisor.com (or a regional .co.uk / .ca etc).' }
+  }
 
   const update: Partial<PropertyMarketProfile> & {
     property_id: string
@@ -126,6 +130,7 @@ export async function saveMarketProfileAction(
     adr_ceiling: adrCeiling,
     location_descriptor: location,
     amenity_tags: amenityTags,
+    tripadvisor_url: tripadvisorUrl,
     operator_confirmed: true,
     updated_at: new Date().toISOString(),
   }

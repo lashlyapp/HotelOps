@@ -9,7 +9,7 @@ export async function buildAdapterContext(): Promise<AdapterContext> {
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('properties')
-    .select('id, org_id, city, state, country, address_line1, postal_code')
+    .select('id, org_id, name, city, state, country, address_line1, postal_code')
   if (error) throw new Error(`buildAdapterContext: ${error.message}`)
 
   // Properties don't yet have lat/lon columns. v1 sources that need
@@ -22,6 +22,7 @@ export async function buildAdapterContext(): Promise<AdapterContext> {
       return {
         id: p.id,
         org_id: p.org_id,
+        name: p.name,
         city: p.city,
         state: p.state,
         country: p.country,
@@ -37,6 +38,7 @@ export async function buildAdapterContext(): Promise<AdapterContext> {
 type PropertyRow = {
   id: string
   org_id: string
+  name: string
   city: string | null
   state: string | null
   country: string

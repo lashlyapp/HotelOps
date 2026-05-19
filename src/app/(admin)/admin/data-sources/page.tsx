@@ -10,7 +10,18 @@ import { ToggleForm } from './_components/toggle-form'
 
 // Sources whose adapters ship in this PR — anything else is shown as
 // "registered, awaiting implementation" in the UI.
-const RUNNABLE_SOURCES = new Set(['nager_holidays', 'open_meteo', 'wikipedia_events'])
+const RUNNABLE_SOURCES = new Set([
+  'nager_holidays',
+  'open_meteo',
+  'wikipedia_events',
+  'nws_alerts',
+  'wikipedia_pageviews',
+  'exchange_rate_host',
+  'overpass_venues',
+  'ticketmaster',
+  'eventbrite',
+  'tripadvisor',
+])
 
 const CATEGORY_LABEL: Record<string, string> = {
   events: 'Events',

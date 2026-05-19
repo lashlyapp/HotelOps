@@ -177,21 +177,23 @@ boundary for years.
 
 ## Source roster
 
-### Active (PR 2 — this PR)
+### Active (PR 2)
 | Source | Layer | Key needed | Notes |
 |---|---|---|---|
 | Nager.Date | Holidays | None | Global public holidays |
 | Open-Meteo | Weather | None | 14-day forecast, severe alerts |
 | Wikipedia events | Events | None | Annual festivals, recurring events |
 
-### Approved next (PR 3)
+### Active (PR 3 — this PR)
 | Source | Layer | Key needed | Notes |
 |---|---|---|---|
-| Ticketmaster Discovery | Events | Free key (10 min signup) | Concerts, sports, theater |
-| Eventbrite Public Search | Events | Free key | Local independent events |
-| exchangerate.host | FX | None | Inbound international FX |
-| NWS API | Weather alerts | None | US severe weather |
-| OpenStreetMap Overpass | Venues | None | Nearby venues, capacity |
+| NWS alerts | Disruption | None | US severe weather alerts |
+| Wikipedia pageviews | Search intent | None | Destination demand index |
+| exchangerate.host | FX | None | International inbound FX context |
+| OpenStreetMap Overpass | Venues + comp set | None | Nearby venues *and* real boutique competitor discovery (replaces synthetic name generator) |
+| Ticketmaster Discovery | Events | Free key | Concerts, sports, theater (gated on `TICKETMASTER_API_KEY`) |
+| Eventbrite Public Search | Events | Free token | Local events (gated on `EVENTBRITE_API_TOKEN`) |
+| TripAdvisor (customer URL) | Reviews | None | Customer-consent gated; scrape only properties whose operator provided URL on /market/settings |
 
 ### Approved later (PR 4)
 | Source | Layer | Key needed | Notes |
@@ -279,6 +281,7 @@ Status updated as items are reported done.
 - [ ] Sign up for **Ticketmaster Discovery API** at developer.ticketmaster.com → add key as `TICKETMASTER_API_KEY` env var
 - [ ] Sign up for **Eventbrite API** at eventbrite.com/platform → add key as `EVENTBRITE_API_TOKEN` env var
 - [ ] Sign up for **AirNow API** (optional, US air quality) at docs.airnowapi.org → add key as `AIRNOW_API_KEY`
+- [ ] Set `PEER_HASH_SALT` env var (any long random string) — used to hash reviewer names for anonymity. Rotate it never if you want stable hashes; rotate it once if you ever need to invalidate a leaked dataset.
 
 ## Phase 3 — OTA affiliate approvals (1–2 weeks each, do in parallel)
 - [ ] Apply for **Booking.com Affiliate Partner** at partner.booking.com → on approval, add credentials as `BOOKING_AFFILIATE_*` env vars

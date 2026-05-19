@@ -180,6 +180,10 @@ export async function detectAndStoreMarketProfile(
     location_descriptor,
     amenity_tags,
     operator_confirmed: existing?.operator_confirmed ?? false,
+    // Preserve customer-provided review-source identifiers across
+    // re-detection — they are operator-supplied ground truth.
+    tripadvisor_url: existing?.tripadvisor_url ?? null,
+    google_place_id: existing?.google_place_id ?? null,
     updated_at: new Date().toISOString(),
   }
 

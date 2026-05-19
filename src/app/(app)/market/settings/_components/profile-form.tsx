@@ -30,6 +30,7 @@ export type ProfileFormProps = {
     adr_ceiling: number | null
     location_descriptor: string | null
     amenity_tags: string | null
+    tripadvisor_url: string | null
   }
   currencyCode: string
 }
@@ -135,6 +136,22 @@ export function ProfileForm({
         />
         <p className="text-xs text-subtle">
           Comma-separated. Used to refine competitor archetypes.
+        </p>
+      </div>
+
+      <div className="space-y-1">
+        <Label htmlFor="tripadvisor_url">TripAdvisor URL</Label>
+        <Input
+          id="tripadvisor_url"
+          name="tripadvisor_url"
+          type="url"
+          placeholder="https://www.tripadvisor.com/Hotel_Review-…"
+          defaultValue={init.tripadvisor_url ?? ''}
+        />
+        <p className="text-xs text-subtle">
+          Optional. Adding this turns on review intelligence — sentiment trend, top
+          complaint/praise themes, and comp-set comparison. We read your TripAdvisor
+          page once a day; nothing is published.
         </p>
       </div>
 

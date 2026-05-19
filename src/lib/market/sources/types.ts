@@ -48,6 +48,7 @@ export type AdapterContext = {
   properties: Array<{
     id: string
     org_id: string
+    name: string
     city: string | null
     state: string | null
     country: string

@@ -6,11 +6,23 @@ import { getDataSource, setDataSourceEnabled } from '@/lib/market/registry'
 import { buildAdapterContext } from '@/lib/market/sources/context'
 import { runAdapter } from '@/lib/market/sources/runner'
 import type { Adapter } from '@/lib/market/sources/types'
+import { eventbriteAdapter } from '@/lib/market/sources/eventbrite'
+import { exchangeRateAdapter } from '@/lib/market/sources/exchange-rate'
 import { nagerHolidaysAdapter } from '@/lib/market/sources/nager-holidays'
+import { nwsAlertsAdapter } from '@/lib/market/sources/nws-alerts'
 import { openMeteoAdapter } from '@/lib/market/sources/open-meteo'
+import { overpassVenuesAdapter } from '@/lib/market/sources/overpass'
+import { ticketmasterAdapter } from '@/lib/market/sources/ticketmaster'
+import { tripadvisorAdapter } from '@/lib/market/sources/tripadvisor'
 import { wikipediaEventsAdapter } from '@/lib/market/sources/wikipedia-events'
+import { wikipediaPageviewsAdapter } from '@/lib/market/sources/wikipedia-pageviews'
+import { normalizeDisruptions } from '@/lib/market/normalizers/disruptions'
 import { normalizeEvents } from '@/lib/market/normalizers/events'
+import { normalizeFx } from '@/lib/market/normalizers/fx'
 import { normalizeHolidays } from '@/lib/market/normalizers/holidays'
+import { normalizeReviews } from '@/lib/market/normalizers/reviews'
+import { normalizeSearchDemand } from '@/lib/market/normalizers/search-demand'
+import { normalizeVenues } from '@/lib/market/normalizers/venues'
 import { normalizeWeather } from '@/lib/market/normalizers/weather'
 
 export type ActionResult = { error?: string; success?: string }
@@ -20,11 +32,18 @@ export type ActionResult = { error?: string; success?: string }
 // in the registry table as "unconfigured" until their adapter lands.
 const ADAPTER_BY_SOURCE: Record<
   string,
-  { adapter: Adapter; normalize?: () => Promise<number> }
+  { adapter: Adapter; normalize?: () => Promise<unknown> }
 > = {
   nager_holidays: { adapter: nagerHolidaysAdapter, normalize: normalizeHolidays },
   open_meteo: { adapter: openMeteoAdapter, normalize: normalizeWeather },
   wikipedia_events: { adapter: wikipediaEventsAdapter, normalize: normalizeEvents },
+  nws_alerts: { adapter: nwsAlertsAdapter, normalize: normalizeDisruptions },
+  wikipedia_pageviews: { adapter: wikipediaPageviewsAdapter, normalize: normalizeSearchDemand },
+  exchange_rate_host: { adapter: exchangeRateAdapter, normalize: normalizeFx },
+  overpass_venues: { adapter: overpassVenuesAdapter, normalize: normalizeVenues },
+  ticketmaster: { adapter: ticketmasterAdapter, normalize: normalizeEvents },
+  eventbrite: { adapter: eventbriteAdapter, normalize: normalizeEvents },
+  tripadvisor: { adapter: tripadvisorAdapter, normalize: normalizeReviews },
 }
 
 export async function toggleDataSourceAction(
@@ -73,7 +92,15 @@ export async function runDataSourceNowAction(
     let normalizedNote = ''
     if (entry.normalize && result.observations_written > 0) {
       const n = await entry.normalize()
-      normalizedNote = ` ${n} L2 row${n === 1 ? '' : 's'} normalized.`
+      // The venues normalizer returns {venues, competitors}; everything else
+      // returns a number.
+      if (typeof n === 'number') {
+        normalizedNote = ` ${n} L2 row${n === 1 ? '' : 's'} normalized.`
+      } else if (n && typeof n === 'object' && 'venues' in n && 'competitors' in n) {
+        const v = (n as { venues: number; competitors: number }).venues
+        const c = (n as { venues: number; competitors: number }).competitors
+        normalizedNote = ` ${v} venues, ${c} competitors normalized.`
+      }
     }
     revalidatePath('/admin/data-sources')
     return {
