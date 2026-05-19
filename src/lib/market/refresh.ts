@@ -14,6 +14,7 @@ import { detectAndStoreCompetitors } from './competitors'
 import { refreshDemandSignals } from './demand'
 import { detectAndStoreMarketProfile } from './profile'
 import { refreshPricingRecommendations } from './recommendations'
+import { buildDemandSignalsFromRealData } from './signals/demand'
 
 export type MarketIntelligenceBundle = {
   profile: PropertyMarketProfile
@@ -35,9 +36,16 @@ export async function refreshMarketIntelligence(
 ): Promise<MarketIntelligenceBundle> {
   const profile = await detectAndStoreMarketProfile(property)
   const competitors = await detectAndStoreCompetitors(property, profile)
-  const signals = await refreshDemandSignals(property, profile, {
+  // Prefer real signals built from L2 (events_catalog + holidays_catalog
+  // + weather_observations). Fall back to the v1 heuristic generator
+  // when L2 has nothing for this property's geo, so /market is never
+  // empty before sources are wired up.
+  const realSignals = await buildDemandSignalsFromRealData(property, profile, {
     today: options.today,
   })
+  const signals = realSignals.length > 0
+    ? realSignals
+    : await refreshDemandSignals(property, profile, { today: options.today })
   const recommendations = await refreshPricingRecommendations(
     property,
     profile,
