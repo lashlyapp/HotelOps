@@ -14,6 +14,7 @@ import { DemandList } from './_components/demand-list'
 import { PropertyTabs } from './_components/property-tabs'
 import { RecommendationsList } from './_components/recommendations-list'
 import { RefreshForm } from './_components/refresh-form'
+import { OutlookSparkline, type OutlookHistoryItem } from './_components/outlook-sparkline'
 import { ReviewIntelligenceCard } from './_components/review-intelligence-card'
 
 type SearchParams = Promise<{ property?: string }>
@@ -60,11 +61,14 @@ export default async function MarketPage({
 
   const currencyCode = session.organization.currency.toUpperCase()
 
-  // Pull the latest review sentiment snapshot + profile to decide
-  // whether the review intelligence card should prompt for a
-  // TripAdvisor URL or show real data.
+  // Pull the latest review sentiment snapshot, profile, and 30-day
+  // outlook trail in one parallel batch.
   const admin = createAdminClient()
-  const [{ data: latestReview }, { data: profileRow }] = await Promise.all([
+  const [
+    { data: latestReview },
+    { data: profileRow },
+    { data: outlookHistoryRaw },
+  ] = await Promise.all([
     admin
       .from('review_sentiment_signals')
       .select('*')
@@ -77,8 +81,15 @@ export default async function MarketPage({
       .select('tripadvisor_url')
       .eq('property_id', activeProperty.id)
       .maybeSingle<Pick<PropertyMarketProfile, 'tripadvisor_url'>>(),
+    admin
+      .from('daily_market_briefings')
+      .select('briefing_date, demand_outlook')
+      .eq('property_id', activeProperty.id)
+      .order('briefing_date', { ascending: false })
+      .limit(30),
   ])
   const hasTripadvisorUrl = Boolean(profileRow?.tripadvisor_url)
+  const outlookHistory = (outlookHistoryRaw as OutlookHistoryItem[] | null) ?? []
 
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-5xl">
@@ -108,6 +119,10 @@ export default async function MarketPage({
         briefing={bundle.briefing}
         propertyName={activeProperty.name}
       />
+
+      {outlookHistory.length > 1 ? (
+        <OutlookSparkline history={outlookHistory} />
+      ) : null}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <RecommendationsList recommendations={bundle.recommendations} />

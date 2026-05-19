@@ -7,8 +7,10 @@ import type {
   Property,
   PropertyCompetitor,
   PropertyMarketProfile,
+  ReviewSentimentSignal,
 } from '@/lib/supabase/types'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { polishBriefingWithAi } from './briefing-ai'
 
 // Compose the top-of-page executive briefing. Strategic principle:
 //
@@ -132,8 +134,35 @@ export async function composeAndStoreBriefing(
   const outlook = classifyOutlook(signals, recommendations, today)
   const topRec = recommendations.find((r) => !r.acted_at) ?? null
 
-  const headline = composeHeadline(profile, outlook, upcoming, topRec)
-  const body = composeBody(profile, competitors, upcoming, recommendations)
+  let headline = composeHeadline(profile, outlook, upcoming, topRec)
+  let body = composeBody(profile, competitors, upcoming, recommendations)
+
+  // Best-effort AI polish — returns null when OPENAI_API_KEY is
+  // missing or the call fails. Numbers/facts come from the rule-based
+  // composer above; the model only rewords.
+  const admin = createAdminClient()
+  const { data: reviewSignal } = await admin
+    .from('review_sentiment_signals')
+    .select('*')
+    .eq('property_id', property.id)
+    .order('observed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle<ReviewSentimentSignal>()
+
+  const polished = await polishBriefingWithAi({
+    property,
+    profile,
+    draftHeadline: headline,
+    draftBody: body,
+    outlook,
+    topSignals: upcoming,
+    topRecommendations: recommendations.filter((r) => !r.acted_at).slice(0, 4),
+    reviewSignal: reviewSignal ?? null,
+  })
+  if (polished) {
+    headline = polished.headline
+    body = polished.body
+  }
 
   const opportunity_count = recommendations.filter(
     (r) => !r.acted_at && (r.recommendation_type === 'rate_increase' || r.recommendation_type === 'rate_hold'),
@@ -144,7 +173,6 @@ export async function composeAndStoreBriefing(
 
   const source_signal_ids = upcoming.slice(0, 4).map((s) => s.id)
 
-  const admin = createAdminClient()
   const { data, error } = await admin
     .from('daily_market_briefings')
     .upsert(

@@ -147,20 +147,75 @@ export async function refreshPricingRecommendations(
     }
   }
 
-  // 4) Visibility / parity check — one per refresh for awareness.
-  rows.push({
-    property_id: property.id,
-    org_id: property.org_id,
-    target_date: addDays(today, 2),
-    recommendation_key: 'visibility_check',
-    recommendation_type: 'visibility_gap',
-    headline: `Confirm OTA rate parity for the upcoming weekend.`,
-    rationale: `Periodic parity check — comparable properties have been adjusting weekend rates; spot-check Booking.com and Expedia for any drift.`,
-    suggested_delta: null,
-    priority: 2,
-    confidence: 'low',
-    contributing_signals: [],
-  })
+  // 5) Real parity-driven recommendations from property_rate_parity_snapshots.
+  // These supersede the heuristic comp_parity_gap when fresh real
+  // data exists for the target_date — the heuristic emits at
+  // target_date = today+1 only, so we don't risk producing two
+  // contradictory cards for the same date.
+  const realParityRows = await loadFreshParity(admin, property.id, today)
+  for (const p of realParityRows) {
+    if (p.gap_pct == null || p.our_rate == null || p.channel_rate == null) continue
+    // Negative gap_pct = we're below the comp set median (gap is
+    // (our - them) / them × 100).
+    if (p.gap_pct >= -8) continue // ignore small gaps; noise
+    const absGap = Math.abs(p.gap_pct)
+    const lift = Math.max(0, Math.round(p.channel_rate - p.our_rate))
+    rows.push({
+      property_id: property.id,
+      org_id: property.org_id,
+      target_date: p.target_date,
+      recommendation_key: `real_parity_gap:${p.target_date}`,
+      recommendation_type: 'parity_alert',
+      headline: `${dayLabel(p.target_date)} pricing is ${Math.round(absGap)}% below the comp-set median.`,
+      rationale: `Comp-set median for ${p.target_date} is ${formatCurrency(p.channel_rate, currency)} across ${p.source_count} comparable propert${p.source_count === 1 ? 'y' : 'ies'}; your rate is ${formatCurrency(p.our_rate, currency)}. Consider a ${formatCurrency(lift, currency)} bump.`,
+      suggested_delta: lift,
+      priority: absGap >= 18 ? 5 : 4,
+      confidence: 'high',
+      contributing_signals: [`parity_snapshot:${p.target_date}`],
+    })
+  }
+
+  // 6) Compression alert — when ≥60% of competitors show limited or
+  // sold_out availability for a target date, bump pricing aggressively.
+  const compressionRows = await loadCompressionDates(admin, property.id, today)
+  for (const c of compressionRows) {
+    if (c.competitor_count < 3) continue
+    const compressionPct = c.limited_count / c.competitor_count
+    if (compressionPct < 0.6) continue
+    const baseFloor = profile.adr_floor ?? 219
+    const lift = Math.round(baseFloor * 0.15) // 15% — comp set is filling
+    rows.push({
+      property_id: property.id,
+      org_id: property.org_id,
+      target_date: c.target_date,
+      recommendation_key: `compression:${c.target_date}`,
+      recommendation_type: 'rate_increase',
+      headline: `${c.limited_count} of ${c.competitor_count} comparable properties near sellout for ${dayLabel(c.target_date)}.`,
+      rationale: `Comp set is compressing — lift ${dayLabel(c.target_date)} rates by ${formatCurrency(lift, currency)} to capture the available demand without leaving money on the table.`,
+      suggested_delta: lift,
+      priority: 5,
+      confidence: 'high',
+      contributing_signals: [`compression:${c.target_date}`],
+    })
+  }
+
+  // 7) Visibility / parity check — one per refresh for awareness.
+  // Only emit when we have no real parity data, otherwise it's noise.
+  if (realParityRows.length === 0) {
+    rows.push({
+      property_id: property.id,
+      org_id: property.org_id,
+      target_date: addDays(today, 2),
+      recommendation_key: 'visibility_check',
+      recommendation_type: 'visibility_gap',
+      headline: `Confirm OTA rate parity for the upcoming weekend.`,
+      rationale: `Periodic parity check — comparable properties have been adjusting weekend rates; spot-check Booking.com and Expedia for any drift.`,
+      suggested_delta: null,
+      priority: 2,
+      confidence: 'low',
+      contributing_signals: [],
+    })
+  }
 
   if (rows.length > 0) {
     const { error } = await admin
@@ -181,6 +236,75 @@ export async function refreshPricingRecommendations(
     .order('target_date', { ascending: true })
   if (readErr) throw new Error(`refreshPricingRecommendations read: ${readErr.message}`)
   return (data as PricingRecommendation[] | null) ?? []
+}
+
+async function loadFreshParity(
+  admin: ReturnType<typeof createAdminClient>,
+  propertyId: string,
+  today: string,
+): Promise<Array<{
+  target_date: string
+  our_rate: number | null
+  channel_rate: number | null
+  gap_pct: number | null
+  source_count: number
+}>> {
+  const { data } = await admin
+    .from('property_rate_parity_snapshots')
+    .select('target_date, our_rate, channel_rate, gap_pct, source_count, scrape_date')
+    .eq('property_id', propertyId)
+    .eq('channel', 'comp_set_median')
+    .gte('target_date', today)
+    .gte('scrape_date', today) // only today's scrape — stale parity is misleading
+    .order('target_date', { ascending: true })
+    .limit(30)
+  return (data as Array<{
+    target_date: string
+    our_rate: number | null
+    channel_rate: number | null
+    gap_pct: number | null
+    source_count: number
+  }> | null) ?? []
+}
+
+async function loadCompressionDates(
+  admin: ReturnType<typeof createAdminClient>,
+  propertyId: string,
+  today: string,
+): Promise<Array<{ target_date: string; limited_count: number; competitor_count: number }>> {
+  const nowIso = new Date().toISOString()
+  const { data } = await admin
+    .from('competitor_rate_snapshots')
+    .select('target_date, competitor_id, availability')
+    .eq('property_id', propertyId)
+    .gte('target_date', today)
+    .gt('expires_at', nowIso)
+  type Row = { target_date: string; competitor_id: string; availability: string | null }
+  const buckets = new Map<string, { competitors: Set<string>; limited: Set<string> }>()
+  for (const r of (data as Row[] | null) ?? []) {
+    const entry = buckets.get(r.target_date) ?? {
+      competitors: new Set<string>(),
+      limited: new Set<string>(),
+    }
+    entry.competitors.add(r.competitor_id)
+    if (r.availability === 'limited' || r.availability === 'sold_out') {
+      entry.limited.add(r.competitor_id)
+    }
+    buckets.set(r.target_date, entry)
+  }
+  return [...buckets.entries()].map(([target_date, v]) => ({
+    target_date,
+    limited_count: v.limited.size,
+    competitor_count: v.competitors.size,
+  }))
+}
+
+function dayLabel(targetDate: string): string {
+  return new Date(targetDate + 'T00:00:00Z').toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 export function typeLabel(t: RecommendationType): string {

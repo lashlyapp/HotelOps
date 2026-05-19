@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { requirePlatformAdmin } from '@/lib/auth/session'
@@ -117,7 +118,12 @@ export default async function DataSourcesPage() {
                   {rows.map((s) => (
                     <tr key={s.source}>
                       <td className="px-5 py-3 align-top">
-                        <p className="text-sm font-medium text-fg">{s.display_name}</p>
+                        <Link
+                          href={`/admin/data-sources/${s.source}`}
+                          className="focus-ring rounded-sm text-sm font-medium text-fg hover:underline"
+                        >
+                          {s.display_name}
+                        </Link>
                         <p className="mt-0.5 text-xs text-muted">{s.description}</p>
                         {s.api_key_env_var ? (
                           <p className="mt-0.5 text-[10px] text-subtle">
