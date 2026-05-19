@@ -74,6 +74,7 @@
     }
   },
   "nav": {
+    "marketIntelligence": "Trí tuệ thị trường",
     "workOrders": "Phiếu công việc",
     "events": "Sự kiện & Tiệc",
     "signage": "Biển hiển thị",
@@ -86,14 +87,14 @@
   },
   "marketing": {
     "hero": {
-      "eyebrow": "Phần mềm back-office khách sạn · hoạt động cùng mọi PMS",
-      "headline": "Mọi thứ mà PMS của bạn không làm.",
-      "sub": "MyHotelOps là lớp vận hành chạy song song với hệ thống đặt phòng của khách sạn. Bảo trì, sự kiện, nhà cung cấp, biển hiển thị, đón khách — mọi phần của việc vận hành một khách sạn boutique tồn tại bên ngoài PMS của bạn, ở một nơi.",
-      "personaLine": "Được xây dựng cho chủ sở hữu, GM và quản lý — không phải cho nhân viên tuyến đầu vật lộn với hệ thống đặt phòng.",
+      "eyebrow": "Trí tuệ thị trường khách sạn AI · cho khách sạn độc lập",
+      "headline": "Biết những gì đang xảy ra quanh khách sạn của bạn.",
+      "sub": "MyHotelOps là radar thương mại thời gian thực dành cho khách sạn boutique và độc lập. Giám sát biến động giá OTA, đợt nhu cầu gần kề, hoạt động đối thủ và sự kiện địa phương — không cần tích hợp PMS, không bảng điều khiển phân tích, không triển khai doanh nghiệp. Nền tảng vận hành đi kèm trong gói.",
+      "personaLine": "Được xây dựng cho chủ sở hữu và GM muốn một bản tóm tắt ngắn mỗi sáng, không phải ba mươi bảng điều khiển mỗi tuần.",
       "trialLine": "Dùng thử miễn phí 7 ngày. Không cần thẻ tín dụng. Bao gồm 10 GB.",
       "ctaPrimary": "Bắt đầu dùng thử miễn phí",
       "ctaSecondary": "Xem giá",
-      "imageAlt": "Quản lý khách sạn xem xét hoạt động trên máy tính bảng"
+      "imageAlt": "Quản lý khách sạn xem xét trí tuệ thị trường trên máy tính bảng"
     },
     "positioning": {
       "eyebrow": "Phạm vi",
@@ -270,6 +271,35 @@
     "title": "Được xây dựng theo cách back-office boutique thực sự hoạt động.",
     "sub": "Toàn bộ bề mặt, ở một nơi. Không có giá theo mô-đun — mọi tính năng dưới đây đều nằm trong nền tảng $100/tài sản hoặc một trong ba bổ sung giá đồng nhất. Không có gì ở đây tốn thêm theo chỗ ngồi, theo màn hình, hay theo phòng.",
     "categories": [
+      {
+        "title": "Thông tin thị trường",
+        "items": [
+          {
+            "name": "Bản tin AI hàng ngày",
+            "description": "Một bản tóm tắt điều hành ngắn mỗi sáng — triển vọng nhu cầu, biến động comp-set, 2–3 cơ hội giá. Không biểu đồ, không bảng tính, không cần phiên dịch của chuyên viên phân tích."
+          },
+          {
+            "name": "Comp-set tự phát hiện",
+            "description": "Các khách sạn boutique lân cận được phát hiện ngay khi bạn thêm cơ sở. Không bao giờ phải cấu hình danh sách đối thủ; giá và tình trạng phòng của họ định hình các đề xuất ngay từ ngày đầu."
+          },
+          {
+            "name": "Radar giá OTA",
+            "description": "Giá và tình trạng phòng của đối thủ theo thời gian thực từ Booking.com, Expedia và Hotelbeds (qua API liên kết được cấp phép). Sự thắt chặt vào thứ Bảy sẽ hiện ra vào thứ Hai với một mức giá đề xuất cụ thể."
+          },
+          {
+            "name": "Tín hiệu nhu cầu địa phương",
+            "description": "Các buổi hòa nhạc, hội nghị, lễ hội, thể thao và thời tiết khắc nghiệt trong bán kính 25 km — lấy từ Ticketmaster, Eventbrite, NWS, Open-Meteo và Wikipedia, hiển thị dưới dạng triển vọng nhu cầu 21 ngày."
+          },
+          {
+            "name": "Thông tin đánh giá",
+            "description": "Cảm xúc trượt 30 ngày, so sánh với comp-set và các chủ đề khen/phàn nàn hàng đầu từ TripAdvisor. Kích hoạt bằng URL TripAdvisor của bạn — không cần cấu hình, không cần thuê chuyên viên phân tích."
+          },
+          {
+            "name": "Chuẩn ADR ngang hàng",
+            "description": "Dải giá ẩn danh giữa các boutique trong thành phố của bạn — tự nguyện tham gia, băm HMAC khi đóng góp, không hiển thị cho đến khi ít nhất ba cơ sở tham gia (k-ẩn danh). Tín hiệu cross-tenant đầu tiên mà không ai khác có."
+          }
+        ]
+      },
       {
         "title": "Vận hành",
         "items": [
@@ -530,8 +560,9 @@
     "plans": {
       "base": {
         "label": "Nền tảng",
-        "body": "Mọi thứ mọi tài sản cần từ ngày đầu — phiếu công việc bảo trì, đề xuất sự kiện, hồ sơ IT, thư viện phương tiện và một màn hình biển hiển thị cho sảnh.",
+        "body": "Trí tuệ thị trường AI (bản tin hàng ngày, radar giá OTA, comp-set, tín hiệu nhu cầu, trí tuệ đánh giá) cùng toàn bộ nền tảng vận hành — phiếu công việc, sự kiện, IT hub, thư viện phương tiện và một màn hình biển hiển thị cho sảnh.",
         "features": [
+          "Trí tuệ thị trường AI — bản tin hàng ngày, radar OTA, comp-set, tín hiệu nhu cầu, trí tuệ đánh giá",
           "Phiếu công việc (Kanban với bằng chứng ảnh/video)",
           "Sự kiện & Tiệc (yêu cầu → đề xuất → hóa đơn)",
           "Hub IT (Wi-Fi, đăng nhập nhà cung cấp, thiết bị)",

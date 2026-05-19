@@ -24,23 +24,23 @@ const LOBBY_IMAGE = '/AdobeStock_1896833868.jpeg'
 const EXTERIOR_IMAGE = '/AdobeStock_1951250090.jpeg'
 
 export const metadata: Metadata = {
-  title: `${BRAND.name} — The operations layer for boutique hotels`,
+  title: `${BRAND.name} — AI market intelligence for independent hotels`,
   description:
-    "MyHotelOps is the back-office software boutique hotels run alongside their PMS. Maintenance, events, vendors, signage, guest arrival — everything your reservation system doesn't do, in one place. Built for owners, GMs, and managers.",
+    "MyHotelOps is a real-time commercial radar for boutique and independent hotels — OTA pricing movement, demand surges, competitor activity, AI-drafted daily briefings. No PMS integration, no analyst dashboards, no enterprise complexity. The operational platform comes bundled.",
   alternates: { canonical: `https://www.${BRAND.domain}/` },
   openGraph: {
     type: 'website',
-    title: `${BRAND.name} — Everything your PMS doesn't do`,
+    title: `${BRAND.name} — AI market intelligence for independent hotels`,
     description:
-      "Back-office operations for boutique hotels — maintenance, events, vendors, signage, guest arrival. Runs alongside any PMS. Flat per-property pricing.",
+      "Real-time commercial radar for boutique hotels — OTA pricing, demand signals, competitor activity, AI daily briefings. No PMS integration. The operational platform comes bundled.",
     url: `https://www.${BRAND.domain}/`,
     siteName: BRAND.name,
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${BRAND.name} — Everything your PMS doesn't do`,
+    title: `${BRAND.name} — AI market intelligence for independent hotels`,
     description:
-      "Back-office operations for boutique hotels. Runs alongside any PMS. Flat per-property pricing.",
+      "Real-time commercial radar for boutique hotels. No PMS integration, no analyst dashboards. The operational platform comes bundled.",
   },
 }
 
@@ -86,6 +86,26 @@ export default async function HomePage() {
           '@type': 'ContactPoint',
           email: BRAND.supportEmail,
           contactType: 'customer support',
+        },
+      },
+      {
+        '@type': 'SoftwareApplication',
+        '@id': `https://www.${BRAND.domain}/#market-intelligence`,
+        name: `${BRAND.name} Market Intelligence`,
+        applicationCategory: 'BusinessApplication',
+        description:
+          'AI-powered hospitality market intelligence for independent hotels — real-time OTA pricing radar, demand surge alerts, competitor activity, daily executive briefings. No PMS integration required.',
+        operatingSystem: 'Web',
+        offers: {
+          '@type': 'Offer',
+          price: '100',
+          priceCurrency: 'USD',
+          priceSpecification: {
+            '@type': 'UnitPriceSpecification',
+            price: '100',
+            priceCurrency: 'USD',
+            unitText: 'property/month',
+          },
         },
       },
       {

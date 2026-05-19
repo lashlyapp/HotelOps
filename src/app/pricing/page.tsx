@@ -10,13 +10,13 @@ import { getLocale } from '@/lib/i18n/get-locale'
 export const metadata: Metadata = {
   title: `Pricing — ${BRAND.name}`,
   description:
-    "Flat per-property pricing for the boutique-hotel back-office layer that runs alongside your PMS. $100/property/month base. Optional add-ons for unlimited signage, guest arrival, and AI-drafted daily social posts.",
+    "Flat per-property pricing for AI market intelligence + operational platform for boutique hotels. $100/property/month base — includes Market Intelligence, work orders, events, IT hub, arrival pages. Optional flat-rate add-ons for unlimited signage, guest experience, and daily AI social posts.",
   alternates: { canonical: `https://www.${BRAND.domain}/pricing` },
   openGraph: {
     type: 'website',
     title: `Pricing — ${BRAND.name}`,
     description:
-      "Back-office operations for boutique hotels, alongside any PMS. Flat per-property pricing — $100/mo base, $217 with everything on.",
+      "AI market intelligence + the operational platform for boutique hotels. Flat per-property pricing — one base, three optional add-ons.",
     url: `https://www.${BRAND.domain}/pricing`,
     siteName: BRAND.name,
   },
