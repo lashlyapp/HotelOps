@@ -202,13 +202,18 @@ comment on table public.events_catalog is
 create table public.holidays_catalog (
   id              uuid primary key default gen_random_uuid(),
   country_code    text not null,                 -- ISO-3166 alpha-2, e.g. 'US'
-  region_code     text,                           -- subdivision, e.g. 'US-CA'; null for country-wide
+  -- Subdivision (e.g. 'US-CA'). Empty string for country-wide
+  -- holidays — empty rather than null so the unique constraint
+  -- below can use plain column names (Postgres UNIQUE treats NULLs
+  -- as distinct, which would let duplicate national holidays slip
+  -- through).
+  region_code     text not null default '',
   holiday_date    date not null,
   name            text not null,
   kind            text not null default 'public', -- 'public'|'school'|'religious'|'observance'
   source          text not null,
   ingested_at     timestamptz not null default now(),
-  unique (country_code, coalesce(region_code, ''), holiday_date, name)
+  unique (country_code, region_code, holiday_date, name)
 );
 
 create index holidays_catalog_country_date_idx

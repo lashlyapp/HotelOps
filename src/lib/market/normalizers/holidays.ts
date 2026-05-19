@@ -18,7 +18,7 @@ export async function normalizeHolidays(options: { since?: string } = {}): Promi
 
   type Row = {
     country_code: string
-    region_code: string | null
+    region_code: string
     holiday_date: string
     name: string
     kind: string
@@ -31,13 +31,15 @@ export async function normalizeHolidays(options: { since?: string } = {}): Promi
     const holiday_date = typeof p.holiday_date === 'string' ? p.holiday_date : null
     const name = typeof p.name === 'string' ? p.name : null
     if (!country_code || !holiday_date || !name) continue
+    // The catalog stores '' for "country-wide" so the unique
+    // constraint on plain columns dedupes correctly.
     const region_codes = Array.isArray(p.region_codes) && p.region_codes.length > 0
       ? (p.region_codes as string[])
-      : [null]
+      : ['']
     for (const region of region_codes) {
       rows.push({
         country_code,
-        region_code: region ?? null,
+        region_code: region ?? '',
         holiday_date,
         name,
         kind: typeof p.kind === 'string' ? p.kind : 'public',
@@ -47,26 +49,12 @@ export async function normalizeHolidays(options: { since?: string } = {}): Promi
   }
 
   if (rows.length === 0) return 0
-
-  // upsert by the composite unique constraint; supabase-js doesn't
-  // accept multi-column unique with coalesce, so we use ignoreDuplicates.
   const { error: insErr } = await admin
     .from('holidays_catalog')
     .upsert(rows, {
       onConflict: 'country_code,region_code,holiday_date,name',
       ignoreDuplicates: true,
     })
-  if (insErr) {
-    // ON CONFLICT with NULL region_code is tricky in supabase-js; fall
-    // back to row-by-row insert ignoring duplicates.
-    let written = 0
-    for (const row of rows) {
-      const { error: oneErr } = await admin
-        .from('holidays_catalog')
-        .insert(row)
-      if (!oneErr) written++
-    }
-    return written
-  }
+  if (insErr) throw new Error(`normalizeHolidays write: ${insErr.message}`)
   return rows.length
 }
