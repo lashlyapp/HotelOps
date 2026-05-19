@@ -64,21 +64,43 @@ function formatCurrency(amount: number, currency: string): string {
   return formatMoney(Math.round(amount * 100), currency as Parameters<typeof formatMoney>[1])
 }
 
-export async function refreshPricingRecommendations(
-  property: Property,
-  profile: PropertyMarketProfile,
-  signals: MarketDemandSignal[],
-  competitors: PropertyCompetitor[],
-  currency: string,
-  options: { today?: string } = {},
-): Promise<PricingRecommendation[]> {
-  const today = options.today ?? new Date().toISOString().slice(0, 10)
-  const admin = createAdminClient()
+export type RecommendationRow = Omit<
+  PricingRecommendation,
+  'id' | 'created_at' | 'acted_at'
+> & { acted_at?: string | null }
 
-  type Row = Omit<PricingRecommendation, 'id' | 'created_at' | 'acted_at'> & {
-    acted_at?: string | null
-  }
-  const rows: Row[] = []
+export type ParitySnapshotInput = {
+  target_date: string
+  our_rate: number | null
+  channel_rate: number | null
+  gap_pct: number | null
+  source_count: number
+}
+
+export type CompressionInput = {
+  target_date: string
+  limited_count: number
+  competitor_count: number
+}
+
+/**
+ * Pure rule evaluator. Given all the inputs, produces the
+ * recommendation rows that the engine would write. No DB I/O, no
+ * random clocks — `today` is required. Used by the orchestrator
+ * `refreshPricingRecommendations` and by the snapshot tests.
+ */
+export function evaluateRecommendationRules(args: {
+  property: Property
+  profile: PropertyMarketProfile
+  signals: MarketDemandSignal[]
+  competitors: PropertyCompetitor[]
+  parity: ParitySnapshotInput[]
+  compression: CompressionInput[]
+  currency: string
+  today: string
+}): RecommendationRow[] {
+  const { property, profile, signals, competitors, parity, compression, currency, today } = args
+  const rows: RecommendationRow[] = []
 
   // 1) Per-signal lift recommendations.
   for (const signal of signals) {
@@ -152,8 +174,7 @@ export async function refreshPricingRecommendations(
   // data exists for the target_date — the heuristic emits at
   // target_date = today+1 only, so we don't risk producing two
   // contradictory cards for the same date.
-  const realParityRows = await loadFreshParity(admin, property.id, today)
-  for (const p of realParityRows) {
+  for (const p of parity) {
     if (p.gap_pct == null || p.our_rate == null || p.channel_rate == null) continue
     // Negative gap_pct = we're below the comp set median (gap is
     // (our - them) / them × 100).
@@ -177,8 +198,7 @@ export async function refreshPricingRecommendations(
 
   // 6) Compression alert — when ≥60% of competitors show limited or
   // sold_out availability for a target date, bump pricing aggressively.
-  const compressionRows = await loadCompressionDates(admin, property.id, today)
-  for (const c of compressionRows) {
+  for (const c of compression) {
     if (c.competitor_count < 3) continue
     const compressionPct = c.limited_count / c.competitor_count
     if (compressionPct < 0.6) continue
@@ -201,7 +221,7 @@ export async function refreshPricingRecommendations(
 
   // 7) Visibility / parity check — one per refresh for awareness.
   // Only emit when we have no real parity data, otherwise it's noise.
-  if (realParityRows.length === 0) {
+  if (parity.length === 0) {
     rows.push({
       property_id: property.id,
       org_id: property.org_id,
@@ -216,6 +236,36 @@ export async function refreshPricingRecommendations(
       contributing_signals: [],
     })
   }
+
+  return rows
+}
+
+export async function refreshPricingRecommendations(
+  property: Property,
+  profile: PropertyMarketProfile,
+  signals: MarketDemandSignal[],
+  competitors: PropertyCompetitor[],
+  currency: string,
+  options: { today?: string } = {},
+): Promise<PricingRecommendation[]> {
+  const today = options.today ?? new Date().toISOString().slice(0, 10)
+  const admin = createAdminClient()
+
+  const [parity, compression] = await Promise.all([
+    loadFreshParity(admin, property.id, today),
+    loadCompressionDates(admin, property.id, today),
+  ])
+
+  const rows = evaluateRecommendationRules({
+    property,
+    profile,
+    signals,
+    competitors,
+    parity,
+    compression,
+    currency,
+    today,
+  })
 
   if (rows.length > 0) {
     const { error } = await admin

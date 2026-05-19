@@ -26,6 +26,7 @@ export default async function AdminLayout({
           <NavLink href="/admin">Tenants</NavLink>
           <NavLink href="/admin/tenants/new">Create tenant</NavLink>
           <NavLink href="/admin/data-sources">Data pipeline</NavLink>
+          <NavLink href="/admin/market-briefing/preview">Briefing preview</NavLink>
           <NavLink href="/admin/appointments">Appointments</NavLink>
           <NavLink href="/admin/leads">Guide leads</NavLink>
           <NavLink href="/admin/blog">Blog queue</NavLink>

@@ -33,7 +33,38 @@ export async function sendMarketBriefingEmail(
     return { ok: false }
   }
 
-  const greeting = args.recipientName ? `Good morning, ${args.recipientName.split(' ')[0]}.` : 'Good morning.'
+  const { subject, text, html } = renderMarketBriefingEmail(args)
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: getEmailFrom(),
+      to: args.to,
+      subject,
+      text,
+      html,
+    })
+    if (error) {
+      console.error('[market-briefing] resend error', error)
+      return { ok: false }
+    }
+    return { ok: true, resendId: data?.id }
+  } catch (err) {
+    console.error('[market-briefing] resend threw', err)
+    return { ok: false }
+  }
+}
+
+// Pure renderer — returns subject + plain text + HTML without
+// sending anything. Exported so the platform-admin preview page
+// can show the exact markup the GM will receive.
+export function renderMarketBriefingEmail(args: MarketBriefingEmailArgs): {
+  subject: string
+  text: string
+  html: string
+} {
+  const greeting = args.recipientName
+    ? `Good morning, ${args.recipientName.split(' ')[0]}.`
+    : 'Good morning.'
   const date = new Date(args.briefing.briefing_date + 'T00:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -85,23 +116,7 @@ export async function sendMarketBriefingEmail(
     </p>
   `)
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: getEmailFrom(),
-      to: args.to,
-      subject,
-      text,
-      html,
-    })
-    if (error) {
-      console.error('[market-briefing] resend error', error)
-      return { ok: false }
-    }
-    return { ok: true, resendId: data?.id }
-  } catch (err) {
-    console.error('[market-briefing] resend threw', err)
-    return { ok: false }
-  }
+  return { subject, text, html }
 }
 
 function subjectFor(briefing: DailyMarketBriefing, propertyName: string): string {
